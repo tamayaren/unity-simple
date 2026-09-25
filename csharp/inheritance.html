@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inheritance &amp; Interfaces | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="csharp/inheritance.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; C# Concepts &rsaquo; Inheritance & Interfaces</div>
+    <div class="infobox">
+      <div class="infobox-title">Inheritance &amp; Interfaces</div>
+      <table>
+        <tr><th>Keywords</th><td><code>:</code>, <code>virtual</code>, <code>override</code>, <code>abstract</code>, <code>base</code>, <code>sealed</code>, <code>interface</code></td></tr>
+        <tr><th>Category</th><td>Object-oriented programming</td></tr>
+        <tr><th>In Unity</th><td><code>class Player : MonoBehaviour</code>, <code>IPointerClickHandler</code></td></tr>
+      </table>
+    </div>
+    <h1>Inheritance &amp; Interfaces</h1>
+    <p class="summary"><strong>Inheritance</strong> lets a class build on another class and reuse its code. <code>Player : MonoBehaviour</code> means "a Player is a MonoBehaviour, plus some extras". <strong>Interfaces</strong> describe what a class <em>can do</em>, without saying how.</p>
+    <div class="analogy"><p><strong>Inheritance</strong> is a family tree: a Goblin <em>is an</em> Enemy, which <em>is a</em> MonoBehaviour. The Goblin inherits everything the Enemy has, like eye color from a parent. <strong>An interface</strong> is a skill certificate, such as a driving licence. A Goblin, a Crate and a Wall aren't related, but each can hold the "can take damage" certificate. Code that needs a driver just asks for the licence, not the family name.</p></div>
+
+    <h2>Inheritance basics</h2>
+    <pre><code class="language-csharp">using UnityEngine;
+
+// Base class: shared by every enemy
+public class Enemy : MonoBehaviour
+{
+    [SerializeField] protected float health = 50f; // protected: children can use it
+
+    public void TakeDamage(float amount)
+    {
+        health -= amount;
+        if (health &lt;= 0f) Die();
+    }
+
+    // virtual: children MAY replace this
+    protected virtual void Die()
+    {
+        Destroy(gameObject);
+    }
+}
+
+// Child class: everything Enemy has, plus changes
+public class ExplodingSlime : Enemy
+{
+    [SerializeField] private GameObject explosionPrefab;
+
+    // override: replace the parent's version
+    protected override void Die()
+    {
+        Instantiate(explosionPrefab, transform.position, Quaternion.identity);
+        base.Die(); // also run the parent's version (Destroy)
+    }
+}
+</code></pre>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Keyword</th><th>Meaning</th></tr>
+      <tr><td><code>class B : A</code></td><td>B inherits from A. A class can only have <strong>one</strong> parent class.</td></tr>
+      <tr><td><code>virtual</code></td><td>"Children are allowed to override this."</td></tr>
+      <tr><td><code>override</code></td><td>"I'm replacing my parent's virtual/abstract version."</td></tr>
+      <tr><td><code>base.Method()</code></td><td>Call the parent's version from inside the override.</td></tr>
+      <tr><td><code>abstract</code></td><td>On a class: can't be used directly, only inherited. On a method: no body; children <em>must</em> override it.</td></tr>
+      <tr><td><code>sealed</code></td><td>Nobody can inherit from this class (or override this method further).</td></tr>
+    </table>
+    </div>
+
+    <h2>Abstract classes</h2>
+    <pre><code class="language-csharp">public abstract class Weapon : MonoBehaviour
+{
+    [SerializeField] protected float cooldown = 0.5f;
+    private float nextUse;
+
+    public void TryUse()
+    {
+        if (Time.time &lt; nextUse) return;
+        nextUse = Time.time + cooldown;
+        Use(); // each weapon decides what "use" means
+    }
+
+    protected abstract void Use(); // no body: every weapon MUST write one
+}
+
+public class Sword : Weapon
+{
+    protected override void Use() { Debug.Log("Swing!"); }
+}
+
+public class Bow : Weapon
+{
+    protected override void Use() { Debug.Log("Shoot arrow!"); }
+}
+
+// The player doesn't care which weapon it has:
+[SerializeField] private Weapon equipped; // drag a Sword OR a Bow here
+void Update() { if (Input.GetButtonDown("Fire1")) equipped.TryUse(); }
+</code></pre>
+    <p>You can't add an abstract class like <code>Weapon</code> to a GameObject by itself, only its concrete children.</p>
+
+    <h2>Interfaces</h2>
+    <pre><code class="language-csharp">public interface IDamageable
+{
+    void TakeDamage(float amount);
+}
+
+public interface IInteractable
+{
+    string Prompt { get; }       // interfaces can require properties too
+    void Interact(GameObject who);
+}
+
+// A class can have ONE parent class but MANY interfaces
+public class Barrel : MonoBehaviour, IDamageable, IInteractable
+{
+    public string Prompt =&gt; "Kick barrel";
+
+    public void TakeDamage(float amount) { /* explode */ }
+    public void Interact(GameObject who)  { /* roll away */ }
+}
+
+// Using them: ask for the ability, not the class
+void OnTriggerEnter(Collider other)
+{
+    if (other.TryGetComponent(out IDamageable d)) d.TakeDamage(10f);
+}
+</code></pre>
+    <p>Unity uses interfaces itself: implement <code>IPointerClickHandler</code> on a UI object and Unity calls your <code>OnPointerClick</code> method.</p>
+
+    <h2>Abstract class or interface?</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th></th><th>Abstract class</th><th>Interface</th></tr>
+      <tr><td>Shares code?</td><td>Yes, fields and method bodies</td><td>Mostly no, just the "contract"</td></tr>
+      <tr><td>How many per class?</td><td>One</td><td>As many as you want</td></tr>
+      <tr><td>Relationship</td><td>"is a" (a Bow is a Weapon)</td><td>"can do" (a Barrel can be damaged)</td></tr>
+      <tr><td>Shows in Inspector fields?</td><td>Yes (<code>[SerializeField] Weapon w</code>)</td><td>No, not directly (<code>[SerializeField] IDamageable d</code> won't show)</td></tr>
+    </table>
+    </div>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>A child object contains all the fields of its parent classes. An <code>ExplodingSlime</code> has <code>health</code> even though it doesn't declare it.</li>
+        <li>When you call a <code>virtual</code> method, C# checks the object's <em>real</em> type at runtime and runs the most-derived override. <code>enemy.TakeDamage()</code> on a slime calls the slime's <code>Die()</code>, even though <code>TakeDamage</code> is written in <code>Enemy</code>.</li>
+        <li>Unity's messages (<code>Update</code>, <code>Start</code>) are also inherited. If the parent has a private <code>Update</code> and the child declares its own, only the child's runs (the parent's is hidden, not combined). Make it <code>protected virtual</code> and call <code>base.Update()</code> to run both.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Deep inheritance trees</strong> (Entity → Character → Enemy → Melee → Goblin → ArmoredGoblin). Hard to change. Prefer small components and interfaces; see "composition" in <a href="../guides/best-practices.html">Better Ways to Do Things</a>.</li>
+      <li><strong>Forgetting <code>override</code>.</strong> Writing <code>void Die()</code> in the child without <code>override</code> <em>hides</em> the parent's method instead of replacing it (warning CS0114). Calls through an <code>Enemy</code> variable still run the parent's version.</li>
+      <li><strong>Two <code>Start</code> methods fighting.</strong> See the runtime note above.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="types.html">Types &amp; Type Checking</a> (<code>is</code>, <code>as</code>, casting to a child class)</li>
+      <li><a href="generics.html">Generics</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://learn.microsoft.com/dotnet/csharp/fundamentals/object-oriented/inheritance">official Microsoft C# documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

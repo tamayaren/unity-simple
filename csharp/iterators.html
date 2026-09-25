@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Iterators &amp; yield (Coroutines) | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="csharp/iterators.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; C# Concepts &rsaquo; Iterators & yield (Coroutines)</div>
+    <div class="infobox">
+      <div class="infobox-title">Iterators</div>
+      <table>
+        <tr><th>Keywords</th><td><code>IEnumerator</code>, <code>IEnumerable</code>, <code>yield return</code>, <code>yield break</code></td></tr>
+        <tr><th>Namespace</th><td><code>System.Collections</code></td></tr>
+        <tr><th>In Unity</th><td>Coroutines (<code>StartCoroutine</code>)</td></tr>
+      </table>
+    </div>
+    <h1>Iterators &amp; yield (Coroutines)</h1>
+    <p class="summary">Unity coroutines are built on a plain C# feature called <strong>iterators</strong>. An iterator is a method that uses <code>yield return</code> to hand back values <em>one at a time</em>, pausing in between. Understanding this C# side explains how coroutines really work. For the Unity usage guide, see <a href="../manual/coroutines.html">Coroutines</a>.</p>
+    <div class="analogy"><p>A Pez dispenser. A normal method that returns a list dumps all the candy out at once. An iterator hands out one candy each time you push the head (<code>MoveNext()</code>), and it remembers how many are left. Unity pushes the head of your coroutine once per frame (or whenever the wait is over).</p></div>
+
+    <h2>Iterators in plain C#</h2>
+    <p>Here's an iterator with nothing to do with Unity:</p>
+    <pre><code class="language-csharp">using System.Collections.Generic;
+
+IEnumerable&lt;int&gt; CountToThree()
+{
+    Debug.Log("start");
+    yield return 1;       // hand back 1, pause here
+    Debug.Log("after 1");
+    yield return 2;
+    Debug.Log("after 2");
+    yield return 3;
+    Debug.Log("done");
+}
+
+foreach (int n in CountToThree())
+{
+    Debug.Log(n);
+}
+// Prints: start, 1, after 1, 2, after 2, 3, done
+</code></pre>
+    <p>The method's code runs <em>in pieces</em>: it runs until a <code>yield return</code>, hands back a value, and only continues when the caller asks for the next one.</p>
+
+    <h2>Driving an iterator by hand</h2>
+    <p><code>foreach</code> hides the details. Underneath, it uses an <code>IEnumerator</code> with two members:</p>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Member</th><th>Meaning</th></tr>
+      <tr><td><code>bool MoveNext()</code></td><td>"Run until the next <code>yield return</code>." Returns <code>false</code> when the method has finished.</td></tr>
+      <tr><td><code>Current</code></td><td>The value from the latest <code>yield return</code>.</td></tr>
+    </table>
+    </div>
+    <pre><code class="language-csharp">IEnumerator&lt;int&gt; e = CountToThree().GetEnumerator();
+while (e.MoveNext())       // run the next piece
+{
+    Debug.Log(e.Current);  // the value it yielded
+}
+</code></pre>
+
+    <h2>How Unity uses this for coroutines</h2>
+    <p>A coroutine is an iterator that returns <code>IEnumerator</code>. The values you yield (<code>null</code>, <code>new WaitForSeconds(1)</code>) are <em>instructions to Unity</em> about when to call <code>MoveNext()</code> again.</p>
+    <pre><code class="language-csharp">IEnumerator Blink()
+{
+    while (true)
+    {
+        rend.enabled = !rend.enabled;
+        yield return new WaitForSeconds(0.5f); // Current = a WaitForSeconds object
+    }
+}
+
+StartCoroutine(Blink()); // Unity gets the IEnumerator and drives it
+</code></pre>
+    <div class="runtime">
+      <p><strong>What Unity does, simplified:</strong></p>
+      <ol>
+        <li>Calling <code>Blink()</code> runs <em>none</em> of its code. It just creates the iterator object. That's why calling a coroutine method without <code>StartCoroutine</code> does nothing.</li>
+        <li><code>StartCoroutine</code> immediately calls <code>MoveNext()</code> once. Your code runs up to the first <code>yield return</code>.</li>
+        <li>Unity looks at <code>Current</code>:
+          <ul>
+            <li><code>null</code> → call <code>MoveNext()</code> again next frame</li>
+            <li><code>WaitForSeconds</code> → call it again once that much game time has passed</li>
+            <li>another <code>Coroutine</code> → call it again when that one finishes</li>
+            <li><code>WaitUntil</code> → check the condition every frame, then call it again</li>
+          </ul>
+        </li>
+        <li>This repeats until <code>MoveNext()</code> returns <code>false</code> (the method reached its end or <code>yield break</code>), or the coroutine is stopped.</li>
+        <li>Local variables survive between pieces because C# turns your method into a hidden class that stores them as fields.</li>
+      </ol>
+    </div>
+
+    <h2>Writing your own iterators</h2>
+    <p>Iterators are useful outside coroutines too, for example producing values lazily:</p>
+    <pre><code class="language-csharp">// Every grid cell around a point, without building a list
+IEnumerable&lt;Vector2Int&gt; Neighbours(Vector2Int c)
+{
+    for (int x = -1; x &lt;= 1; x++)
+    for (int y = -1; y &lt;= 1; y++)
+    {
+        if (x == 0 &amp;&amp; y == 0) continue;
+        yield return new Vector2Int(c.x + x, c.y + y);
+    }
+}
+
+foreach (Vector2Int n in Neighbours(playerCell))
+{
+    if (IsWall(n)) continue;
+    // ...
+}
+</code></pre>
+
+    <h2>IEnumerator vs. IEnumerable</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th></th><th><code>IEnumerable</code></th><th><code>IEnumerator</code></th></tr>
+      <tr><td>Is</td><td>Something you can loop over (a "sequence")</td><td>A cursor moving through a sequence</td></tr>
+      <tr><td>Used by</td><td><code>foreach</code>, LINQ</td><td>Unity coroutines</td></tr>
+      <tr><td>Return this from</td><td>Iterators you'll <code>foreach</code> over</td><td>Coroutines</td></tr>
+    </table>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Returning <code>IEnumerable</code> from a coroutine.</strong> <code>StartCoroutine</code> wants an <code>IEnumerator</code>. Use <code>IEnumerator</code> (from <code>System.Collections</code>, not the generic one).</li>
+      <li><strong>Thinking iterators are threads.</strong> Every piece runs on the main thread. A heavy loop between two yields still freezes the game.</li>
+      <li><strong><code>yield return</code> inside try/catch.</strong> Not allowed by C#. A <code>try</code> with only <code>finally</code> is allowed.</li>
+      <li><strong><code>return</code> instead of <code>yield break</code>.</strong> Inside an iterator, use <code>yield break;</code> to stop early. A plain <code>return value;</code> won't compile.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../manual/coroutines.html">Coroutines</a> (Unity usage guide)</li>
+      <li><a href="async-await.html">async &amp; await</a> (the other way to wait)</li>
+      <li><a href="collections.html">Collections</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://learn.microsoft.com/dotnet/csharp/iterators">official Microsoft C# documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Delegates, Lambdas &amp; Events | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="csharp/delegates-events.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; C# Concepts &rsaquo; Delegates, Lambdas & Events</div>
+    <div class="infobox">
+      <div class="infobox-title">Delegates &amp; Events</div>
+      <table>
+        <tr><th>Keywords</th><td><code>delegate</code>, <code>Action</code>, <code>Func</code>, <code>=&gt;</code>, <code>event</code>, <code>+=</code>, <code>-=</code></td></tr>
+        <tr><th>Namespace</th><td><code>System</code> (for <code>Action</code>/<code>Func</code>)</td></tr>
+        <tr><th>In Unity</th><td><code>SceneManager.sceneLoaded</code>, <code>InputAction.performed</code>, <code>UnityEvent</code>, DOTween's <code>OnComplete</code></td></tr>
+      </table>
+    </div>
+    <h1>Delegates, Lambdas &amp; Events</h1>
+    <p class="summary">A <strong>delegate</strong> is a variable that holds a <em>method</em> instead of a value, so you can pass "what to do" around and call it later. A <strong>lambda</strong> (<code>x =&gt; ...</code>) is a quick way to write a small method inline. An <strong>event</strong> is a delegate that other classes can subscribe to but only the owner can fire.</p>
+    <div class="analogy"><p>A delegate is a phone number written on a card. You can hand the card to someone, store it, or put several numbers on one card. Later, whoever has the card can "call" it without knowing whose number it is. An <strong>event</strong> is a mailing list: people add their own number (<code>+=</code>) and remove it (<code>-=</code>), but only the list owner can send the message.</p></div>
+
+    <h2>Action and Func</h2>
+    <p>You rarely need to declare your own delegate types. .NET provides two general-purpose ones:</p>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Type</th><th>Holds a method that...</th><th>Example</th></tr>
+      <tr><td><code>Action</code></td><td>takes nothing, returns nothing</td><td><code>Action onDone = Respawn;</code></td></tr>
+      <tr><td><code>Action&lt;T1, T2...&gt;</code></td><td>takes parameters, returns nothing</td><td><code>Action&lt;int&gt; onScore = AddScore;</code></td></tr>
+      <tr><td><code>Func&lt;TResult&gt;</code></td><td>takes nothing, returns a value</td><td><code>Func&lt;bool&gt; isReady = () =&gt; loaded;</code></td></tr>
+      <tr><td><code>Func&lt;T1, TResult&gt;</code></td><td>takes parameters, returns a value (the <em>last</em> type is the return type)</td><td><code>Func&lt;Enemy, float&gt; score = e =&gt; e.health;</code></td></tr>
+    </table>
+    </div>
+    <pre><code class="language-csharp">using System;
+using UnityEngine;
+
+public class DelegateDemo : MonoBehaviour
+{
+    void Start()
+    {
+        Action greet = SayHello;       // store a method (no parentheses!)
+        greet();                       // call it: prints "Hello"
+
+        Func&lt;int, int, int&gt; add = (a, b) =&gt; a + b; // lambda
+        Debug.Log(add(2, 3));          // 5
+
+        DoLater(2f, () =&gt; Debug.Log("Two seconds passed"));
+    }
+
+    void SayHello() { Debug.Log("Hello"); }
+
+    // A method that takes "what to do" as a parameter
+    void DoLater(float seconds, Action callback)
+    {
+        StartCoroutine(Wait());
+        System.Collections.IEnumerator Wait()
+        {
+            yield return new WaitForSeconds(seconds);
+            callback();
+        }
+    }
+}
+</code></pre>
+
+    <h2>Lambdas</h2>
+    <pre><code class="language-csharp">x =&gt; x * 2                      // one parameter, returns x * 2
+(a, b) =&gt; a + b                 // two parameters
+() =&gt; Debug.Log("Hi")           // no parameters
+item =&gt; { Debug.Log(item); return item.isKey; } // multi-line needs { } and return
+</code></pre>
+    <p>A lambda can use variables from around it (it "captures" them):</p>
+    <pre><code class="language-csharp">int threshold = 50;
+var strong = enemies.FindAll(e =&gt; e.health &gt; threshold); // uses threshold
+</code></pre>
+
+    <h2>Events</h2>
+    <pre><code class="language-csharp">using System;
+using UnityEngine;
+
+public class Health : MonoBehaviour
+{
+    // Subscribers get the new health value
+    public event Action&lt;float&gt; Changed;
+    public event Action Died;
+
+    private float hp = 100f;
+
+    public void TakeDamage(float amount)
+    {
+        hp -= amount;
+        Changed?.Invoke(hp);        // ?. : only if someone subscribed
+        if (hp &lt;= 0f) Died?.Invoke();
+    }
+}
+
+public class HealthUI : MonoBehaviour
+{
+    [SerializeField] private Health health;
+
+    void OnEnable()
+    {
+        health.Changed += UpdateBar; // subscribe
+        health.Died += ShowGameOver;
+    }
+
+    void OnDisable()
+    {
+        health.Changed -= UpdateBar; // ALWAYS unsubscribe
+        health.Died -= ShowGameOver;
+    }
+
+    private void UpdateBar(float hp)  { /* ... */ }
+    private void ShowGameOver()       { /* ... */ }
+}
+</code></pre>
+    <p>Without the <code>event</code> keyword, any class could do <code>health.Died = null;</code> (wiping everyone's subscriptions) or <code>health.Died()</code> (faking a death). <code>event</code> only allows <code>+=</code> and <code>-=</code> from outside.</p>
+
+    <h2>C# event vs. UnityEvent</h2>
+    <p>Use a C# <code>event</code> for code-to-code connections, and <code>UnityEvent</code> when you want designers to connect things in the Inspector. The full comparison is on the <a href="../api/unityevent.html">UnityEvent</a> page.</p>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>A delegate is an object that stores the target object and which method to call on it.</li>
+        <li><code>+=</code> creates a new delegate containing the old list plus the new method. <code>Invoke()</code> calls them in the order they were added.</li>
+        <li>A lambda that captures local variables is turned into a hidden class that holds those variables, which means an allocation each time it's created. Avoid creating capturing lambdas every frame.</li>
+        <li>An event holds a reference to every subscriber. A destroyed object that never unsubscribed stays in the list, and invoking it throws <code>MissingReferenceException</code> (or silently keeps objects alive in memory).</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Not unsubscribing.</strong> Pair every <code>+=</code> in <code>OnEnable</code> with <code>-=</code> in <code>OnDisable</code>.</li>
+      <li><strong>Unsubscribing a lambda.</strong> <code>Died -= () =&gt; Respawn();</code> does nothing, because it's a <em>new</em> lambda. Use a named method, or store the lambda in a field.</li>
+      <li><strong><code>greet = SayHello();</code></strong> with parentheses calls the method and tries to store its result. Leave off the <code>()</code>.</li>
+      <li><strong>Capturing a loop variable</strong> in a <code>for</code> loop: <code>for (int i...) buttons[i].onClick.AddListener(() =&gt; Select(i));</code> makes every button use the final value of <code>i</code>. Copy it first: <code>int index = i;</code> and capture <code>index</code>. (<code>foreach</code> variables are safe.)</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../api/unityevent.html">UnityEvent</a></li>
+      <li><a href="../tutorials/unityevents.html">Tutorial: UnityEvents in a Game</a></li>
+      <li><a href="linq.html">LINQ</a> (lambdas everywhere)</li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://learn.microsoft.com/dotnet/csharp/programming-guide/delegates/">official Microsoft C# documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

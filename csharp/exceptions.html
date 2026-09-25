@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Exceptions &amp; try/catch | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="csharp/exceptions.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; C# Concepts &rsaquo; Exceptions & try/catch</div>
+    <div class="infobox">
+      <div class="infobox-title">Exceptions</div>
+      <table>
+        <tr><th>Keywords</th><td><code>try</code>, <code>catch</code>, <code>finally</code>, <code>throw</code>, <code>when</code></td></tr>
+        <tr><th>Category</th><td>Error handling</td></tr>
+        <tr><th>In Unity</th><td>The red errors in the Console: <code>NullReferenceException</code>, <code>MissingReferenceException</code>...</td></tr>
+      </table>
+    </div>
+    <h1>Exceptions &amp; try/catch</h1>
+    <p class="summary">An <strong>exception</strong> is C#'s way of saying "something went wrong and I can't continue". If nothing handles it, Unity prints a red error in the Console and skips the rest of that method. A <code>try</code>/<code>catch</code> block lets you handle the problem yourself.</p>
+    <div class="analogy"><p>A tightrope walker with a safety net. The code inside <code>try</code> is the walk. If the walker falls (an exception), the <code>catch</code> is the net that catches them, so the show can go on. <code>finally</code> is the crew who clean up the stage afterwards, whether the walker made it across or fell.</p></div>
+
+    <h2>Syntax</h2>
+    <pre><code class="language-csharp">try
+{
+    // Code that might fail
+}
+catch (SpecificException ex)
+{
+    // Runs only if that kind of exception happened
+}
+catch (Exception ex)
+{
+    // Catches anything else (put the most general one last)
+}
+finally
+{
+    // ALWAYS runs: after try succeeds, after a catch, even after a return
+}
+</code></pre>
+
+    <h2>What Unity does with an unhandled exception</h2>
+    <div class="runtime">
+      <ol>
+        <li>Your code throws, e.g. you call a method on a <code>null</code> variable in <code>Update</code>.</li>
+        <li>C# stops running that method immediately, and walks back up through the methods that called it, looking for a matching <code>catch</code>.</li>
+        <li>If none is found, Unity catches it at the top, logs a red error with the stack trace, and moves on to the next script's <code>Update</code>.</li>
+        <li><strong>The game doesn't crash</strong>, but everything after the error line in that method was skipped. Next frame it runs again, and probably fails again, which is why you see the same error hundreds of times.</li>
+        <li>Inside a coroutine, an unhandled exception <em>stops that coroutine for good</em>.</li>
+      </ol>
+    </div>
+
+    <h2>When to use try/catch in Unity</h2>
+    <p>Use it for things <strong>outside your control</strong> that can fail even when your code is correct:</p>
+    <ul>
+      <li>Reading and writing files (disk full, file missing, no permission)</li>
+      <li>Parsing data from files, the network or players (bad JSON, bad numbers)</li>
+      <li>Web requests and platform APIs</li>
+      <li>Calling third-party code or mods you don't trust</li>
+    </ul>
+    <p>Don't use it to hide <strong>bugs in your own code</strong>. A <code>NullReferenceException</code> from an unassigned field should be fixed, not caught.</p>
+
+    <h2>Code Samples</h2>
+    <h3>Loading a save file safely</h3>
+    <pre><code class="language-csharp">using System;
+using System.IO;
+using UnityEngine;
+
+public static class SaveSystem
+{
+    private static string SavePath =&gt; Path.Combine(Application.persistentDataPath, "save.json");
+
+    public static SaveData Load()
+    {
+        try
+        {
+            string json = File.ReadAllText(SavePath);
+            SaveData data = JsonUtility.FromJson&lt;SaveData&gt;(json);
+            return data ?? new SaveData(); // FromJson can return null for empty text
+        }
+        catch (FileNotFoundException)
+        {
+            // First time playing: not an error.
+            return new SaveData();
+        }
+        catch (Exception ex)
+        {
+            // Corrupt file or no permission: tell the developer, but keep the game running.
+            Debug.LogError($"Could not load save: {ex.Message}");
+            return new SaveData();
+        }
+    }
+
+    public static void Save(SaveData data)
+    {
+        string tempPath = SavePath + ".tmp";
+        try
+        {
+            // Write to a temp file first, so a crash mid-write can't destroy the real save.
+            File.WriteAllText(tempPath, JsonUtility.ToJson(data));
+            File.Copy(tempPath, SavePath, overwrite: true);
+        }
+        catch (IOException ex)
+        {
+            Debug.LogError($"Could not save: {ex.Message}");
+        }
+        finally
+        {
+            if (File.Exists(tempPath)) File.Delete(tempPath); // clean up either way
+        }
+    }
+}
+
+[Serializable]
+public class SaveData
+{
+    public int level = 1;
+    public int coins;
+}
+</code></pre>
+    <p>The <code>??</code> here is fine because <code>SaveData</code> is a plain C# class, not a Unity object.</p>
+
+    <h3>Parsing without exceptions: TryParse</h3>
+    <p>Many .NET types offer a <code>Try...</code> method that returns <code>false</code> instead of throwing. It's faster and cleaner than try/catch.</p>
+    <pre><code class="language-csharp">// Throws FormatException on bad input:
+int a = int.Parse(inputField.text);
+
+// Better: no exception, just check the result
+if (int.TryParse(inputField.text, out int amount))
+{
+    GiveCoins(amount);
+}
+else
+{
+    errorLabel.text = "Please enter a number.";
+}
+</code></pre>
+    <p>Unity's own APIs follow the same idea: <code>TryGetComponent</code>, <code>Dictionary.TryGetValue</code>.</p>
+
+    <h3>Throwing your own exceptions</h3>
+    <p>Throw when a method is used wrongly in a way the caller must fix.</p>
+    <pre><code class="language-csharp">public void SetVolume(float volume)
+{
+    if (volume &lt; 0f || volume &gt; 1f)
+        throw new ArgumentOutOfRangeException(nameof(volume), "Volume must be between 0 and 1.");
+    // ...
+}
+</code></pre>
+
+    <h3>Keeping one bad listener from breaking the others</h3>
+    <pre><code class="language-csharp">foreach (var listener in listeners)
+{
+    try
+    {
+        listener.OnGameSaved();
+    }
+    catch (Exception ex)
+    {
+        Debug.LogException(ex); // logs with the full stack trace, then continues the loop
+    }
+}
+</code></pre>
+
+    <h2>Common exceptions in Unity</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Exception</th><th>Usually means</th><th>Fix</th></tr>
+      <tr><td><code>NullReferenceException</code></td><td>You used a variable that's <code>null</code>: an unassigned Inspector field, or <code>GetComponent</code> found nothing</td><td>Double-click the error; check which variable on that line is null</td></tr>
+      <tr><td><code>MissingReferenceException</code></td><td>The object was destroyed, but you still use it</td><td>Check <code>!= null</code> before use; unsubscribe events in <code>OnDisable</code></td></tr>
+      <tr><td><code>UnassignedReferenceException</code></td><td>A serialized field was never assigned in the Inspector</td><td>Assign it, or check in <code>Awake</code> and log a clear error</td></tr>
+      <tr><td><code>IndexOutOfRangeException</code> / <code>ArgumentOutOfRangeException</code></td><td>Array/list index is negative or ≥ Count</td><td>Loop with <code>i &lt; array.Length</code>, not <code>&lt;=</code></td></tr>
+      <tr><td><code>KeyNotFoundException</code></td><td><code>dictionary[key]</code> for a key that isn't there</td><td>Use <code>TryGetValue</code></td></tr>
+      <tr><td><code>InvalidOperationException</code></td><td>"Collection was modified" while looping over it with <code>foreach</code>; or reading old <code>Input</code> with only the new Input System on</td><td>Loop backwards with <code>for</code>; see <a href="../manual/input.html">Handling Input</a></td></tr>
+      <tr><td><code>StackOverflowException</code></td><td>A method or property calls itself forever</td><td>Usually crashes the Editor; check recursive calls and properties</td></tr>
+    </table>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Empty catch blocks.</strong> <code>catch { } </code> hides the problem completely, so you'll never know why something doesn't work. At minimum, <code>Debug.LogException(ex)</code>.</li>
+      <li><strong>Catching <code>Exception</code> around everything.</strong> Catch the specific exceptions you expect and can handle.</li>
+      <li><strong>Using exceptions for normal flow.</strong> Throwing is slow. "Player has no key" is a normal situation: use an <code>if</code>, not an exception.</li>
+      <li><strong><code>throw ex;</code> inside a catch.</strong> This resets the stack trace. To re-throw, write just <code>throw;</code>.</li>
+      <li><strong>try/catch around a <code>yield return</code>.</strong> C# doesn't allow <code>yield return</code> inside a <code>try</code> block that has a <code>catch</code>. Put the risky code in a normal method and call it from the coroutine.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="null.html">Null &amp; Nullable Types</a></li>
+      <li><a href="../api/debug.html">Debug</a> (<code>LogException</code>)</li>
+      <li><a href="async-await.html">async &amp; await</a> (exceptions in async code)</li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/statements/exception-handling-statements">official Microsoft C# documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

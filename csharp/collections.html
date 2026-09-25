@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Collections | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="csharp/collections.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; C# Concepts &rsaquo; Collections</div>
+    <div class="infobox">
+      <div class="infobox-title">Collections</div>
+      <table>
+        <tr><th>Types</th><td><code>T[]</code>, <code>List&lt;T&gt;</code>, <code>Dictionary&lt;K,V&gt;</code>, <code>HashSet&lt;T&gt;</code>, <code>Queue&lt;T&gt;</code>, <code>Stack&lt;T&gt;</code></td></tr>
+        <tr><th>Namespace</th><td><code>System.Collections.Generic</code></td></tr>
+        <tr><th>In Unity</th><td>Inventories, enemy lists, spawn points, lookup tables</td></tr>
+      </table>
+    </div>
+    <h1>Collections</h1>
+    <p class="summary">Collections hold many values in one variable. Picking the right one makes your code simpler and faster. Add <code>using System.Collections.Generic;</code> for everything except arrays.</p>
+
+    <h2>Which one do I need?</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Collection</th><th>Think of it as</th><th>Use when</th><th>Inspector?</th></tr>
+      <tr><td>Array <code>T[]</code></td><td>An egg carton: fixed number of slots</td><td>The size doesn't change: spawn points, waypoints</td><td>Yes</td></tr>
+      <tr><td><code>List&lt;T&gt;</code></td><td>A shopping list: add and cross off items</td><td>The size changes: inventory, active enemies</td><td>Yes</td></tr>
+      <tr><td><code>Dictionary&lt;K,V&gt;</code></td><td>A phone book: look up a value by its key</td><td>Find things by ID or name: items by ID, stats by name</td><td>No</td></tr>
+      <tr><td><code>HashSet&lt;T&gt;</code></td><td>A guest list: each name at most once, fast "are you on the list?"</td><td>Uniqueness and fast "contains": enemies already hit by this attack</td><td>No</td></tr>
+      <tr><td><code>Queue&lt;T&gt;</code></td><td>A line at the shop: first in, first out</td><td>Process in order: dialogue lines, spawn queue, pathfinding</td><td>No</td></tr>
+      <tr><td><code>Stack&lt;T&gt;</code></td><td>A stack of plates: last in, first out</td><td>Undo history, menu back-navigation</td><td>No</td></tr>
+    </table>
+    </div>
+
+    <h2>Arrays</h2>
+    <pre><code class="language-csharp">[SerializeField] private Transform[] spawnPoints; // set the size and fill it in the Inspector
+
+int[] scores = new int[5];          // 5 slots, all 0
+string[] names = { "Ana", "Ben" };  // created with values
+
+Debug.Log(spawnPoints.Length);       // number of slots
+Transform first = spawnPoints[0];    // index starts at 0
+Transform last  = spawnPoints[^1];   // ^1 = last element (C# 8)
+</code></pre>
+
+    <h2>List&lt;T&gt;</h2>
+    <pre><code class="language-csharp">List&lt;Item&gt; inventory = new List&lt;Item&gt;();
+
+inventory.Add(sword);                // add to the end
+inventory.Insert(0, potion);         // add at a position
+inventory.Remove(potion);            // remove first match (returns true if found)
+inventory.RemoveAt(0);               // remove by index
+bool hasSword = inventory.Contains(sword);
+int count = inventory.Count;         // Count for lists, Length for arrays
+inventory.Clear();                   // empty it, keep the memory for reuse
+
+// Remove all matching items
+inventory.RemoveAll(item =&gt; item.isBroken);
+
+// Find the first match (or null)
+Item key = inventory.Find(item =&gt; item.id == "gold_key");
+</code></pre>
+
+    <h2>Dictionary&lt;TKey, TValue&gt;</h2>
+    <pre><code class="language-csharp">Dictionary&lt;string, int&gt; ammo = new Dictionary&lt;string, int&gt;
+{
+    { "Pistol", 12 },
+    { "Shotgun", 6 },
+};
+
+ammo["Rifle"] = 30;                  // add or overwrite
+ammo["Pistol"] -= 1;                 // change existing
+
+// Safe lookup: no exception if the key is missing
+if (ammo.TryGetValue("Rocket", out int rockets))
+{
+    Debug.Log($"Rockets: {rockets}");
+}
+
+foreach (KeyValuePair&lt;string, int&gt; pair in ammo)
+{
+    Debug.Log($"{pair.Key}: {pair.Value}");
+}
+</code></pre>
+    <div class="note"><strong>Dictionaries in the Inspector</strong>Unity can't show dictionaries. A common workaround: serialize a <code>List</code> of small <code>[Serializable]</code> entries, then build the dictionary from it in <code>Awake</code>.</div>
+    <pre><code class="language-csharp">[System.Serializable]
+public class ItemEntry { public string id; public ItemData data; }
+
+[SerializeField] private List&lt;ItemEntry&gt; entries;  // edited in the Inspector
+private Dictionary&lt;string, ItemData&gt; byId;
+
+void Awake()
+{
+    byId = new Dictionary&lt;string, ItemData&gt;();
+    foreach (var e in entries) byId[e.id] = e.data;
+}
+</code></pre>
+
+    <h2>HashSet, Queue, Stack</h2>
+    <pre><code class="language-csharp">// A sword swing should hit each enemy only once, even with several colliders
+HashSet&lt;Enemy&gt; alreadyHit = new HashSet&lt;Enemy&gt;();
+if (alreadyHit.Add(enemy))          // Add returns false if it was already there
+    enemy.TakeDamage(10);
+
+// Dialogue shown in order
+Queue&lt;string&gt; lines = new Queue&lt;string&gt;();
+lines.Enqueue("Hello!");
+lines.Enqueue("Nice weather.");
+string next = lines.Dequeue();      // "Hello!"
+
+// Menu back button
+Stack&lt;GameObject&gt; menuHistory = new Stack&lt;GameObject&gt;();
+menuHistory.Push(optionsMenu);
+GameObject previous = menuHistory.Pop();
+</code></pre>
+
+    <h2>Looping</h2>
+    <pre><code class="language-csharp">// foreach: simplest, read-only
+foreach (Enemy e in enemies) e.Alert();
+
+// for: when you need the index, or to change items
+for (int i = 0; i &lt; enemies.Count; i++) enemies[i].Alert();
+
+// Removing while looping: go BACKWARDS
+for (int i = enemies.Count - 1; i &gt;= 0; i--)
+{
+    if (enemies[i] == null) enemies.RemoveAt(i);
+}
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>A <code>List&lt;T&gt;</code> is an array inside. When it's full, it creates a bigger array (about double) and copies everything over. If you know the size, <code>new List&lt;T&gt;(100)</code> avoids those copies.</li>
+        <li><code>Contains</code> and <code>Remove</code> on a List check every item one by one. With thousands of items, a <code>HashSet</code> or <code>Dictionary</code> is far faster, because it jumps straight to the right slot using the item's hash.</li>
+        <li>Creating a new collection allocates memory; creating one every frame creates garbage. Keep collections as fields and <code>Clear()</code> them.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong><code>InvalidOperationException: Collection was modified</code></strong>: you added/removed items inside a <code>foreach</code> over the same collection. Loop backwards with <code>for</code>, or collect changes and apply them after.</li>
+      <li><strong>Off-by-one:</strong> <code>for (int i = 0; i &lt;= list.Count; i++)</code> goes one past the end. Use <code>&lt;</code>.</li>
+      <li><strong><code>dictionary[key]</code> for a missing key</strong> throws <code>KeyNotFoundException</code>. Use <code>TryGetValue</code>.</li>
+      <li><strong>Forgetting to create the collection.</strong> <code>private List&lt;Enemy&gt; enemies;</code> is null until you write <code>= new List&lt;Enemy&gt;()</code>. (Serialized lists are created by Unity automatically.)</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="linq.html">LINQ</a> (querying collections)</li>
+      <li><a href="generics.html">Generics</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://learn.microsoft.com/dotnet/standard/collections/">official Microsoft C# documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

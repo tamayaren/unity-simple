@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Object Pooling | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="guides/object-pooling.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Performance &rsaquo; Object Pooling</div>
+    <h1>Object Pooling</h1>
+    <p class="summary">Object pooling means <strong>reusing</strong> objects instead of creating and destroying them. When a bullet "dies", you switch it off and put it back in a pool; the next shot takes it out and switches it on again. It removes the cost of <code>Instantiate</code>/<code>Destroy</code> and the garbage-collection stutters they cause.</p>
+    <div class="analogy"><p>Shoes at a bowling alley. The alley doesn't make a new pair for every customer and throw them away afterwards. It keeps a shelf of shoes: hand a pair out, get it back, spray it clean (reset), and put it back on the shelf. When it's busy and the shelf is empty, it buys a few more pairs.</p></div>
+
+    <h2>When to pool</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Pool it</th><th>Don't bother</th></tr>
+      <tr><td>Bullets, shell casings, projectiles</td><td>The player</td></tr>
+      <tr><td>Hit effects, particles, decals</td><td>A boss spawned once per level</td></tr>
+      <tr><td>Damage numbers, floating text</td><td>UI screens opened occasionally</td></tr>
+      <tr><td>Enemies in wave-based games</td><td>Anything created a few times per minute</td></tr>
+      <tr><td>Audio one-shot sources</td><td></td></tr>
+    </table>
+    </div>
+    <p>Rule of thumb: pool things created <strong>many times per second</strong>, or in bursts large enough to show a spike in the Profiler.</p>
+
+    <h2>The lifecycle</h2>
+    <pre><code>        Create (only when the pool is empty)
+               |
+               v
+   +-----> [ In pool: inactive ] ---- Get() ----> [ Active in the game ]
+   |                                                      |
+   +------------------ Release() (reset + deactivate) ----+</code></pre>
+
+    <h2>Unity's built-in ObjectPool&lt;T&gt;</h2>
+    <p>Namespace <code>UnityEngine.Pool</code> (Unity 2021.1+).</p>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Constructor parameter</th><th>Meaning</th></tr>
+      <tr><td><code>createFunc</code></td><td>How to make a new one (usually <code>Instantiate</code>)</td></tr>
+      <tr><td><code>actionOnGet</code></td><td>Runs when taken out (usually <code>SetActive(true)</code>)</td></tr>
+      <tr><td><code>actionOnRelease</code></td><td>Runs when returned (usually <code>SetActive(false)</code>)</td></tr>
+      <tr><td><code>actionOnDestroy</code></td><td>Runs when the pool is full and throws one away, or on <code>Clear()</code></td></tr>
+      <tr><td><code>collectionCheck</code></td><td>If true, throws an error if you release the same object twice (checked in the Editor). Keep it on while developing.</td></tr>
+      <tr><td><code>defaultCapacity</code></td><td>Starting size of the internal storage</td></tr>
+      <tr><td><code>maxSize</code></td><td>Max objects kept <em>inactive</em>. Extras released beyond this are destroyed.</td></tr>
+    </table>
+    </div>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Member</th><th>Description</th></tr>
+      <tr><td><code>Get()</code></td><td>Take one out (creates one if the pool is empty)</td></tr>
+      <tr><td><code>Release(obj)</code></td><td>Give one back</td></tr>
+      <tr><td><code>CountActive</code> / <code>CountInactive</code> / <code>CountAll</code></td><td>How many are out / waiting / total</td></tr>
+      <tr><td><code>Clear()</code></td><td>Destroy all inactive ones</td></tr>
+    </table>
+    </div>
+
+    <h2>Full example: pooled bullets</h2>
+    <pre><code class="language-csharp">using UnityEngine;
+using UnityEngine.Pool;
+
+public class Gun : MonoBehaviour
+{
+    [SerializeField] private Bullet bulletPrefab;
+    [SerializeField] private Transform muzzle;
+    [SerializeField] private int prewarm = 30;
+
+    private ObjectPool&lt;Bullet&gt; pool;
+
+    void Awake()
+    {
+        pool = new ObjectPool&lt;Bullet&gt;(
+            createFunc: () =&gt;
+            {
+                Bullet b = Instantiate(bulletPrefab);
+                b.SetPool(pool);          // the bullet needs to know where to return
+                return b;
+            },
+            actionOnGet:     b =&gt; b.gameObject.SetActive(true),
+            actionOnRelease: b =&gt; b.gameObject.SetActive(false),
+            actionOnDestroy: b =&gt; Destroy(b.gameObject),
+            collectionCheck: true,
+            defaultCapacity: prewarm,
+            maxSize: 200);
+
+        Prewarm();
+    }
+
+    // Create objects during loading, not in the middle of a fight
+    void Prewarm()
+    {
+        var temp = new Bullet[prewarm];
+        for (int i = 0; i &lt; prewarm; i++) temp[i] = pool.Get();
+        for (int i = 0; i &lt; prewarm; i++) pool.Release(temp[i]);
+    }
+
+    public void Fire()
+    {
+        Bullet b = pool.Get();
+        b.Launch(muzzle.position, muzzle.rotation);
+    }
+}
+</code></pre>
+    <pre><code class="language-csharp">using UnityEngine;
+using UnityEngine.Pool;
+
+[RequireComponent(typeof(Rigidbody))]
+public class Bullet : MonoBehaviour
+{
+    [SerializeField] private float speed = 40f;
+    [SerializeField] private float lifetime = 3f;
+    [SerializeField] private TrailRenderer trail;
+
+    private IObjectPool&lt;Bullet&gt; pool;
+    private Rigidbody rb;
+    private float dieAt;
+    private bool released;
+
+    void Awake() { rb = GetComponent&lt;Rigidbody&gt;(); }
+
+    public void SetPool(IObjectPool&lt;Bullet&gt; p) { pool = p; }
+
+    // Everything that must be "fresh" is reset here, NOT in Start
+    public void Launch(Vector3 pos, Quaternion rot)
+    {
+        released = false;
+        transform.SetPositionAndRotation(pos, rot);
+        rb.position = pos;                  // keep physics in sync with the teleport
+        rb.linearVelocity = transform.forward * speed;
+        rb.angularVelocity = Vector3.zero;
+        if (trail) trail.Clear();           // otherwise a streak is drawn from the old position
+        dieAt = Time.time + lifetime;
+    }
+
+    void Update()
+    {
+        if (Time.time &gt;= dieAt) ReturnToPool();
+    }
+
+    void OnCollisionEnter(Collision c)
+    {
+        if (c.collider.TryGetComponent(out IDamageable d)) d.TakeDamage(10f);
+        ReturnToPool();
+    }
+
+    private void ReturnToPool()
+    {
+        if (released) return;   // guard: hit something AND timed out on the same frame
+        released = true;
+        pool.Release(this);     // instead of Destroy(gameObject)
+    }
+}
+</code></pre>
+
+    <div class="runtime">
+      <p><strong>What happens at runtime</strong></p>
+      <ol>
+        <li>At load, <code>Prewarm</code> creates 30 bullets (running their <code>Awake</code>), then deactivates them. All the expensive work is done up front.</li>
+        <li><code>Fire()</code> takes an inactive bullet from the pool's internal stack. No <code>Instantiate</code>, no memory allocation. <code>SetActive(true)</code> runs <code>OnEnable</code>.</li>
+        <li>On hit or timeout, the bullet deactivates itself (<code>OnDisable</code> runs) and goes back on the stack.</li>
+        <li>If 31 bullets are needed at once, the pool creates one more. Over time the pool grows to the peak you actually need and then stops allocating.</li>
+      </ol>
+    </div>
+
+    <h2>Pooling particle effects</h2>
+    <p>Set the ParticleSystem's <strong>Stop Action</strong> to <em>Callback</em> (Main module). Unity then calls <code>OnParticleSystemStopped</code> on scripts on the same GameObject when it finishes.</p>
+    <pre><code class="language-csharp">using UnityEngine;
+using UnityEngine.Pool;
+
+[RequireComponent(typeof(ParticleSystem))]
+public class PooledEffect : MonoBehaviour
+{
+    public IObjectPool&lt;PooledEffect&gt; Pool { get; set; }
+    private ParticleSystem ps;
+
+    void Awake()
+    {
+        ps = GetComponent&lt;ParticleSystem&gt;();
+        var main = ps.main;
+        main.stopAction = ParticleSystemStopAction.Callback;
+    }
+
+    public void PlayAt(Vector3 pos)
+    {
+        transform.position = pos;
+        ps.Play();
+    }
+
+    void OnParticleSystemStopped() { Pool.Release(this); }
+}
+</code></pre>
+
+    <h2>One pool per prefab</h2>
+    <pre><code class="language-csharp">using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.Pool;
+
+public class PoolManager : MonoBehaviour
+{
+    public static PoolManager Instance { get; private set; }
+    private readonly Dictionary&lt;GameObject, ObjectPool&lt;GameObject&gt;&gt; pools = new();
+    private readonly Dictionary&lt;GameObject, GameObject&gt; instanceToPrefab = new();
+
+    void Awake() { Instance = this; }
+
+    public GameObject Spawn(GameObject prefab, Vector3 pos, Quaternion rot)
+    {
+        if (!pools.TryGetValue(prefab, out var pool))
+        {
+            pool = new ObjectPool&lt;GameObject&gt;(
+                () =&gt; Instantiate(prefab, transform),   // parent under the manager: tidy Hierarchy
+                go =&gt; go.SetActive(true),
+                go =&gt; go.SetActive(false),
+                go =&gt; Destroy(go));
+            pools[prefab] = pool;
+        }
+        GameObject obj = pool.Get();
+        obj.transform.SetPositionAndRotation(pos, rot);
+        instanceToPrefab[obj] = prefab;
+        return obj;
+    }
+
+    public void Despawn(GameObject obj)
+    {
+        if (instanceToPrefab.TryGetValue(obj, out var prefab)) pools[prefab].Release(obj);
+        else Destroy(obj); // wasn't pooled
+    }
+}
+</code></pre>
+
+    <h2>Pooling temporary collections</h2>
+    <p><code>UnityEngine.Pool</code> also pools lists and sets, to avoid garbage from temporary collections:</p>
+    <pre><code class="language-csharp">using (ListPool&lt;Collider&gt;.Get(out List&lt;Collider&gt; nearby))
+{
+    GetComponentsInChildren(nearby);
+    // use the list...
+} // automatically returned to the pool here
+</code></pre>
+    <p>Also available: <code>HashSetPool&lt;T&gt;</code>, <code>DictionaryPool&lt;K,V&gt;</code>, <code>GenericPool&lt;T&gt;</code> for plain C# classes.</p>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Not resetting state.</strong> A reused enemy comes back with 0 health; a bullet keeps its old velocity. Reset in your "launch"/<code>OnEnable</code> code. <code>Awake</code> and <code>Start</code> only run the first time.</li>
+      <li><strong>Releasing twice.</strong> The same object ends up in the pool twice and gets handed out to two users. Guard with a flag (see <code>released</code> above) and keep <code>collectionCheck</code> on.</li>
+      <li><strong>Calling <code>Destroy</code> on a pooled object.</strong> The pool still holds a reference to a destroyed object. Always <code>Release</code>.</li>
+      <li><strong>Stale references.</strong> An enemy still targeting a bullet that has been recycled into a new bullet. Clear references on release, or check an ID.</li>
+      <li><strong>Coroutines on pooled objects</strong> stop when deactivated. Restart them in <code>OnEnable</code> if needed.</li>
+      <li><strong>Pools that grow forever.</strong> Set <code>maxSize</code> so a one-off burst doesn't keep hundreds of objects in memory.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../manual/prefabs.html">Prefabs &amp; Spawning</a></li>
+      <li><a href="optimization-practices.html">Optimization Best Practices</a></li>
+      <li><a href="optimization.html">Optimizing Your Code</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/Pool.ObjectPool_1.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

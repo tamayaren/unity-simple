@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Extension Methods | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="csharp/extension-methods.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; C# Concepts &rsaquo; Extension Methods</div>
+    <div class="infobox">
+      <div class="infobox-title">Extension Methods</div>
+      <table>
+        <tr><th>Keywords</th><td><code>static class</code>, <code>this</code> (first parameter)</td></tr>
+        <tr><th>Category</th><td>Methods</td></tr>
+        <tr><th>In Unity</th><td>DOTween's <code>transform.DOMove()</code>, LINQ's <code>list.Where()</code></td></tr>
+      </table>
+    </div>
+    <h1>Extension Methods</h1>
+    <p class="summary">Extension methods let you add your own methods to types you didn't write, such as <code>Transform</code>, <code>Vector3</code> or <code>GameObject</code>, and call them as if they were built in. DOTween's <code>transform.DOMove(...)</code> is an extension method.</p>
+    <div class="analogy"><p>Stick-on accessories for a phone. You can't open the phone and rebuild it (you don't own Unity's source code), but you can clip on a camera lens that looks and works like part of the phone. Underneath, it's still a separate piece.</p></div>
+
+    <h2>How to write one</h2>
+    <ol>
+      <li>Create a <code>static class</code> (any name, often ending in "Extensions").</li>
+      <li>Write a <code>static</code> method.</li>
+      <li>Put <code>this</code> before the first parameter. Its type is the type you're extending.</li>
+    </ol>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public static class VectorExtensions
+{
+    // Returns a copy with a different y
+    public static Vector3 WithY(this Vector3 v, float y)
+    {
+        return new Vector3(v.x, y, v.z);
+    }
+
+    // Ignore height: useful for top-down distances and directions
+    public static Vector3 Flat(this Vector3 v) =&gt; new Vector3(v.x, 0f, v.z);
+}
+
+// Usage: looks like a Vector3 method
+transform.position = transform.position.WithY(0f);
+Vector3 dir = (target.position - transform.position).Flat().normalized;
+</code></pre>
+    <p>Compare with the long version: <code>Vector3 p = transform.position; p.y = 0f; transform.position = p;</code></p>
+
+    <h2>More useful examples</h2>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public static class UnityExtensions
+{
+    // Destroy every child
+    public static void DestroyChildren(this Transform t)
+    {
+        for (int i = t.childCount - 1; i &gt;= 0; i--)
+            Object.Destroy(t.GetChild(i).gameObject);
+    }
+
+    // Is this layer inside a LayerMask?
+    public static bool Contains(this LayerMask mask, int layer)
+    {
+        return (mask.value &amp; (1 &lt;&lt; layer)) != 0;
+    }
+
+    // Get a component, or add it if it's missing
+    public static T GetOrAdd&lt;T&gt;(this GameObject go) where T : Component
+    {
+        return go.TryGetComponent(out T c) ? c : go.AddComponent&lt;T&gt;();
+    }
+
+    // Pick a random element
+    public static T RandomItem&lt;T&gt;(this T[] array)
+    {
+        return array[Random.Range(0, array.Length)];
+    }
+}
+
+// Usage
+inventoryPanel.DestroyChildren();
+if (groundMask.Contains(other.gameObject.layer)) { /* landed */ }
+var source = gameObject.GetOrAdd&lt;AudioSource&gt;();
+AudioClip clip = footsteps.RandomItem();
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>Extension methods are only a nicer way to <em>write</em> the call. The compiler turns <code>pos.WithY(0f)</code> into <code>VectorExtensions.WithY(pos, 0f)</code>.</li>
+        <li>They cost exactly the same as calling a normal static method.</li>
+        <li>They can only use the <em>public</em> members of the type. They can't reach private fields or add new fields.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Method not found.</strong> The class must be <code>static</code>, not nested inside another class, and its namespace must be imported with <code>using</code>.</li>
+      <li><strong>Expecting it to change a struct.</strong> <code>transform.position.WithY(0)</code> returns a <em>new</em> Vector3; assign it back. See <a href="value-vs-reference.html">Value &amp; Reference Types</a>.</li>
+      <li><strong>Calling on a null object.</strong> Extension methods <em>can</em> be called on null (no instant error, since it's a static call), so check inside if it matters.</li>
+      <li><strong>Name clashes.</strong> If the type already has a method with the same name and parameters, the built-in one wins and yours is ignored.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="generics.html">Generics</a></li>
+      <li><a href="../api/dotween.html">DOTween</a> (built from extension methods)</li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://learn.microsoft.com/dotnet/csharp/programming-guide/classes-and-structs/extension-methods">official Microsoft C# documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

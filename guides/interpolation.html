@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interpolation &amp; Easing | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="guides/interpolation.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Guides &rsaquo; Interpolation & Easing</div>
+    <h1>Interpolation &amp; Easing</h1>
+    <p class="summary">Interpolation means finding a value <em>between</em> two others. It's behind almost every smooth motion in games: doors opening, cameras following, health bars draining, colors fading. This guide covers the four main ways to do it, which to pick, and how to make it feel good with easing.</p>
+    <div class="analogy"><p>A dimmer switch between "off" (A) and "full brightness" (B). The knob position is <code>t</code>: 0 is fully A, 1 is fully B, 0.5 is halfway. Interpolation is just "set the knob to <code>t</code>, what's the brightness?" Easing is changing <em>how fast you turn the knob</em>: slowly at first, then faster, then slowly again.</p></div>
+
+    <h2>Lerp: the core idea</h2>
+    <p><code>Lerp</code> (linear interpolation) is simply: <strong><code>a + (b - a) * t</code></strong>.</p>
+    <pre><code class="language-csharp">Mathf.Lerp(0f, 10f, 0.25f);                  // 2.5
+Vector3.Lerp(pointA, pointB, 0.5f);          // halfway between the points
+Color.Lerp(Color.white, Color.red, 0.8f);    // mostly red
+Quaternion.Slerp(rotA, rotB, 0.5f);          // halfway rotation
+</code></pre>
+    <p><code>Lerp</code> clamps <code>t</code> to 0-1. <code>LerpUnclamped</code> doesn't, so <code>t = 1.2</code> overshoots past <code>b</code> (useful for bouncy effects).</p>
+
+    <h2>The four patterns</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Pattern</th><th>Feels like</th><th>Arrives?</th><th>Use for</th><th>Tool</th></tr>
+      <tr><td>1. Fixed duration</td><td>"Takes exactly 0.5 s"</td><td>Yes, on time</td><td>Doors, UI transitions, cutscenes</td><td><code>Lerp</code> with <code>t = elapsed / duration</code></td></tr>
+      <tr><td>2. Constant speed</td><td>"Moves at 5 m/s"</td><td>Yes, exactly</td><td>Enemies walking, turrets turning</td><td><code>MoveTowards</code>, <code>RotateTowards</code></td></tr>
+      <tr><td>3. Smooth follow</td><td>"Fast when far, slows as it gets close"</td><td>Almost (gets very close)</td><td>Cameras, UI following a target, smoothing input</td><td><code>Lerp</code> with a decay factor</td></tr>
+      <tr><td>4. Spring</td><td>"Has momentum, eases in and out"</td><td>Yes (approximately)</td><td>Cameras, zoom, aim smoothing</td><td><code>SmoothDamp</code></td></tr>
+    </table>
+    </div>
+
+    <h3>1. Fixed duration (with easing)</h3>
+    <pre><code class="language-csharp">using System.Collections;
+using UnityEngine;
+
+public class SlidingDoor : MonoBehaviour
+{
+    [SerializeField] private Vector3 openOffset = new Vector3(2f, 0f, 0f);
+    [SerializeField] private float duration = 0.6f;
+    [SerializeField] private AnimationCurve ease = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+
+    public IEnumerator Open()
+    {
+        Vector3 start = transform.position;
+        Vector3 end = start + openOffset;
+
+        for (float elapsed = 0f; elapsed &lt; duration; elapsed += Time.deltaTime)
+        {
+            float t = elapsed / duration;                        // 0 -&gt; 1 over "duration" seconds
+            transform.position = Vector3.Lerp(start, end, ease.Evaluate(t));
+            yield return null;
+        }
+        transform.position = end; // make sure we land exactly
+    }
+}
+</code></pre>
+    <p><code>start</code> and <code>end</code> are stored once. Only <code>t</code> changes. This is what DOTween does for you in one line.</p>
+
+    <h3>2. Constant speed</h3>
+    <pre><code class="language-csharp">// Never overshoots, arrives exactly, same speed on every machine
+transform.position = Vector3.MoveTowards(transform.position, target, speed * Time.deltaTime);
+transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRot, degreesPerSec * Time.deltaTime);
+health = Mathf.MoveTowards(health, targetHealth, drainPerSec * Time.deltaTime); // draining bar
+</code></pre>
+
+    <h3>3. Smooth follow (frame-rate independent)</h3>
+    <p>You'll often see this in tutorials:</p>
+    <pre><code class="language-csharp">// Common, but frame-rate DEPENDENT: faster at high FPS
+transform.position = Vector3.Lerp(transform.position, target.position, 0.1f);
+</code></pre>
+    <p>It moves 10% of the remaining distance <em>per frame</em>, so 144 FPS catches up much faster than 30 FPS. Multiplying by <code>Time.deltaTime</code> (<code>0.1f * Time.deltaTime</code>) is closer but still not exact. The correct version uses an exponential:</p>
+    <pre><code class="language-csharp">[SerializeField] private float sharpness = 10f; // higher = snappier
+
+void LateUpdate()
+{
+    // Same feel at any frame rate
+    float t = 1f - Mathf.Exp(-sharpness * Time.deltaTime);
+    transform.position = Vector3.Lerp(transform.position, target.position, t);
+}
+</code></pre>
+    <div class="note"><strong>Why exp?</strong>This pattern closes a fixed <em>fraction</em> of the gap per <em>second</em>, not per frame. Two 8 ms frames then do exactly the same as one 16 ms frame. It never quite reaches the target mathematically, but gets within a tiny distance very quickly.</div>
+
+    <h3>4. SmoothDamp (spring)</h3>
+    <pre><code class="language-csharp">private Vector3 velocity; // SmoothDamp stores its speed here between frames
+
+void LateUpdate()
+{
+    transform.position = Vector3.SmoothDamp(transform.position, target.position, ref velocity, 0.25f);
+    // 0.25 = roughly how long it takes to reach the target
+}
+</code></pre>
+    <p>Unlike pattern 3, SmoothDamp accelerates from rest too, so it feels heavier and more natural. Great for cameras. Also available as <code>Mathf.SmoothDamp</code> and <code>Mathf.SmoothDampAngle</code>.</p>
+
+    <h2>Easing</h2>
+    <p>Easing reshapes <code>t</code> before you use it. <code>t</code> still goes 0 → 1, but not in a straight line.</p>
+    <pre><code class="language-csharp">public static class Ease
+{
+    public static float InQuad(float t)    =&gt; t * t;                          // slow start
+    public static float OutQuad(float t)   =&gt; 1f - (1f - t) * (1f - t);       // slow end
+    public static float InOutQuad(float t) =&gt; t &lt; 0.5f ? 2f * t * t : 1f - Mathf.Pow(-2f * t + 2f, 2f) / 2f;
+    public static float OutCubic(float t)  =&gt; 1f - Mathf.Pow(1f - t, 3f);     // strong slow end
+    public static float SmoothStep(float t)=&gt; t * t * (3f - 2f * t);           // gentle in and out
+
+    public static float OutBack(float t)   // overshoots slightly, then settles
+    {
+        const float c1 = 1.70158f, c3 = c1 + 1f;
+        return 1f + c3 * Mathf.Pow(t - 1f, 3f) + c1 * Mathf.Pow(t - 1f, 2f);
+    }
+}
+
+// Usage (use LerpUnclamped for OutBack so the overshoot isn't cut off)
+transform.localScale = Vector3.LerpUnclamped(Vector3.zero, Vector3.one, Ease.OutBack(t));
+</code></pre>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Ease</th><th>Feels</th><th>Good for</th></tr>
+      <tr><td>Linear</td><td>Mechanical</td><td>Rotating fans, progress bars, conveyor belts</td></tr>
+      <tr><td>Out (Quad/Cubic)</td><td>Fast then gentle stop</td><td>Most UI and things arriving: the default choice</td></tr>
+      <tr><td>In</td><td>Slow then fast exit</td><td>Things leaving the screen, falling</td></tr>
+      <tr><td>InOut / SmoothStep</td><td>Gentle both ends</td><td>Camera moves, doors, elevators</td></tr>
+      <tr><td>OutBack</td><td>Playful overshoot</td><td>Pop-ups, pickups, buttons</td></tr>
+    </table>
+    </div>
+    <p><strong>AnimationCurve</strong> fields let designers draw their own easing in the Inspector: <code>[SerializeField] AnimationCurve curve;</code> then <code>curve.Evaluate(t)</code>.</p>
+
+    <h2>Other helpers</h2>
+    <h3>InverseLerp and remapping</h3>
+    <pre><code class="language-csharp">// "Where is value between a and b?" -&gt; 0..1
+float t = Mathf.InverseLerp(10f, 50f, speed);   // speed 30 -&gt; 0.5
+
+// Remap one range to another: speed 10..50 -&gt; engine pitch 0.8..2.0
+float pitch = Mathf.Lerp(0.8f, 2f, Mathf.InverseLerp(10f, 50f, speed));
+</code></pre>
+
+    <h3>Angles and rotations</h3>
+    <pre><code class="language-csharp">Mathf.Lerp(350f, 10f, 0.5f);       // 180: the LONG way around
+Mathf.LerpAngle(350f, 10f, 0.5f);  // 0:   the short way. Use this for angles.
+
+Quaternion.Slerp(a, b, t);   // spherical: constant angular speed, best for rotations
+Quaternion.Lerp(a, b, t);    // slightly faster, slightly uneven speed for big angles
+Vector3.Slerp(dirA, dirB, t);// rotate a DIRECTION, keeping its length
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>All these functions are small pieces of math. They're very cheap and create no garbage.</li>
+        <li>The "smoothness" comes from calling them every frame with a <code>t</code> that changes. Pattern 1 changes <code>t</code> over time; patterns 2-4 move the <em>current</em> value a bit each frame.</li>
+        <li>Anything multiplied by <code>Time.deltaTime</code>, or driven by elapsed time, stops when <code>Time.timeScale = 0</code>. Use <code>Time.unscaledDeltaTime</code> for pause-menu animations.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong><code>Lerp(a, b, Time.time)</code></strong>: <code>Time.time</code> is seconds since start, so after 1 second it's stuck at <code>b</code>. Use elapsed time divided by duration.</li>
+      <li><strong>Lerping from the current value with a constant t</strong> and expecting a fixed duration. It never truly arrives and speed depends on FPS. Use pattern 1 or 3 properly.</li>
+      <li><strong>Lerping Euler angles.</strong> Use <code>Quaternion.Slerp</code> or <code>Mathf.LerpAngle</code>.</li>
+      <li><strong>Not snapping at the end</strong> of a fixed-duration lerp. The last frame may land at 0.98. Set the final value after the loop.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="bezier-curves.html">Bezier Curves</a> (interpolating along a curve)</li>
+      <li><a href="../api/mathf.html">Mathf</a>, <a href="../api/vector3.html">Vector3</a>, <a href="../api/quaternion.html">Quaternion</a></li>
+      <li><a href="../api/dotween.html">DOTween</a> (easing built in)</li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/Mathf.Lerp.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

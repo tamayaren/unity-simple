@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>async &amp; await | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="csharp/async-await.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; C# Concepts &rsaquo; async & await</div>
+    <div class="infobox">
+      <div class="infobox-title">async &amp; await</div>
+      <table>
+        <tr><th>Keywords</th><td><code>async</code>, <code>await</code>, <code>Task</code>, <code>Awaitable</code>, <code>CancellationToken</code></td></tr>
+        <tr><th>Namespaces</th><td><code>System.Threading.Tasks</code>, <code>UnityEngine</code> (<code>Awaitable</code>)</td></tr>
+        <tr><th>In Unity</th><td>Unity 2023.1+ / Unity 6: <code>Awaitable</code>; any version: <code>Task</code></td></tr>
+      </table>
+    </div>
+    <h1>async &amp; await</h1>
+    <p class="summary"><code>async</code>/<code>await</code> is C#'s built-in way to write code that waits without freezing the game. It's an alternative to coroutines. It reads top to bottom like normal code, can return values, and works with try/catch.</p>
+    <div class="analogy"><p>Ordering at a coffee shop. Without <code>await</code>, you'd stand frozen at the counter until your coffee is ready, and nobody else can order. With <code>await</code>, you get a buzzer, go sit down (the game keeps running), and when it buzzes you come back and continue exactly where you left off.</p></div>
+
+    <h2>Awaitable (Unity 6)</h2>
+    <p>Unity 6 includes <code>Awaitable</code>, which is designed for games: it's allocation-friendly and continues on Unity's main thread, so you can safely touch GameObjects after awaiting.</p>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Like the coroutine...</th></tr>
+      <tr><td><code>await Awaitable.NextFrameAsync();</code></td><td><code>yield return null;</code></td></tr>
+      <tr><td><code>await Awaitable.WaitForSecondsAsync(1f);</code></td><td><code>yield return new WaitForSeconds(1f);</code></td></tr>
+      <tr><td><code>await Awaitable.FixedUpdateAsync();</code></td><td><code>yield return new WaitForFixedUpdate();</code></td></tr>
+      <tr><td><code>await Awaitable.EndOfFrameAsync();</code></td><td><code>yield return new WaitForEndOfFrame();</code></td></tr>
+      <tr><td><code>await Awaitable.BackgroundThreadAsync();</code></td><td>(no equivalent) move to a background thread for heavy work</td></tr>
+      <tr><td><code>await Awaitable.MainThreadAsync();</code></td><td>(no equivalent) come back to the main thread</td></tr>
+      <tr><td><code>await SceneManager.LoadSceneAsync("Level1");</code></td><td><code>yield return SceneManager.LoadSceneAsync(...)</code></td></tr>
+    </table>
+    </div>
+
+    <h2>Code Samples</h2>
+    <h3>A countdown</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class Countdown : MonoBehaviour
+{
+    async void Start() // "async void" is OK for Unity event methods like Start
+    {
+        for (int i = 3; i &gt; 0; i--)
+        {
+            Debug.Log(i);
+            await Awaitable.WaitForSecondsAsync(1f, destroyCancellationToken);
+        }
+        Debug.Log("Go!");
+    }
+}
+</code></pre>
+
+    <h3>Returning a value</h3>
+    <p>Something coroutines can't do directly:</p>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class DoorPuzzle : MonoBehaviour
+{
+    [SerializeField] private Door door;
+
+    async void Start()
+    {
+        bool solved = await WaitForPlayerAnswer(10f);
+        if (solved) door.Open();
+    }
+
+    async Awaitable&lt;bool&gt; WaitForPlayerAnswer(float timeout)
+    {
+        float end = Time.time + timeout;
+        while (Time.time &lt; end)
+        {
+            if (Input.GetKeyDown(KeyCode.Y)) return true;
+            await Awaitable.NextFrameAsync(destroyCancellationToken);
+        }
+        return false;
+    }
+}
+</code></pre>
+
+    <h3>Heavy work off the main thread</h3>
+    <pre><code class="language-csharp">async Awaitable GenerateMapAsync()
+{
+    await Awaitable.BackgroundThreadAsync();   // now on a worker thread
+    int[,] tiles = BuildNoiseMap(512, 512);    // heavy pure-C# math: OK here
+    // transform.position = ...;               // NOT OK: Unity APIs need the main thread
+
+    await Awaitable.MainThreadAsync();         // back on the main thread
+    SpawnTiles(tiles);                         // now Unity APIs are fine
+}
+</code></pre>
+
+    <h2>Cancellation: stopping when the object is destroyed</h2>
+    <p>Unlike coroutines, async methods <strong>don't stop automatically</strong> when the GameObject is destroyed. They keep running and then crash on the destroyed object. Pass a <code>CancellationToken</code>: every MonoBehaviour has <code>destroyCancellationToken</code> (Unity 2022.2+), which is cancelled when it's destroyed.</p>
+    <pre><code class="language-csharp">async void Start()
+{
+    try
+    {
+        while (true)
+        {
+            transform.Rotate(0f, 90f, 0f);
+            await Awaitable.WaitForSecondsAsync(1f, destroyCancellationToken);
+        }
+    }
+    catch (System.OperationCanceledException)
+    {
+        // Object was destroyed: normal, nothing to do.
+    }
+}
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>Calling an <code>async</code> method runs it normally until the first <code>await</code> on something that isn't finished yet.</li>
+        <li>At that <code>await</code>, the method returns control to its caller, and the rest of the method is saved as a "continuation" (like a coroutine's bookmark).</li>
+        <li>When the awaited thing completes, the continuation runs. With <code>Awaitable</code> on the main thread, this happens during Unity's player loop, just like a coroutine.</li>
+        <li>An exception inside an <code>async Awaitable</code> method is stored and re-thrown where it's awaited. In <code>async void</code>, it's logged to the Console.</li>
+      </ol>
+    </div>
+
+    <h2>Coroutine or async?</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th></th><th>Coroutine</th><th>async / Awaitable</th></tr>
+      <tr><td>Unity versions</td><td>All</td><td><code>Awaitable</code>: 2023.1+ / Unity 6</td></tr>
+      <tr><td>Stops when object destroyed</td><td>Automatically</td><td>Only with a cancellation token</td></tr>
+      <tr><td>Return a value</td><td>No (use a callback)</td><td>Yes</td></tr>
+      <tr><td>try/catch around waits</td><td>No</td><td>Yes</td></tr>
+      <tr><td>Background threads</td><td>No</td><td>Yes</td></tr>
+      <tr><td>Found in tutorials</td><td>Very common</td><td>Growing</td></tr>
+    </table>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>No cancellation.</strong> The method outlives its object and throws <code>MissingReferenceException</code>. Pass <code>destroyCancellationToken</code>.</li>
+      <li><strong>Using <code>Task.Delay</code> for game timing.</strong> <code>Task.Delay</code> runs on the system clock: it ignores <code>Time.timeScale</code> and knows nothing about Unity's frames, and in the Editor a pending <code>Task</code> can keep running after you exit Play Mode. Prefer <code>Awaitable</code> methods, which run inside Unity's player loop.</li>
+      <li><strong>Using Unity APIs on a background thread.</strong> Most Unity APIs throw ("can only be called from the main thread"). Switch back first.</li>
+      <li><strong><code>async void</code> for your own methods.</strong> Callers can't await it or catch its exceptions. Use <code>async Awaitable</code> (or <code>Task</code>); keep <code>async void</code> for Unity messages like <code>Start</code> and UI callbacks.</li>
+      <li><strong>Awaiting the same Awaitable twice.</strong> Awaitables are pooled and reused; await each one only once.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="iterators.html">Iterators &amp; yield</a></li>
+      <li><a href="../manual/coroutines.html">Coroutines</a></li>
+      <li><a href="exceptions.html">Exceptions &amp; try/catch</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://learn.microsoft.com/dotnet/csharp/asynchronous-programming/">official Microsoft C# documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

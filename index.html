@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body data-root="" data-page="index.html">
-<header class="site-header">
+<header class="site-header" id="top">
   <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
   <a class="logo" href="index.html">Unity Simple Docs</a>
   <nav class="header-links">
@@ -49,6 +49,18 @@
       <li><a href="manual/input.html">Handling Input</a>: keyboard, mouse and gamepad</li>
     </ol>
 
+    <h2>C# for Unity</h2>
+    <p>The C# language features you'll meet in Unity code, each explained with Unity examples.</p>
+    <div class="card-grid">
+      <div class="card"><h3><a href="csharp/value-vs-reference.html">Value &amp; Reference Types</a></h3><p>Why <code>transform.position.x = 5</code> doesn't compile.</p></div>
+      <div class="card"><h3><a href="csharp/types.html">Types &amp; Type Checking</a></h3><p><code>GetType</code>, <code>typeof</code>, <code>is</code>, <code>as</code> and casting.</p></div>
+      <div class="card"><h3><a href="csharp/exceptions.html">Exceptions &amp; try/catch</a></h3><p>Handling errors, and what those red Console messages mean.</p></div>
+      <div class="card"><h3><a href="csharp/iterators.html">Iterators &amp; yield</a></h3><p>The C# feature coroutines are built on.</p></div>
+      <div class="card"><h3><a href="csharp/delegates-events.html">Delegates &amp; Events</a></h3><p><code>Action</code>, <code>Func</code>, lambdas and <code>event</code>.</p></div>
+      <div class="card"><h3><a href="csharp/async-await.html">async &amp; await</a></h3><p>Waiting without coroutines, with Unity 6's <code>Awaitable</code>.</p></div>
+    </div>
+    <p>Also: <a href="csharp/members.html">Fields, Properties &amp; Modifiers</a>, <a href="csharp/inheritance.html">Inheritance &amp; Interfaces</a>, <a href="csharp/null.html">Null</a>, <a href="csharp/generics.html">Generics</a>, <a href="csharp/collections.html">Collections</a>, <a href="csharp/linq.html">LINQ</a>, <a href="csharp/enums.html">Enums</a>, <a href="csharp/strings.html">Strings</a>, <a href="csharp/extension-methods.html">Extension Methods</a>, <a href="csharp/attributes.html">Attributes</a>.</p>
+
     <h2>Tutorials</h2>
     <p>Step-by-step builds of real game features. Each one ends with something you can play.</p>
     <div class="card-grid">
@@ -60,8 +72,18 @@
 
     <h2>Guides</h2>
     <ul>
-      <li><a href="guides/optimization.html">Optimizing Your Code</a>: profiling, caching, garbage, pooling and other ways to speed up your scripts</li>
+      <li><a href="guides/update-fixedupdate.html">Working with Update &amp; FixedUpdate</a>: the two game loops, what goes where, and how to fix jitter</li>
+      <li><a href="guides/interpolation.html">Interpolation &amp; Easing</a>: Lerp, MoveTowards, SmoothDamp, and making motion feel good</li>
+      <li><a href="guides/bezier-curves.html">Bezier Curves</a>: arcs and paths, moving along a curve at constant speed</li>
       <li><a href="guides/best-practices.html">Better Ways to Do Things</a>: beginner habits that cause trouble later, and what to do instead</li>
+    </ul>
+
+    <h2>Performance</h2>
+    <ul>
+      <li><a href="guides/optimization-practices.html">Optimization Best Practices</a>: budgets, profiling on real devices, CPU vs GPU, engine and asset settings</li>
+      <li><a href="guides/optimization.html">Optimizing Your Code</a>: caching, garbage, cheaper math and other script-level tips</li>
+      <li><a href="guides/object-pooling.html">Object Pooling</a>: reuse bullets, effects and enemies instead of creating and destroying them</li>
+      <li><a href="guides/gpu-instancing.html">GPU Instancing &amp; Batching</a>: draw thousands of objects with a handful of draw calls</li>
     </ul>
 
     <h2>API Reference</h2>
@@ -98,7 +120,7 @@
 
   </main>
 </div>
-<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
 <script src="js/nav.js"></script>
 </body>
 </html>

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Null &amp; Nullable Types | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="csharp/null.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; C# Concepts &rsaquo; Null & Nullable Types</div>
+    <div class="infobox">
+      <div class="infobox-title">Null</div>
+      <table>
+        <tr><th>Keywords</th><td><code>null</code>, <code>?.</code>, <code>??</code>, <code>??=</code>, <code>int?</code>, <code>is null</code></td></tr>
+        <tr><th>Category</th><td>Type system</td></tr>
+        <tr><th>In Unity</th><td>Empty Inspector fields, destroyed objects, <code>GetComponent</code> finding nothing</td></tr>
+      </table>
+    </div>
+    <h1>Null &amp; Nullable Types</h1>
+    <p class="summary"><code>null</code> means "this variable doesn't point to any object". Using a null variable causes the most common error in Unity, <code>NullReferenceException</code>. This page covers how to check for null safely, the <code>?.</code> and <code>??</code> shortcuts, and the important Unity exception to those shortcuts.</p>
+    <div class="analogy"><p>A reference variable is a leash. Normally there's a dog on the end. <code>null</code> is an empty leash. Calling a method on it (<code>dog.Bark()</code>) is telling the empty leash to bark, and C# throws <code>NullReferenceException</code> because there's no dog to do it.</p></div>
+
+    <h2>Checking for null</h2>
+    <pre><code class="language-csharp">[SerializeField] private Transform target;
+
+void Update()
+{
+    if (target == null) return; // nothing to follow yet
+    transform.LookAt(target);
+}
+</code></pre>
+    <p>A good habit: check required references once in <code>Awake</code> and log a clear message, instead of letting a mystery error happen later.</p>
+    <pre><code class="language-csharp">void Awake()
+{
+    if (target == null)
+        Debug.LogError($"{name}: 'target' is not assigned in the Inspector.", this);
+}
+</code></pre>
+
+    <h2>Null shortcuts (for normal C# objects)</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Operator</th><th>Meaning</th><th>Example</th></tr>
+      <tr><td><code>a?.B()</code></td><td>Call only if <code>a</code> isn't null; otherwise result is null</td><td><code>OnDied?.Invoke();</code></td></tr>
+      <tr><td><code>a ?? b</code></td><td>Use <code>a</code>, or <code>b</code> if <code>a</code> is null</td><td><code>string n = playerName ?? "Guest";</code></td></tr>
+      <tr><td><code>a ??= b</code></td><td>Assign <code>b</code> only if <code>a</code> is null</td><td><code>cache ??= new List&lt;int&gt;();</code></td></tr>
+      <tr><td><code>a is null</code> / <code>a is not null</code></td><td>Pure null check</td><td><code>if (data is null) return;</code></td></tr>
+    </table>
+    </div>
+
+    <h2>The Unity exception: don't use these on Unity objects</h2>
+    <div class="warning"><strong>?. ?? ??= and "is null" skip Unity's destroyed check</strong>Unity objects (<code>GameObject</code>, components, assets) that have been <em>destroyed</em> still exist as C# objects. Unity overrides <code>==</code> so <code>destroyedObj == null</code> returns <code>true</code>. The operators <code>?.</code>, <code>??</code>, <code>??=</code> and <code>is null</code> don't use that override, so they think a destroyed object is still alive.</div>
+    <pre><code class="language-csharp">Destroy(enemy.gameObject);
+// ...a frame later:
+
+enemy?.TakeDamage(5);         // BUG: calls TakeDamage on a destroyed object -&gt; MissingReferenceException
+if (enemy != null) enemy.TakeDamage(5); // CORRECT
+
+var cam = customCam ?? Camera.main;                   // BUG if customCam was destroyed
+var cam2 = customCam != null ? customCam : Camera.main; // CORRECT
+
+if (enemy) { }                // also correct: Unity objects convert to bool (false if null/destroyed)
+</code></pre>
+    <p>Rule of thumb: <strong>Unity object → <code>== null</code> / <code>!= null</code>. Plain C# object, event or delegate → any of the shortcuts.</strong> See also "fake null" on the <a href="../api/object.html">Object</a> page.</p>
+
+    <h2>Nullable value types (int?, float?, Vector3?)</h2>
+    <p>Value types like <code>int</code> and <code>Vector3</code> can't normally be null. Add <code>?</code> to allow it. Useful when "no value" is different from zero.</p>
+    <pre><code class="language-csharp">private Vector3? lastSeenPosition; // null = never seen the player
+
+void Update()
+{
+    if (CanSeePlayer())
+        lastSeenPosition = player.position;
+
+    if (lastSeenPosition.HasValue)
+    {
+        MoveTowards(lastSeenPosition.Value);
+    }
+}
+
+// Shorter:
+float? bestTime = LoadBestTime();       // null = no record yet
+float shown = bestTime ?? 0f;           // ?? is fine: float? is not a Unity object
+</code></pre>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Member</th><th>Description</th></tr>
+      <tr><td><code>x.HasValue</code></td><td><code>true</code> if it holds a value</td></tr>
+      <tr><td><code>x.Value</code></td><td>The value. Throws <code>InvalidOperationException</code> if there is none.</td></tr>
+      <tr><td><code>x.GetValueOrDefault()</code></td><td>The value, or <code>0</code>/<code>default</code> if none</td></tr>
+    </table>
+    </div>
+    <p>Unity can't show nullable fields (<code>int?</code>) in the Inspector.</p>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>A reference variable stores an address. <code>null</code> is address "nothing".</li>
+        <li>Calling a member on it makes the runtime detect the invalid access and throw <code>NullReferenceException</code>.</li>
+        <li>For Unity objects, the C# object can outlive the native engine object. After <code>Destroy</code>, the native part is gone; Unity's <code>==</code> checks for that. Accessing members then throws <code>MissingReferenceException</code>.</li>
+        <li>An unassigned serialized field in the Editor may also be a "fake null" and throw <code>UnassignedReferenceException</code>, whose message names the field. That's why the Editor's errors can be more helpful than a build's.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Assuming GetComponent always succeeds.</strong> It returns null if the component isn't there. Use <code>TryGetComponent</code> or <code>[RequireComponent]</code>.</li>
+      <li><strong>Forgetting to assign an Inspector field.</strong> The #1 cause of <code>NullReferenceException</code> for beginners.</li>
+      <li><strong>Using a reference in Awake that another script sets in its Awake.</strong> Order between objects isn't guaranteed; use <code>Start</code> for cross-object references.</li>
+      <li><strong><code>?.</code> on Unity objects.</strong> See the warning above.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="exceptions.html">Exceptions &amp; try/catch</a></li>
+      <li><a href="value-vs-reference.html">Value &amp; Reference Types</a></li>
+      <li><a href="../api/object.html">Object</a> (fake null)</li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/nullable-value-types">official Microsoft C# documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

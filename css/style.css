@@ -25,6 +25,11 @@ html, body {
   padding: 0;
 }
 
+html {
+  -webkit-text-size-adjust: 100%; /* stop iOS from enlarging text in landscape */
+  text-size-adjust: 100%;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
@@ -79,12 +84,28 @@ a:hover { text-decoration: underline; }
   margin-bottom: 12px;
 }
 .sidebar h3 {
+  margin: 12px 0 2px;
   font-size: 12px;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin: 16px 0 4px;
-  letter-spacing: 0.5px;
 }
+/* Group headings are buttons that collapse/expand their list */
+.nav-toggle {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 4px 0;
+  text-align: left;
+  font: inherit;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.nav-toggle::before { content: "\25BE  "; } /* down triangle */
+.nav-group.collapsed .nav-toggle::before { content: "\25B8  "; } /* right triangle */
+.nav-group.collapsed ul { display: none; }
+.sidebar.searching .nav-group.collapsed ul { display: block; }
 .sidebar ul { list-style: none; margin: 0; padding: 0; }
 .sidebar li a {
   display: block;
@@ -101,6 +122,7 @@ a:hover { text-decoration: underline; }
   flex: 1;
   min-width: 0;
   padding: 20px 32px 60px;
+  overflow-wrap: break-word; /* long words and URLs don't push the page wider */
 }
 
 /* ---------- Typography ---------- */
@@ -230,6 +252,7 @@ td code { white-space: nowrap; }
   padding: 12px 16px;
   text-align: center;
 }
+.site-footer .back-to-top { display: block; margin-top: 6px; }
 
 /* ---------- Mobile ---------- */
 .menu-toggle {
@@ -252,9 +275,45 @@ td code { white-space: nowrap; }
     display: none;
   }
   .sidebar.open { display: block; }
-  .menu-toggle { display: inline-block; }
-  .content { padding: 16px; }
-  .infobox { float: none; width: 100%; margin: 0 0 16px; }
+  .menu-toggle { display: inline-block; min-height: 36px; }
+
+  /* Bigger touch targets */
+  .sidebar li a { padding: 8px 6px; font-size: 15px; }
+  .nav-toggle { padding: 10px 0; font-size: 13px; }
+  /* 16px stops iOS Safari from zooming in when the search box is tapped */
+  .sidebar input[type="search"] { font-size: 16px; padding: 8px 10px; }
+
+  .site-header { gap: 10px; }
   .site-header .header-links { margin-left: 0; width: 100%; }
-  .site-header .header-links a { margin: 0 14px 0 0; }
+  .site-header .header-links a { margin: 0 14px 0 0; display: inline-block; padding: 4px 0; }
+
+  .content { padding: 16px; }
+  h1 { font-size: 25px; }
+  h2 { font-size: 20px; margin-top: 28px; }
+  h3 { font-size: 17px; }
+  .summary { font-size: 16px; }
+
+  .infobox { float: none; width: 100%; margin: 0 0 16px; }
+
+  /* Let long signatures wrap instead of forcing sideways scrolling */
+  td code { white-space: normal; overflow-wrap: anywhere; }
+  th, td { padding: 6px 8px; }
+  table { font-size: 14px; }
+
+  pre { font-size: 13px; padding: 10px; }
+  .runtime { padding: 8px 12px; }
+  .runtime ol, .content ol, .content ul { padding-left: 22px; }
+  .card-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 400px) {
+  .site-header .logo { font-size: 16px; }
+  .content { padding: 12px; }
+  pre { font-size: 12px; }
+}
+
+/* Printing: hide navigation */
+@media print {
+  .site-header, .sidebar, .site-footer { display: none; }
+  .content { padding: 0; }
 }

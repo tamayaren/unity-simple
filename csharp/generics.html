@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generics | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="csharp/generics.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; C# Concepts &rsaquo; Generics</div>
+    <div class="infobox">
+      <div class="infobox-title">Generics</div>
+      <table>
+        <tr><th>Syntax</th><td><code>&lt;T&gt;</code>, <code>where T : ...</code></td></tr>
+        <tr><th>Category</th><td>Type system</td></tr>
+        <tr><th>In Unity</th><td><code>GetComponent&lt;T&gt;()</code>, <code>List&lt;T&gt;</code>, <code>UnityEvent&lt;T&gt;</code>, <code>ObjectPool&lt;T&gt;</code></td></tr>
+      </table>
+    </div>
+    <h1>Generics</h1>
+    <p class="summary">Generics let you write a class or method once and use it with many types. The <code>&lt;T&gt;</code> is a placeholder for "some type, chosen later". You've already used them: <code>GetComponent&lt;Rigidbody&gt;()</code> and <code>List&lt;Enemy&gt;</code> are generics.</p>
+    <div class="analogy"><p>A generic is a labeled storage box with a blank label. <code>List&lt;T&gt;</code> is "a box for ___". When you write <code>List&lt;Coin&gt;</code> you fill in the blank, and now the box only accepts coins. Try to put a sword in it and the compiler stops you before the game even runs.</p></div>
+
+    <h2>Using generics</h2>
+    <pre><code class="language-csharp">Rigidbody rb = GetComponent&lt;Rigidbody&gt;();              // T = Rigidbody
+List&lt;Enemy&gt; enemies = new List&lt;Enemy&gt;();               // T = Enemy
+Dictionary&lt;string, int&gt; scores = new Dictionary&lt;string, int&gt;(); // two type parameters
+
+enemies.Add(goblin);     // OK
+// enemies.Add(coin);    // compile error: a Coin is not an Enemy
+</code></pre>
+    <p>Before generics, collections stored <code>object</code>, so you had to cast everything back and could put the wrong thing in by accident. Generics catch those mistakes at compile time.</p>
+
+    <h2>Writing a generic method</h2>
+    <pre><code class="language-csharp">public static class RandomUtil
+{
+    // Works for an array of ANY type
+    public static T Pick&lt;T&gt;(T[] items)
+    {
+        return items[Random.Range(0, items.Length)];
+    }
+}
+
+// Usage: C# usually figures out T from the argument
+AudioClip clip = RandomUtil.Pick(footstepClips);    // T = AudioClip
+string line    = RandomUtil.Pick(greetings);        // T = string
+GameObject pre = RandomUtil.Pick&lt;GameObject&gt;(enemyPrefabs); // or write T explicitly
+</code></pre>
+
+    <h2>Constraints: where T : ...</h2>
+    <p>Sometimes your code needs <code>T</code> to be a certain kind of type. A constraint says so, and lets you use that type's members.</p>
+    <pre><code class="language-csharp">public static class GameObjectExtensions
+{
+    // T must be a Component, because AddComponent&lt;T&gt; only accepts components.
+    // ("this GameObject go" makes it an extension method; see Extension Methods.)
+    public static T GetOrAdd&lt;T&gt;(this GameObject go) where T : Component
+    {
+        if (!go.TryGetComponent(out T comp))
+            comp = go.AddComponent&lt;T&gt;();
+        return comp;
+    }
+}
+
+// Usage
+var audio = gameObject.GetOrAdd&lt;AudioSource&gt;();
+</code></pre>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Constraint</th><th>Means</th></tr>
+      <tr><td><code>where T : Component</code></td><td>T is Component or a subclass (any component type)</td></tr>
+      <tr><td><code>where T : MonoBehaviour</code></td><td>T is one of your scripts</td></tr>
+      <tr><td><code>where T : IDamageable</code></td><td>T implements the interface</td></tr>
+      <tr><td><code>where T : class</code></td><td>T is a reference type</td></tr>
+      <tr><td><code>where T : struct</code></td><td>T is a value type</td></tr>
+      <tr><td><code>where T : new()</code></td><td>T has a parameterless constructor, so you can write <code>new T()</code></td></tr>
+    </table>
+    </div>
+
+    <h2>Writing a generic class</h2>
+    <p>A generic singleton base class: every manager gets the singleton behavior by inheriting from it.</p>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public abstract class Singleton&lt;T&gt; : MonoBehaviour where T : MonoBehaviour
+{
+    public static T Instance { get; private set; }
+
+    protected virtual void Awake()
+    {
+        if (Instance != null &amp;&amp; Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this as T;
+    }
+}
+
+public class GameManager : Singleton&lt;GameManager&gt;
+{
+    public int Score { get; set; }
+}
+
+public class AudioManager : Singleton&lt;AudioManager&gt;
+{
+    public void Play(AudioClip clip) { /* ... */ }
+}
+
+// Usage
+GameManager.Instance.Score += 10;
+AudioManager.Instance.Play(coinSound);
+</code></pre>
+    <p>Each <code>Singleton&lt;GameManager&gt;</code> and <code>Singleton&lt;AudioManager&gt;</code> is a separate class with its own <code>Instance</code>, because static fields are separate for each <code>T</code>.</p>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>Generics are checked when you compile. That's where the safety comes from: wrong types never make it into the game.</li>
+        <li>At runtime, each different <code>T</code> gets its own version of the class. <code>List&lt;int&gt;</code> stores real <code>int</code>s directly, with no boxing (see <a href="value-vs-reference.html">Value &amp; Reference Types</a>).</li>
+        <li>Unity can serialize (show in the Inspector) <code>List&lt;T&gt;</code> and, since Unity 2020.1, fields of other generic types such as <code>UnityEvent&lt;float&gt;</code> or your own <code>[Serializable] class Stat&lt;T&gt;</code>. It can't serialize <code>Dictionary</code>.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong><code>GetComponent&lt;IDamageable&gt;()</code> with a constraint that forbids it.</strong> Unity's own <code>GetComponent&lt;T&gt;</code> allows interfaces, but if your helper says <code>where T : Component</code>, interfaces won't compile. Drop the constraint or use a separate helper.</li>
+      <li><strong>Trying to use members without a constraint.</strong> Inside <code>Pick&lt;T&gt;</code>, you can't call <code>item.name</code>, because T could be anything. Add <code>where T : UnityEngine.Object</code> to use Unity object members.</li>
+      <li><strong>Over-engineering.</strong> Make something generic when you actually have two or more types that need it, not before.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="collections.html">Collections</a></li>
+      <li><a href="extension-methods.html">Extension Methods</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://learn.microsoft.com/dotnet/csharp/fundamentals/types/generics">official Microsoft C# documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

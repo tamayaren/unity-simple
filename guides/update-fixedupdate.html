@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Working with Update &amp; FixedUpdate | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="guides/update-fixedupdate.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Guides &rsaquo; Working with Update & FixedUpdate</div>
+    <h1>Working with Update &amp; FixedUpdate</h1>
+    <p class="summary">Unity runs on two clocks: <code>Update</code> runs once per rendered frame (a variable rate), and <code>FixedUpdate</code> runs at a fixed rate for physics. Most jitter, missed inputs and "physics feels different on my friend's PC" bugs come from mixing them up. This guide explains how they relate and what belongs where.</p>
+    <div class="analogy"><p>A film crew with two people. The <strong>camera operator</strong> (<code>Update</code>) takes a photo whenever they're ready: sometimes 30 per second, sometimes 144. The <strong>drummer</strong> (<code>FixedUpdate</code>) keeps a strict beat of exactly 50 per second no matter what. Physics dances to the drummer's beat. If you tell the dancer to move on camera clicks instead, the dance speeds up and slows down with the camera.</p></div>
+
+    <h2>How the two loops line up</h2>
+    <p>With the default fixed timestep of 0.02 s (50 steps per second):</p>
+    <pre><code>At 30 FPS (each frame ~33 ms):
+Frame 1: [FixedUpdate][FixedUpdate] Update  LateUpdate  render
+Frame 2: [FixedUpdate]              Update  LateUpdate  render
+Frame 3: [FixedUpdate][FixedUpdate] Update  LateUpdate  render
+
+At 144 FPS (each frame ~7 ms):
+Frame 1: [FixedUpdate] Update  LateUpdate  render
+Frame 2:               Update  LateUpdate  render
+Frame 3:               Update  LateUpdate  render
+Frame 4: [FixedUpdate] Update  LateUpdate  render</code></pre>
+    <p>So <code>FixedUpdate</code> may run <strong>several times</strong> in one frame, or <strong>not at all</strong>.</p>
+
+    <div class="runtime">
+      <p><strong>What Unity does each frame</strong></p>
+      <ol>
+        <li>Adds the real time since the last frame to an internal "accumulator".</li>
+        <li>While the accumulator holds at least one <code>fixedDeltaTime</code>: run every <code>FixedUpdate</code>, step the physics simulation, send collision/trigger messages, then subtract one <code>fixedDeltaTime</code>.</li>
+        <li>Run every <code>Update</code>, then coroutines, animations and <code>LateUpdate</code>.</li>
+        <li>Render the frame.</li>
+      </ol>
+      <p>If a frame takes very long (a loading hitch), the number of catch-up physics steps is capped by <strong>Project Settings &gt; Time &gt; Maximum Allowed Timestep</strong> (default ⅓ s). Without that cap, a slow frame would cause many physics steps, making the next frame slow too: a "spiral of death".</p>
+    </div>
+
+    <h2>What goes where</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Task</th><th>Where</th><th>Why</th></tr>
+      <tr><td>Reading input</td><td><code>Update</code></td><td>"Pressed this frame" is only true for one frame; FixedUpdate might skip it</td></tr>
+      <tr><td><code>AddForce</code>, setting <code>linearVelocity</code>, <code>MovePosition</code></td><td><code>FixedUpdate</code></td><td>Physics steps at a fixed rate; applying forces per frame makes them frame-rate dependent</td></tr>
+      <tr><td>One-off impulse (jump, explosion)</td><td>Either, but buffer it into <code>FixedUpdate</code></td><td>Consistent timing with the physics step</td></tr>
+      <tr><td>Moving objects <em>without</em> a Rigidbody</td><td><code>Update</code> with <code>Time.deltaTime</code></td><td>Smooth on every frame</td></tr>
+      <tr><td>Timers, cooldowns, UI, game logic</td><td><code>Update</code></td><td>Runs every frame</td></tr>
+      <tr><td>Camera follow</td><td><code>LateUpdate</code></td><td>Everything else has moved already</td></tr>
+      <tr><td>Raycasts for gameplay (shooting)</td><td><code>Update</code></td><td>React immediately</td></tr>
+      <tr><td>Raycasts that drive physics (suspension, hover)</td><td><code>FixedUpdate</code></td><td>Must match physics steps</td></tr>
+    </table>
+    </div>
+
+    <h2>Pattern: read in Update, apply in FixedUpdate</h2>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class RollingBall : MonoBehaviour
+{
+    [SerializeField] private float moveForce = 20f;
+    [SerializeField] private float jumpImpulse = 6f;
+
+    private Rigidbody rb;
+    private Vector3 moveInput;   // continuous input: just overwrite each frame
+    private bool jumpQueued;     // one-off input: set in Update, consume in FixedUpdate
+
+    void Awake() { rb = GetComponent&lt;Rigidbody&gt;(); }
+
+    void Update()
+    {
+        moveInput = new Vector3(Input.GetAxisRaw("Horizontal"), 0f, Input.GetAxisRaw("Vertical")).normalized;
+        if (Input.GetButtonDown("Jump")) jumpQueued = true; // never set back to false here
+    }
+
+    void FixedUpdate()
+    {
+        rb.AddForce(moveInput * moveForce, ForceMode.Force); // continuous: every step
+
+        if (jumpQueued)
+        {
+            rb.AddForce(Vector3.up * jumpImpulse, ForceMode.Impulse); // once
+            jumpQueued = false; // consumed
+        }
+    }
+}
+</code></pre>
+    <p>Why a flag instead of calling <code>AddForce</code> directly in <code>Update</code>? At 144 FPS, most frames have no physics step, so the force would sit waiting anyway. At 20 FPS, several physics steps happen per frame, and a force added in Update only affects the first of them. Buffering makes behavior identical at any frame rate.</p>
+
+    <h2>deltaTime in each method</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Inside</th><th><code>Time.deltaTime</code> returns</th></tr>
+      <tr><td><code>Update</code> / <code>LateUpdate</code></td><td>Time since the last frame (varies)</td></tr>
+      <tr><td><code>FixedUpdate</code></td><td><code>Time.fixedDeltaTime</code> (e.g. 0.02), automatically</td></tr>
+    </table>
+    </div>
+    <p>So a function using <code>Time.deltaTime</code> works correctly in either. Remember that forces and velocities are already "per second": don't multiply <code>AddForce</code> or <code>linearVelocity</code> by deltaTime.</p>
+
+    <h2>Fixing jitter: interpolation</h2>
+    <p>At 144 FPS with 50 physics steps, a Rigidbody only moves on ~1 in 3 frames. The camera moves every frame. The result: the object looks like it stutters.</p>
+    <ul>
+      <li>Set the Rigidbody's <strong>Interpolate</strong> to <em>Interpolate</em>. Unity then smooths the Transform between the last two physics positions every frame. (Costs a little; use it on the player and anything the camera follows.)</li>
+      <li>Move the camera in <code>LateUpdate</code>, following the <em>Transform</em> (which is interpolated), not <code>rb.position</code> (which isn't).</li>
+      <li>Never move the same object from both loops (e.g. Rigidbody in FixedUpdate and <code>transform.position</code> in Update).</li>
+    </ul>
+    <div class="analogy"><p>Interpolation is a flipbook artist drawing extra in-between pages. Physics only gives you a few key drawings per second; interpolation fills in the frames between them so the motion looks smooth.</p></div>
+
+    <h2>Changing the fixed timestep</h2>
+    <p><strong>Project Settings &gt; Time &gt; Fixed Timestep</strong> (or <code>Time.fixedDeltaTime</code> in code).</p>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Value</th><th>Steps/s</th><th>Effect</th></tr>
+      <tr><td>0.02 (default)</td><td>50</td><td>Good for most games</td></tr>
+      <tr><td>0.01</td><td>100</td><td>More precise (racing, fast collisions), double the physics CPU cost</td></tr>
+      <tr><td>0.0333</td><td>30</td><td>Cheaper; OK for slow-paced games and mobile</td></tr>
+    </table>
+    </div>
+    <p>For slow motion, scale both: <code>Time.timeScale = 0.25f; Time.fixedDeltaTime = 0.02f * Time.timeScale;</code>. Reset both afterwards.</p>
+
+    <h2>Advanced: many objects, one Update</h2>
+    <p>Every MonoBehaviour <code>Update</code> is a call from Unity's engine (C++) into your C# code. With thousands of objects, that overhead adds up. A common industry pattern is a single <em>update manager</em> that loops over plain C# objects:</p>
+    <pre><code class="language-csharp">using System.Collections.Generic;
+using UnityEngine;
+
+public interface ITickable { void Tick(float dt); }
+
+public class TickManager : MonoBehaviour
+{
+    private static readonly List&lt;ITickable&gt; tickables = new List&lt;ITickable&gt;();
+
+    public static void Register(ITickable t)   =&gt; tickables.Add(t);
+    public static void Unregister(ITickable t) =&gt; tickables.Remove(t);
+
+    void Update()
+    {
+        float dt = Time.deltaTime;
+        for (int i = tickables.Count - 1; i &gt;= 0; i--) // backwards: safe if one unregisters
+            tickables[i].Tick(dt);
+    }
+}
+
+public class Drone : MonoBehaviour, ITickable
+{
+    void OnEnable()  { TickManager.Register(this); }
+    void OnDisable() { TickManager.Unregister(this); }
+
+    public void Tick(float dt) { transform.Rotate(0f, 90f * dt, 0f); }
+}
+</code></pre>
+    <p>Only worth it for large numbers (hundreds to thousands) of per-frame objects. Measure with the Profiler before and after.</p>
+
+    <h3>Staggering expensive work</h3>
+    <pre><code class="language-csharp">// Each enemy thinks every 5th frame, spread out so they don't all think on the same frame.
+private int slot;
+void Awake() { slot = Random.Range(0, 5); }
+
+void Update()
+{
+    Move();                                   // cheap: every frame
+    if (Time.frameCount % 5 == slot) Think(); // expensive: 1 in 5 frames
+}
+</code></pre>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Input in FixedUpdate</strong> → missed presses at high frame rates.</li>
+      <li><strong>Continuous forces in Update</strong> → movement speed changes with frame rate.</li>
+      <li><strong>Moving a Rigidbody with Transform</strong> → teleporting, tunneling, jitter.</li>
+      <li><strong>Camera in Update or FixedUpdate</strong> following a physics object → jitter. Use LateUpdate + Interpolate.</li>
+      <li><strong>Counting on FixedUpdate every frame</strong> for timers → wrong at high FPS. Use Update for timers.</li>
+      <li><strong>Setting fixedDeltaTime very small</strong> "for accuracy" → physics eats the CPU, especially on mobile.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../manual/script-lifecycle.html">Script Lifecycle</a></li>
+      <li><a href="../api/time.html">Time</a></li>
+      <li><a href="../api/rigidbody.html">Rigidbody</a></li>
+      <li><a href="interpolation.html">Interpolation &amp; Easing</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/MonoBehaviour.FixedUpdate.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

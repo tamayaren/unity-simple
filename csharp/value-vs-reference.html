@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Value &amp; Reference Types | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="csharp/value-vs-reference.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; C# Concepts &rsaquo; Value & Reference Types</div>
+    <div class="infobox">
+      <div class="infobox-title">Value &amp; Reference Types</div>
+      <table>
+        <tr><th>Keywords</th><td><code>struct</code>, <code>class</code>, <code>ref</code>, <code>out</code></td></tr>
+        <tr><th>Category</th><td>Type system</td></tr>
+        <tr><th>In Unity</th><td><code>Vector3</code>, <code>Quaternion</code>, <code>Color</code> are structs; <code>GameObject</code>, <code>Transform</code>, your scripts are classes</td></tr>
+      </table>
+    </div>
+    <h1>Value &amp; Reference Types</h1>
+    <p class="summary">Every type in C# is either a <strong>value type</strong> (copied when you assign it) or a <strong>reference type</strong> (shared when you assign it). This one difference explains many confusing Unity errors, like why <code>transform.position.x = 5</code> doesn't compile.</p>
+    <div class="analogy"><p>A <strong>value type</strong> is a photocopy of a document. Give someone a copy and they can scribble on it all they like; your original doesn't change. A <strong>reference type</strong> is a link to a shared online document. Give someone the link and you're both looking at the same document, so their edits show up for you too.</p></div>
+
+    <h2>Which is which?</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Value types (copied)</th><th>Reference types (shared)</th></tr>
+      <tr><td><code>int</code>, <code>float</code>, <code>bool</code>, <code>double</code>, <code>char</code></td><td><code>string</code> (special: behaves like a value, see below)</td></tr>
+      <tr><td><code>enum</code> types</td><td>Arrays (<code>int[]</code>, <code>GameObject[]</code>)</td></tr>
+      <tr><td>Any <code>struct</code>: <code>Vector2</code>, <code>Vector3</code>, <code>Quaternion</code>, <code>Color</code>, <code>Ray</code>, <code>RaycastHit</code></td><td>Any <code>class</code>: <code>GameObject</code>, <code>Transform</code>, <code>Rigidbody</code>, <code>List&lt;T&gt;</code>, your MonoBehaviours</td></tr>
+      <tr><td>Can't be <code>null</code> (unless you use <code>int?</code>)</td><td>Can be <code>null</code></td></tr>
+    </table>
+    </div>
+
+    <h2>Seeing the difference</h2>
+    <pre><code class="language-csharp">// Value type: b gets its own copy
+Vector3 a = new Vector3(1f, 2f, 3f);
+Vector3 b = a;
+b.x = 100f;
+Debug.Log(a.x); // 1   (a is unchanged)
+
+// Reference type: both variables point to the same object
+List&lt;int&gt; listA = new List&lt;int&gt; { 1, 2, 3 };
+List&lt;int&gt; listB = listA;
+listB.Add(4);
+Debug.Log(listA.Count); // 4   (it's the same list)
+</code></pre>
+
+    <h2>Why transform.position.x = 5 fails</h2>
+    <p><code>transform.position</code> is a <em>property</em> that returns a <code>Vector3</code>. Because <code>Vector3</code> is a struct, you get back a <strong>copy</strong>. Changing <code>x</code> on a temporary copy would do nothing, so the compiler stops you with error CS1612.</p>
+    <pre><code class="language-csharp">// Error CS1612: Cannot modify the return value of 'Transform.position' because it is not a variable
+transform.position.x = 5f;
+
+// Fix: copy, change, assign back
+Vector3 pos = transform.position;
+pos.x = 5f;
+transform.position = pos;
+</code></pre>
+    <p>The same applies to <code>rb.linearVelocity</code>, <code>material.color</code> and any other struct property.</p>
+
+    <h2>Passing to methods</h2>
+    <pre><code class="language-csharp">void MakeBig(Vector3 v)        { v *= 10f; }         // changes a local copy only
+void MakeBig(ref Vector3 v)    { v *= 10f; }         // changes the caller's variable
+void Rename(GameObject go)     { go.name = "Big"; }  // changes the shared object
+
+Vector3 size = Vector3.one;
+MakeBig(size);        // size is still (1,1,1)
+MakeBig(ref size);    // size is now (10,10,10)
+Rename(gameObject);   // the real GameObject is renamed
+</code></pre>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Keyword</th><th>Meaning</th><th>Unity example</th></tr>
+      <tr><td><code>ref</code></td><td>Pass the caller's variable itself, so the method can change it</td><td><code>Vector3.SmoothDamp(..., ref velocity, ...)</code> remembers speed between frames</td></tr>
+      <tr><td><code>out</code></td><td>The method <em>must</em> fill this variable in. Used to return extra results</td><td><code>Physics.Raycast(ray, out RaycastHit hit)</code>, <code>TryGetComponent(out Rigidbody rb)</code></td></tr>
+    </table>
+    </div>
+
+    <h2>Strings are special</h2>
+    <p><code>string</code> is a reference type, but it's <em>immutable</em>: you can never change a string, only make a new one. So it behaves like a value type in practice.</p>
+    <pre><code class="language-csharp">string a = "Hello";
+string b = a;
+b += " World";   // creates a NEW string; a is still "Hello"
+</code></pre>
+
+    <h2>Making your own struct</h2>
+    <p>Use a struct for small bundles of data that you treat as a single value (like a coordinate or a damage number). Use a class for everything else.</p>
+    <pre><code class="language-csharp">[System.Serializable] // lets Unity show it in the Inspector
+public struct DamageInfo
+{
+    public float amount;
+    public Vector3 hitPoint;
+    public bool isCritical;
+
+    public DamageInfo(float amount, Vector3 hitPoint, bool isCritical)
+    {
+        this.amount = amount;
+        this.hitPoint = hitPoint;
+        this.isCritical = isCritical;
+    }
+}
+
+// Usage
+var info = new DamageInfo(25f, hit.point, Random.value &lt; 0.1f);
+target.TakeDamage(info);
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li><strong>Value types</strong> are stored directly where they're declared: inside a local variable, or inline inside the object that has them as a field. Local value types need no garbage collection.</li>
+        <li><strong>Reference types</strong> live on the <em>heap</em>, a shared memory area. Your variable only holds the address. <code>new</code> on a class allocates heap memory, which the garbage collector must clean up later.</li>
+        <li>This is why Unity's math types are structs: you can create millions of <code>Vector3</code>s per second without producing garbage.</li>
+        <li><strong>Boxing:</strong> if you store a value type in an <code>object</code> variable (or a non-generic collection), C# wraps it in a heap object. That creates garbage. Generic collections like <code>List&lt;int&gt;</code> avoid it.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Modifying a struct inside a list:</strong> <code>points[0].x = 5</code> fails for <code>List&lt;Vector3&gt;</code> for the same reason as <code>transform.position.x</code>. Copy, change, assign back: <code>var p = points[0]; p.x = 5; points[0] = p;</code> (Arrays allow it directly: <code>pointsArray[0].x = 5</code> works.)</li>
+      <li><strong>Expecting a copy of a class.</strong> <code>List&lt;Item&gt; backup = inventory;</code> is not a backup; it's the same list. Use <code>new List&lt;Item&gt;(inventory)</code>.</li>
+      <li><strong>Big structs.</strong> Structs are copied every time you pass them, so keep them small (a handful of fields).</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="null.html">Null &amp; Nullable Types</a></li>
+      <li><a href="../api/vector3.html">Vector3</a></li>
+      <li><a href="collections.html">Collections</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/value-types">official Microsoft C# documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

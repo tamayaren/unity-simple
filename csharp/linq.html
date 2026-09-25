@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LINQ | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="csharp/linq.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; C# Concepts &rsaquo; LINQ</div>
+    <div class="infobox">
+      <div class="infobox-title">LINQ</div>
+      <table>
+        <tr><th>Namespace</th><td><code>System.Linq</code></td></tr>
+        <tr><th>Category</th><td>Querying collections</td></tr>
+        <tr><th>In Unity</th><td>Sorting high scores, filtering inventories, finding the closest enemy</td></tr>
+      </table>
+    </div>
+    <h1>LINQ</h1>
+    <p class="summary">LINQ (Language Integrated Query) is a set of methods for asking questions about collections: "which items are weapons?", "sort enemies by distance", "what's the total value?". Each is one readable line instead of a hand-written loop. Add <code>using System.Linq;</code>.</p>
+    <div class="analogy"><p>A conveyor belt in a factory. Items go in one end. <code>Where</code> is a worker who throws out items that don't pass inspection. <code>Select</code> is a worker who repackages each item into something else. <code>OrderBy</code> sorts them. At the end, <code>ToList()</code> puts everything into a box for you. Nothing moves until someone at the end asks for the result.</p></div>
+
+    <h2>Most-used methods</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Does</th><th>Example</th></tr>
+      <tr><td><code>Where(x =&gt; ...)</code></td><td>Keep items that match</td><td><code>items.Where(i =&gt; i.isWeapon)</code></td></tr>
+      <tr><td><code>Select(x =&gt; ...)</code></td><td>Turn each item into something else</td><td><code>enemies.Select(e =&gt; e.name)</code></td></tr>
+      <tr><td><code>OrderBy</code> / <code>OrderByDescending</code></td><td>Sort by a value</td><td><code>scores.OrderByDescending(s =&gt; s.points)</code></td></tr>
+      <tr><td><code>First()</code> / <code>FirstOrDefault()</code></td><td>First item (throws / returns default if none)</td><td><code>items.FirstOrDefault(i =&gt; i.id == id)</code></td></tr>
+      <tr><td><code>Any(x =&gt; ...)</code></td><td>Does at least one match?</td><td><code>enemies.Any(e =&gt; e.IsBoss)</code></td></tr>
+      <tr><td><code>All(x =&gt; ...)</code></td><td>Do all match?</td><td><code>switches.All(s =&gt; s.isOn)</code></td></tr>
+      <tr><td><code>Count(x =&gt; ...)</code></td><td>How many match?</td><td><code>items.Count(i =&gt; i.isKey)</code></td></tr>
+      <tr><td><code>Sum</code>, <code>Min</code>, <code>Max</code>, <code>Average</code></td><td>Math over values</td><td><code>items.Sum(i =&gt; i.weight)</code></td></tr>
+      <tr><td><code>Take(n)</code> / <code>Skip(n)</code></td><td>Only the first n / all but the first n</td><td><code>sorted.Take(10)</code> (top 10)</td></tr>
+      <tr><td><code>Distinct()</code></td><td>Remove duplicates</td><td><code>tags.Distinct()</code></td></tr>
+      <tr><td><code>ToList()</code> / <code>ToArray()</code></td><td>Run the query and store the result</td><td><code>sorted.Take(10).ToList()</code></td></tr>
+    </table>
+    </div>
+
+    <h2>Code Samples</h2>
+    <h3>Top 5 high scores</h3>
+    <pre><code class="language-csharp">using System.Collections.Generic;
+using System.Linq;
+
+List&lt;ScoreEntry&gt; top5 = allScores
+    .OrderByDescending(s =&gt; s.points)
+    .Take(5)
+    .ToList();
+</code></pre>
+
+    <h3>Inventory questions</h3>
+    <pre><code class="language-csharp">bool hasKey        = inventory.Any(i =&gt; i.type == ItemType.Key);
+float totalWeight  = inventory.Sum(i =&gt; i.weight);
+var potions        = inventory.Where(i =&gt; i.type == ItemType.Potion).ToList();
+string[] itemNames = inventory.Select(i =&gt; i.displayName).ToArray();
+</code></pre>
+
+    <h3>Closest enemy (the loop version is better in Update)</h3>
+    <pre><code class="language-csharp">// LINQ: clear, fine for occasional use (e.g. when the player presses "lock on")
+Enemy closest = enemies
+    .OrderBy(e =&gt; (e.transform.position - transform.position).sqrMagnitude)
+    .FirstOrDefault();
+
+// Loop: no garbage, faster, better if it runs every frame
+Enemy best = null;
+float bestDist = float.MaxValue;
+foreach (Enemy e in enemies)
+{
+    float d = (e.transform.position - transform.position).sqrMagnitude;
+    if (d &lt; bestDist) { bestDist = d; best = e; }
+}
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li><strong>Deferred execution:</strong> <code>Where</code>, <code>Select</code> and <code>OrderBy</code> don't do anything yet. They build a recipe. The work happens when you loop over it or call <code>ToList()</code>, <code>First()</code>, <code>Count()</code>, etc.</li>
+        <li>If you loop over the same un-stored query twice, it runs twice. Store it with <code>ToList()</code> if you'll reuse it.</li>
+        <li>Each LINQ call creates small objects (the query, the lambda, an enumerator), which is garbage. Harmless once, noticeable if done every frame on many objects.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>LINQ in Update on hot paths.</strong> Use it for menus, loading, events and editor tools; use loops for per-frame code. See <a href="../guides/optimization.html">Optimizing Your Code</a>.</li>
+      <li><strong><code>First()</code> on an empty result</strong> throws <code>InvalidOperationException</code>. Use <code>FirstOrDefault()</code> and check for null.</li>
+      <li><strong>Destroyed Unity objects in the list.</strong> <code>enemies.Where(e =&gt; e != null)</code> uses Unity's <code>!=</code>, which is correct. Avoid <code>e is not null</code> here.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="collections.html">Collections</a></li>
+      <li><a href="delegates-events.html">Delegates, Lambdas &amp; Events</a> (what <code>x =&gt; ...</code> means)</li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://learn.microsoft.com/dotnet/csharp/linq/">official Microsoft C# documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

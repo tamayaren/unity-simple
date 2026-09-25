@@ -17,6 +17,27 @@ var NAV = [
     ]
   },
   {
+    heading: "C# Concepts",
+    pages: [
+      { title: "Value & Reference Types", path: "csharp/value-vs-reference.html" },
+      { title: "Fields, Properties & Modifiers", path: "csharp/members.html" },
+      { title: "Inheritance & Interfaces", path: "csharp/inheritance.html" },
+      { title: "Types & Type Checking", path: "csharp/types.html" },
+      { title: "Exceptions & try/catch", path: "csharp/exceptions.html" },
+      { title: "Null & Nullable Types", path: "csharp/null.html" },
+      { title: "Generics", path: "csharp/generics.html" },
+      { title: "Collections", path: "csharp/collections.html" },
+      { title: "LINQ", path: "csharp/linq.html" },
+      { title: "Delegates, Lambdas & Events", path: "csharp/delegates-events.html" },
+      { title: "Iterators & yield", path: "csharp/iterators.html" },
+      { title: "async & await", path: "csharp/async-await.html" },
+      { title: "Enums & switch", path: "csharp/enums.html" },
+      { title: "Strings & Formatting", path: "csharp/strings.html" },
+      { title: "Extension Methods", path: "csharp/extension-methods.html" },
+      { title: "Attributes", path: "csharp/attributes.html" }
+    ]
+  },
+  {
     heading: "Tutorials",
     pages: [
       { title: "UnityEvents in a Game", path: "tutorials/unityevents.html" },
@@ -28,8 +49,19 @@ var NAV = [
   {
     heading: "Guides",
     pages: [
-      { title: "Optimizing Your Code", path: "guides/optimization.html" },
+      { title: "Update & FixedUpdate", path: "guides/update-fixedupdate.html" },
+      { title: "Interpolation & Easing", path: "guides/interpolation.html" },
+      { title: "Bezier Curves", path: "guides/bezier-curves.html" },
       { title: "Better Ways to Do Things", path: "guides/best-practices.html" }
+    ]
+  },
+  {
+    heading: "Performance",
+    pages: [
+      { title: "Optimization Best Practices", path: "guides/optimization-practices.html" },
+      { title: "Optimizing Your Code", path: "guides/optimization.html" },
+      { title: "Object Pooling", path: "guides/object-pooling.html" },
+      { title: "GPU Instancing & Batching", path: "guides/gpu-instancing.html" }
     ]
   },
   {
@@ -93,35 +125,58 @@ var NAV = [
   // data-root tells us how to get back to the site root ("" or "../").
   var root = document.body.getAttribute("data-root") || "";
   var current = document.body.getAttribute("data-page") || "";
+  var isHome = current === "index.html";
 
   var html = '<input type="search" id="nav-search" placeholder="Search pages..." aria-label="Search pages">';
-  html += '<ul><li><a href="' + root + 'index.html"' + (current === "index.html" ? ' class="active"' : "") + ">Home</a></li></ul>";
+  html += '<ul><li><a href="' + root + 'index.html"' + (isHome ? ' class="active" aria-current="page"' : "") + ">Home</a></li></ul>";
 
   for (var i = 0; i < NAV.length; i++) {
     var group = NAV[i];
-    html += '<div class="nav-group"><h3>' + group.heading + "</h3><ul>";
+    var hasCurrent = false;
+    var items = "";
     for (var j = 0; j < group.pages.length; j++) {
       var p = group.pages[j];
-      var cls = p.path === current ? ' class="active"' : "";
-      html += '<li><a href="' + root + p.path + '"' + cls + ">" + p.title + "</a></li>";
+      var active = p.path === current;
+      if (active) hasCurrent = true;
+      items += '<li><a href="' + root + p.path + '"' + (active ? ' class="active" aria-current="page"' : "") + ">" + p.title + "</a></li>";
     }
-    html += "</ul></div>";
+    // Open the group that holds the current page. On the home page, open the first group.
+    var open = hasCurrent || (isHome && i === 0);
+    var listId = "nav-group-" + i;
+    html += '<div class="nav-group' + (open ? "" : " collapsed") + '">' +
+      '<h3><button type="button" class="nav-toggle" aria-expanded="' + open + '" aria-controls="' + listId + '">' +
+      group.heading + "</button></h3>" +
+      '<ul id="' + listId + '">' + items + "</ul></div>";
   }
   html += '<p class="no-results" id="nav-empty" style="display:none">No pages match.</p>';
   sidebar.innerHTML = html;
 
+  // Collapse / expand a group when its heading is clicked.
+  var toggles = sidebar.querySelectorAll(".nav-toggle");
+  for (var t = 0; t < toggles.length; t++) {
+    toggles[t].addEventListener("click", function () {
+      var groupEl = this.parentNode.parentNode;
+      var collapsed = groupEl.classList.toggle("collapsed");
+      this.setAttribute("aria-expanded", String(!collapsed));
+    });
+  }
+
   // Search: hide links that don't match, and hide empty groups.
+  // While searching, collapsed groups are shown so matches aren't hidden.
   var search = document.getElementById("nav-search");
   search.addEventListener("input", function () {
     var q = search.value.toLowerCase().trim();
+    if (q) sidebar.classList.add("searching");
+    else sidebar.classList.remove("searching");
+
     var groups = sidebar.querySelectorAll(".nav-group");
     var anyVisible = false;
     for (var g = 0; g < groups.length; g++) {
-      var items = groups[g].querySelectorAll("li");
+      var lis = groups[g].querySelectorAll("li");
       var groupVisible = false;
-      for (var k = 0; k < items.length; k++) {
-        var match = items[k].textContent.toLowerCase().indexOf(q) !== -1;
-        items[k].style.display = match ? "" : "none";
+      for (var k = 0; k < lis.length; k++) {
+        var match = lis[k].textContent.toLowerCase().indexOf(q) !== -1;
+        lis[k].style.display = match ? "" : "none";
         if (match) groupVisible = true;
       }
       groups[g].style.display = groupVisible ? "" : "none";
@@ -130,11 +185,15 @@ var NAV = [
     document.getElementById("nav-empty").style.display = anyVisible ? "none" : "";
   });
 
-  // Mobile menu button.
-  var toggle = document.getElementById("menu-toggle");
-  if (toggle) {
-    toggle.addEventListener("click", function () {
-      sidebar.classList.toggle("open");
+  // Mobile menu button: shows/hides the sidebar on small screens.
+  var menuButton = document.getElementById("menu-toggle");
+  if (menuButton) {
+    menuButton.setAttribute("aria-controls", "sidebar");
+    menuButton.setAttribute("aria-expanded", "false");
+    menuButton.addEventListener("click", function () {
+      var isOpen = sidebar.classList.toggle("open");
+      menuButton.setAttribute("aria-expanded", String(isOpen));
+      menuButton.textContent = isOpen ? "Close" : "Menu";
     });
   }
 })();

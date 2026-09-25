@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bezier Curves | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="guides/bezier-curves.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Guides &rsaquo; Bezier Curves</div>
+    <h1>Bezier Curves</h1>
+    <p class="summary">A Bezier curve is a smooth curve defined by a few <em>control points</em>. Games use them for projectile arcs, missile paths, camera rails, card-dealing animations, racing lines and UI connectors. This guide explains how they work, gives ready-to-use code, and shows how to move along a curve at a constant speed.</p>
+    <div class="analogy"><p>The pen tool in a drawing app. You click a start point and an end point, then drag "handles" that pull the line toward them like magnets. The line never touches the handles, but bends toward them. The more you drag, the stronger the bend.</p></div>
+
+    <h2>Built from Lerps</h2>
+    <p>A Bezier curve is just <a href="interpolation.html">Lerp</a> applied several times. Take three points: start <code>P0</code>, control <code>P1</code>, end <code>P2</code>.</p>
+    <ol>
+      <li>Lerp from <code>P0</code> to <code>P1</code> by <code>t</code> → point A</li>
+      <li>Lerp from <code>P1</code> to <code>P2</code> by <code>t</code> → point B</li>
+      <li>Lerp from A to B by <code>t</code> → <strong>the point on the curve</strong></li>
+    </ol>
+    <p>As <code>t</code> goes from 0 to 1, that point traces a smooth curve from <code>P0</code> to <code>P2</code>, bending toward <code>P1</code>. This step-by-step method is called <em>De Casteljau's algorithm</em>.</p>
+    <pre><code class="language-csharp">Vector3 QuadraticByLerps(Vector3 p0, Vector3 p1, Vector3 p2, float t)
+{
+    Vector3 a = Vector3.Lerp(p0, p1, t);
+    Vector3 b = Vector3.Lerp(p1, p2, t);
+    return Vector3.Lerp(a, b, t);
+}
+</code></pre>
+
+    <h2>Types of curve</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Type</th><th>Points</th><th>Shape</th><th>Good for</th></tr>
+      <tr><td>Linear</td><td>2</td><td>Straight line (just Lerp)</td><td>Simple moves</td></tr>
+      <tr><td>Quadratic</td><td>3 (1 control)</td><td>One bend</td><td>Jumps, thrown objects, arcs</td></tr>
+      <tr><td>Cubic</td><td>4 (2 controls)</td><td>S-curves, independent start/end directions</td><td>Paths, rails, missiles, UI lines</td></tr>
+    </table>
+    </div>
+
+    <h2>The code</h2>
+    <p>The direct formulas are faster than chaining Lerps. The <em>derivative</em> gives the direction the curve is heading at <code>t</code>, which you use to rotate an object along the path.</p>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public static class Bezier
+{
+    // Quadratic: (1-t)^2 P0 + 2(1-t)t P1 + t^2 P2
+    public static Vector3 Quadratic(Vector3 p0, Vector3 p1, Vector3 p2, float t)
+    {
+        float u = 1f - t;
+        return u * u * p0 + 2f * u * t * p1 + t * t * p2;
+    }
+
+    public static Vector3 QuadraticTangent(Vector3 p0, Vector3 p1, Vector3 p2, float t)
+    {
+        return 2f * (1f - t) * (p1 - p0) + 2f * t * (p2 - p1);
+    }
+
+    // Cubic: (1-t)^3 P0 + 3(1-t)^2 t P1 + 3(1-t) t^2 P2 + t^3 P3
+    public static Vector3 Cubic(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, float t)
+    {
+        float u = 1f - t;
+        return u * u * u * p0
+             + 3f * u * u * t * p1
+             + 3f * u * t * t * p2
+             + t * t * t * p3;
+    }
+
+    public static Vector3 CubicTangent(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, float t)
+    {
+        float u = 1f - t;
+        return 3f * u * u * (p1 - p0)
+             + 6f * u * t * (p2 - p1)
+             + 3f * t * t * (p3 - p2);
+    }
+}
+</code></pre>
+
+    <h2>Example: a lobbed grenade</h2>
+    <p>Place the control point above the midpoint between thrower and target. Higher control = higher arc.</p>
+    <pre><code class="language-csharp">using System.Collections;
+using UnityEngine;
+
+public class Lob : MonoBehaviour
+{
+    [SerializeField] private float arcHeight = 3f;
+    [SerializeField] private float flightTime = 1f;
+
+    public IEnumerator FlyTo(Vector3 target)
+    {
+        Vector3 start = transform.position;
+        Vector3 control = (start + target) / 2f + Vector3.up * arcHeight;
+
+        for (float e = 0f; e &lt; flightTime; e += Time.deltaTime)
+        {
+            float t = e / flightTime;
+            transform.position = Bezier.Quadratic(start, control, target, t);
+
+            // Face the direction of travel
+            Vector3 dir = Bezier.QuadraticTangent(start, control, target, t);
+            if (dir != Vector3.zero) transform.rotation = Quaternion.LookRotation(dir);
+
+            yield return null;
+        }
+        transform.position = target;
+    }
+}
+</code></pre>
+    <p>A quadratic curve with the control at the midpoint gives an arc that peaks at half of <code>arcHeight</code>, because the curve only bends <em>toward</em> the control point.</p>
+
+    <h2>Example: an editable path with Gizmos</h2>
+    <p>Use four child Transforms as the points, so you can drag them around in the Scene view.</p>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class BezierPath : MonoBehaviour
+{
+    public Transform p0, p1, p2, p3;
+    [SerializeField, Range(4, 100)] private int gizmoSegments = 30;
+
+    public Vector3 GetPoint(float t)   =&gt; Bezier.Cubic(p0.position, p1.position, p2.position, p3.position, t);
+    public Vector3 GetTangent(float t) =&gt; Bezier.CubicTangent(p0.position, p1.position, p2.position, p3.position, t);
+
+    void OnDrawGizmos()
+    {
+        if (!p0 || !p1 || !p2 || !p3) return;
+
+        // Handles (straight lines to the control points)
+        Gizmos.color = Color.gray;
+        Gizmos.DrawLine(p0.position, p1.position);
+        Gizmos.DrawLine(p3.position, p2.position);
+
+        // The curve itself, as many short lines
+        Gizmos.color = Color.cyan;
+        Vector3 prev = GetPoint(0f);
+        for (int i = 1; i &lt;= gizmoSegments; i++)
+        {
+            Vector3 next = GetPoint(i / (float)gizmoSegments);
+            Gizmos.DrawLine(prev, next);
+            prev = next;
+        }
+    }
+}
+</code></pre>
+    <p>To show it in the game, feed the same points to a <code>LineRenderer</code>: set <code>positionCount</code> and call <code>SetPosition(i, GetPoint(i / (float)(count - 1)))</code>.</p>
+
+    <h2>Moving at a constant speed</h2>
+    <p>Here's the catch: <strong><code>t</code> is not distance</strong>. Where control points bunch up, equal steps of <code>t</code> cover less ground, so an object moving with <code>t += speed * dt</code> speeds up and slows down along the curve.</p>
+    <div class="analogy"><p>A tape measure printed on stretchy rubber. The marks (<code>t</code>) are evenly spaced on the tape, but when the tape is bent around a curve, some sections are stretched and others squashed. To walk at an even pace you need a real measurement: a table that says "5 meters along = mark 0.37".</p></div>
+    <p>The fix is an <em>arc-length table</em>: sample the curve, add up the distances, then look up <code>t</code> from a distance.</p>
+    <pre><code class="language-csharp">using UnityEngine;
+
+[RequireComponent(typeof(BezierPath))]
+public class PathFollower : MonoBehaviour
+{
+    [SerializeField] private Transform mover;
+    [SerializeField] private float speed = 3f;      // meters per second
+    [SerializeField] private int samples = 100;
+
+    private BezierPath path;
+    private float[] lengths;   // lengths[i] = distance along the curve at t = i / samples
+    private float distance;
+
+    public float TotalLength =&gt; lengths[samples];
+
+    void Start()
+    {
+        path = GetComponent&lt;BezierPath&gt;();
+        BuildTable(); // rebuild if the control points move
+    }
+
+    void BuildTable()
+    {
+        lengths = new float[samples + 1];
+        Vector3 prev = path.GetPoint(0f);
+        for (int i = 1; i &lt;= samples; i++)
+        {
+            Vector3 p = path.GetPoint(i / (float)samples);
+            lengths[i] = lengths[i - 1] + Vector3.Distance(prev, p);
+            prev = p;
+        }
+    }
+
+    // Convert a distance along the curve into the matching t
+    float DistanceToT(float d)
+    {
+        d = Mathf.Clamp(d, 0f, TotalLength);
+        for (int i = 1; i &lt;= samples; i++)
+        {
+            if (lengths[i] &gt;= d)
+            {
+                float segment = Mathf.InverseLerp(lengths[i - 1], lengths[i], d);
+                return (i - 1 + segment) / samples;
+            }
+        }
+        return 1f;
+    }
+
+    void Update()
+    {
+        distance = Mathf.Repeat(distance + speed * Time.deltaTime, TotalLength); // loop
+        float t = DistanceToT(distance);
+        mover.position = path.GetPoint(t);
+        mover.rotation = Quaternion.LookRotation(path.GetTangent(t));
+    }
+}
+</code></pre>
+    <p>For long paths, replace the linear search with a binary search. For a looping path, make sure P3 equals P0.</p>
+
+    <h2>Joining curves into longer paths</h2>
+    <p>Chain cubic curves end to end: the end point of one is the start of the next. For a smooth joint (no sharp corner), the last control point of curve A, the shared point, and the first control point of curve B must lie on one straight line. Drawing apps do this automatically when you "mirror" handles.</p>
+
+    <h2>In production</h2>
+    <ul>
+      <li><strong>Unity Splines package</strong> (<code>com.unity.splines</code>, Package Manager): edit Bezier splines in the Scene view with proper tools, evaluate them in code, and animate objects with the <code>SplineAnimate</code> component. Use it for real level paths.</li>
+      <li><strong>DOTween</strong>: <code>transform.DOPath(points, duration, PathType.CatmullRom)</code> moves along a smooth path through the points you give it.</li>
+      <li><strong>Cinemachine</strong> uses splines for camera dolly tracks.</li>
+    </ul>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Expecting the curve to pass through control points.</strong> It only passes through the start and end. It bends <em>toward</em> the controls.</li>
+      <li><strong>Assuming even t = even speed.</strong> Use an arc-length table (above) when speed matters.</li>
+      <li><strong><code>LookRotation</code> with a zero tangent.</strong> Happens when a control point sits exactly on an end point. Check for <code>Vector3.zero</code>.</li>
+      <li><strong>Recomputing the table every frame.</strong> Build it once, and again only when points move.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="interpolation.html">Interpolation &amp; Easing</a></li>
+      <li><a href="../api/debug.html">Debug</a> (Gizmos)</li>
+      <li><a href="../api/dotween.html">DOTween</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/Packages/com.unity.splines@latest">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

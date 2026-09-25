@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Attributes | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="csharp/attributes.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; C# Concepts &rsaquo; Attributes</div>
+    <div class="infobox">
+      <div class="infobox-title">Attributes</div>
+      <table>
+        <tr><th>Syntax</th><td><code>[Name]</code>, <code>[Name(args)]</code></td></tr>
+        <tr><th>Category</th><td>Metadata / reflection</td></tr>
+        <tr><th>In Unity</th><td><code>[SerializeField]</code>, <code>[Header]</code>, <code>[Range]</code>, <code>[RequireComponent]</code>, <code>[CreateAssetMenu]</code></td></tr>
+      </table>
+    </div>
+    <h1>Attributes</h1>
+    <p class="summary">Attributes are labels in square brackets that you attach to classes, fields or methods. They don't change what your code does by themselves. Instead, <em>other</em> code (Unity's Editor, the compiler, or your own tools) reads them and acts on them.</p>
+    <div class="analogy"><p>Sticky notes on a filing cabinet. "FRAGILE" on a box doesn't make it fragile; it tells the movers how to handle it. <code>[Range(0, 10)]</code> doesn't limit your field in code; it tells the Inspector to draw a slider from 0 to 10.</p></div>
+
+    <h2>Unity Inspector attributes</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Attribute</th><th>Goes on</th><th>Effect</th></tr>
+      <tr><td><code>[SerializeField]</code></td><td>Private field</td><td>Show and save it in the Inspector</td></tr>
+      <tr><td><code>[HideInInspector]</code></td><td>Public field</td><td>Still saved, but hidden from the Inspector</td></tr>
+      <tr><td><code>[System.NonSerialized]</code></td><td>Public field</td><td>Not saved and not shown</td></tr>
+      <tr><td><code>[Header("Movement")]</code></td><td>Field</td><td>Bold heading above it</td></tr>
+      <tr><td><code>[Tooltip("...")]</code></td><td>Field</td><td>Hover text</td></tr>
+      <tr><td><code>[Range(0f, 1f)]</code></td><td><code>float</code>/<code>int</code> field</td><td>Slider</td></tr>
+      <tr><td><code>[Min(0)]</code></td><td><code>float</code>/<code>int</code> field</td><td>Can't go below the value in the Inspector</td></tr>
+      <tr><td><code>[Space(10)]</code></td><td>Field</td><td>Empty gap</td></tr>
+      <tr><td><code>[TextArea(3, 10)]</code></td><td><code>string</code> field</td><td>Multi-line text box</td></tr>
+      <tr><td><code>[ColorUsage(true, true)]</code></td><td><code>Color</code> field</td><td>Color picker with alpha/HDR</td></tr>
+      <tr><td><code>[System.Serializable]</code></td><td>Your own class/struct</td><td>Lets Unity show fields of that type</td></tr>
+    </table>
+    </div>
+
+    <h2>Unity class and method attributes</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Attribute</th><th>Effect</th></tr>
+      <tr><td><code>[RequireComponent(typeof(Rigidbody))]</code></td><td>Adds the component automatically and prevents removing it</td></tr>
+      <tr><td><code>[DisallowMultipleComponent]</code></td><td>Only one of this script per GameObject</td></tr>
+      <tr><td><code>[CreateAssetMenu(menuName = "...")]</code></td><td>Adds a ScriptableObject to the Create menu</td></tr>
+      <tr><td><code>[AddComponentMenu("Game/Health")]</code></td><td>Where it appears in the Add Component menu</td></tr>
+      <tr><td><code>[ExecuteAlways]</code></td><td>Runs <code>Update</code> etc. in Edit Mode too (careful!)</td></tr>
+      <tr><td><code>[ContextMenu("Reset Stats")]</code></td><td>On a method: adds it to the component's ⋮ menu, so you can run it from the Inspector</td></tr>
+      <tr><td><code>[SelectionBase]</code></td><td>Clicking a child in the Scene view selects this object instead</td></tr>
+    </table>
+    </div>
+
+    <h2>Example: a well-labeled component</h2>
+    <pre><code class="language-csharp">using UnityEngine;
+
+[RequireComponent(typeof(Rigidbody))]
+[DisallowMultipleComponent]
+[AddComponentMenu("Game/Enemy Stats")]
+public class EnemyStats : MonoBehaviour
+{
+    [Header("Health")]
+    [Tooltip("Health when spawned.")]
+    [SerializeField, Min(1)] private int maxHealth = 50;
+
+    [Header("Movement")]
+    [SerializeField, Range(0f, 20f)] private float speed = 4f;
+
+    [Space]
+    [SerializeField, TextArea(2, 5)] private string designerNotes;
+
+    [ContextMenu("Double Health")]
+    private void DoubleHealth()
+    {
+        maxHealth *= 2;
+    }
+}
+</code></pre>
+    <p>Several attributes can go in one set of brackets, separated by commas: <code>[SerializeField, Range(0, 1)]</code>.</p>
+
+    <h2>C# attributes you'll meet</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Attribute</th><th>Effect</th></tr>
+      <tr><td><code>[System.Obsolete("Use X instead")]</code></td><td>Warns anyone who uses this method. How Unity marks old APIs like <code>FindObjectOfType</code>.</td></tr>
+      <tr><td><code>[System.Flags]</code></td><td>An enum whose values combine. See <a href="enums.html">Enums</a>.</td></tr>
+      <tr><td><code>[System.Diagnostics.Conditional("UNITY_EDITOR")]</code></td><td>Calls to this method are removed unless the symbol is defined.</td></tr>
+    </table>
+    </div>
+
+    <h2>Making your own attribute</h2>
+    <p>Create a class that inherits from <code>System.Attribute</code>. Then read it with <em>reflection</em> using <code>GetType()</code>.</p>
+    <pre><code class="language-csharp">using System;
+using System.Reflection;
+using UnityEngine;
+
+// The attribute: its name must end in "Attribute"; you use it without that part
+[AttributeUsage(AttributeTargets.Method)]
+public class CheatAttribute : Attribute
+{
+    public string Command { get; }
+    public CheatAttribute(string command) { Command = command; }
+}
+
+public class Player : MonoBehaviour
+{
+    [Cheat("god")]  public void GodMode()  { Debug.Log("God mode on"); }
+    [Cheat("heal")] public void FullHeal() { Debug.Log("Healed"); }
+}
+
+// A debug console that finds cheat methods automatically
+public class CheatConsole : MonoBehaviour
+{
+    [SerializeField] private Player player;
+
+    public void Run(string command)
+    {
+        foreach (MethodInfo method in player.GetType().GetMethods())
+        {
+            var cheat = method.GetCustomAttribute&lt;CheatAttribute&gt;();
+            if (cheat != null &amp;&amp; cheat.Command == command)
+            {
+                method.Invoke(player, null);
+                return;
+            }
+        }
+        Debug.LogWarning($"Unknown cheat: {command}");
+    }
+}
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>The compiler stores attributes as extra data (metadata) next to your compiled code.</li>
+        <li>Unity's Editor reads Inspector attributes when drawing components. They have no effect on your game's logic or performance.</li>
+        <li>Reading attributes yourself uses reflection, which is slow. Do it once (e.g. at startup) and cache the results, not every frame.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Expecting <code>[Range]</code> to clamp in code.</strong> It only limits the Inspector slider. <code>speed = 999</code> in code still works. Clamp in code if it matters.</li>
+      <li><strong>Adding <code>[RequireComponent]</code> to a script already on objects.</strong> It only auto-adds when the script is added. Existing objects aren't updated.</li>
+      <li><strong><code>[SerializeField]</code> on a property.</strong> Doesn't work. Use <code>[field: SerializeField]</code> on an auto-property.</li>
+      <li><strong>Custom classes not showing in the Inspector.</strong> Add <code>[System.Serializable]</code> to the class.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="members.html">Fields, Properties &amp; Modifiers</a></li>
+      <li><a href="types.html">Types &amp; Type Checking</a> (GetType and reflection)</li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://learn.microsoft.com/dotnet/csharp/advanced-topics/reflection-and-attributes/">official Microsoft C# documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

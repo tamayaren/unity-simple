@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="../css/style.css">
 </head>
 <body data-root="../" data-page="guides/optimization.html">
-<header class="site-header">
+<header class="site-header" id="top">
   <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
   <a class="logo" href="../index.html">Unity Simple Docs</a>
   <nav class="header-links">
@@ -20,9 +20,9 @@
 <div class="layout">
   <aside class="sidebar" id="sidebar"></aside>
   <main class="content">
-    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Guides &rsaquo; Optimizing Your Code</div>
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Performance &rsaquo; Optimizing Your Code</div>
     <h1>Optimizing Your Code</h1>
-    <p class="summary">Practical tips for making Unity scripts run faster and stutter less. Each tip shows the slow version, the better version, and why it matters.</p>
+    <p class="summary">Practical tips for making Unity scripts run faster and stutter less. Each tip shows the slow version, the better version, and why it matters. For the overall process (budgets, profiling on devices, engine settings), see <a href="optimization-practices.html">Optimization Best Practices</a>.</p>
 
     <h2>Rule zero: measure first</h2>
     <p>Most code is fast enough. Before changing anything, find out what is actually slow using the <strong>Profiler</strong> (<strong>Window &gt; Analysis &gt; Profiler</strong>). Press Play, record a few seconds, click a spike in the CPU graph, and look at the <em>Hierarchy</em> view sorted by time. It tells you exactly which scripts and methods took the most time that frame.</p>
@@ -89,7 +89,7 @@ void CheckNearby()
     <p>To find garbage, select the <strong>GC Alloc</strong> column in the Profiler's CPU Hierarchy view and sort by it.</p>
 
     <h2>3. Pool objects you spawn a lot</h2>
-    <p><code>Instantiate</code> and <code>Destroy</code> are expensive when done dozens of times per second (bullets, particles, damage numbers). Reuse objects with an object pool instead. Unity includes <code>UnityEngine.Pool.ObjectPool&lt;T&gt;</code>; see <a href="../manual/prefabs.html">Prefabs &amp; Spawning</a> for a full example.</p>
+    <p><code>Instantiate</code> and <code>Destroy</code> are expensive when done dozens of times per second (bullets, particles, damage numbers). Reuse objects with an object pool instead. Unity includes <code>UnityEngine.Pool.ObjectPool&lt;T&gt;</code>; the <a href="object-pooling.html">Object Pooling</a> guide covers it in depth.</p>
 
     <h2>4. Don't run code every frame if you don't have to</h2>
     <pre><code class="language-csharp">// WASTEFUL: checks a slow thing 60+ times per second
@@ -173,6 +173,9 @@ static void EditorLog(string msg) =&gt; Debug.Log(msg); // calls are removed fro
 
     <h2>See also</h2>
     <ul>
+      <li><a href="optimization-practices.html">Optimization Best Practices</a> (process, profiling, engine settings)</li>
+      <li><a href="gpu-instancing.html">GPU Instancing &amp; Batching</a></li>
+      <li><a href="object-pooling.html">Object Pooling</a></li>
       <li><a href="best-practices.html">Better Ways to Do Things</a></li>
       <li><a href="../api/debug.html">Debug</a></li>
     </ul>
@@ -180,7 +183,7 @@ static void EditorLog(string msg) =&gt; Debug.Log(msg); // calls are removed fro
     <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/Manual/index.html">official Unity documentation</a>.</p>
   </main>
 </div>
-<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
 <script src="../js/nav.js"></script>
 </body>
 </html>

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPU Instancing &amp; Batching | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="guides/gpu-instancing.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Performance &rsaquo; GPU Instancing & Batching</div>
+    <h1>GPU Instancing &amp; Batching</h1>
+    <p class="summary">Every time the CPU asks the GPU to draw something, there's overhead. With thousands of objects (trees, grass, rocks, crowds), that overhead, not the drawing itself, often limits your frame rate. Batching and GPU instancing reduce how many requests the CPU has to make.</p>
+    <div class="analogy"><p>Shipping 1,000 identical chairs. You could send 1,000 trucks, each with one chair and its own paperwork (1,000 draw calls). Or you can send one truck with one set of paperwork that says "1,000 of this chair, here's the list of addresses" (one instanced draw call). The chairs are the same work to unload, but the paperwork is where the time was going.</p></div>
+
+    <h2>Key terms</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Term</th><th>Meaning</th></tr>
+      <tr><td>Draw call</td><td>One CPU → GPU command: "draw this mesh with these settings"</td></tr>
+      <tr><td>SetPass call</td><td>Changing the shader/material state before drawing. Usually the most expensive part.</td></tr>
+      <tr><td>Batch</td><td>A group of objects drawn with one command</td></tr>
+      <tr><td>CPU-bound vs GPU-bound</td><td>Whether the CPU (preparing work) or the GPU (drawing pixels) is the bottleneck. Batching only helps when the <em>CPU</em> is the problem.</td></tr>
+    </table>
+    </div>
+
+    <h2>Measuring first</h2>
+    <ul>
+      <li><strong>Game view &gt; Stats</strong>: shows <em>Batches</em> and <em>SetPass calls</em> for the current frame.</li>
+      <li><strong>Window &gt; Analysis &gt; Frame Debugger</strong>: step through every draw call in a frame and see <em>why</em> two objects weren't batched together ("Objects have different materials", etc.).</li>
+      <li><strong>Profiler &gt; Rendering / CPU</strong>: how long the render thread spends preparing draws.</li>
+    </ul>
+
+    <h2>The options</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Technique</th><th>What it does</th><th>Best for</th><th>How to enable</th></tr>
+      <tr><td><strong>SRP Batcher</strong> (URP/HDRP)</td><td>Makes switching between objects with the same <em>shader</em> very cheap, even with different materials. Doesn't reduce draw calls, but reduces their cost.</td><td>Most scenes in URP/HDRP: the default path</td><td>On by default in the URP asset; use compatible shaders (URP Lit, Shader Graph)</td></tr>
+      <tr><td><strong>Static batching</strong></td><td>Combines static meshes sharing a material into bigger meshes</td><td>Level geometry that never moves</td><td>Tick <em>Static</em> (Batching Static) on the GameObject</td></tr>
+      <tr><td><strong>GPU instancing</strong></td><td>Draws many copies of the <em>same mesh + same material</em> in one call, each with its own position/rotation/scale</td><td>Lots of identical things: grass, trees, rocks, bullets, crowds</td><td>Tick <em>Enable GPU Instancing</em> on the material, or draw from code</td></tr>
+      <tr><td><strong>GPU Resident Drawer</strong> (Unity 6, URP/HDRP)</td><td>Automatically instances compatible GameObjects using the BatchRendererGroup API</td><td>Big scenes with many repeated MeshRenderers</td><td>URP asset: <em>GPU Resident Drawer</em> = Instanced Drawing. Requires the Forward+ rendering path and <em>Project Settings &gt; Graphics &gt; BatchRendererGroup Variants</em> = Keep All</td></tr>
+      <tr><td>Dynamic batching</td><td>Combines tiny moving meshes on the CPU each frame</td><td>Rarely worth it on modern hardware</td><td>Built-in / URP asset setting</td></tr>
+    </table>
+    </div>
+    <div class="note"><strong>SRP Batcher vs. instancing on GameObjects</strong>In URP/HDRP, when a GameObject is compatible with the SRP Batcher, the SRP Batcher is used <em>instead of</em> GPU instancing for it. Ticking "Enable GPU Instancing" on the material then has no effect for those objects. Instancing still matters when you draw from code (below), and for shaders or renderers that aren't SRP Batcher compatible.</div>
+
+    <h2>Instancing from code: thousands of objects without GameObjects</h2>
+    <p>For huge counts (a field of grass, an asteroid belt), skip GameObjects entirely and draw the mesh directly. No Transforms, no components, no <code>Update</code> calls.</p>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class AsteroidField : MonoBehaviour
+{
+    [SerializeField] private Mesh mesh;
+    [SerializeField] private Material material;   // "Enable GPU Instancing" ticked
+    [SerializeField] private int count = 5000;
+    [SerializeField] private float radius = 100f;
+
+    private Matrix4x4[] matrices;
+    private RenderParams renderParams;
+    private const int BatchSize = 1023; // classic per-call limit; stay under it
+
+    void Start()
+    {
+        matrices = new Matrix4x4[count];
+        for (int i = 0; i &lt; count; i++)
+        {
+            Vector3 pos = Random.insideUnitSphere * radius;
+            Quaternion rot = Random.rotation;
+            Vector3 scale = Vector3.one * Random.Range(0.5f, 3f);
+            matrices[i] = Matrix4x4.TRS(pos, rot, scale); // position + rotation + scale in one
+        }
+
+        renderParams = new RenderParams(material)
+        {
+            // Bounds used for culling: must contain every instance
+            worldBounds = new Bounds(transform.position, Vector3.one * radius * 2f)
+        };
+    }
+
+    void Update()
+    {
+        // Must be called every frame: this draws for the current frame only
+        for (int start = 0; start &lt; count; start += BatchSize)
+        {
+            int n = Mathf.Min(BatchSize, count - start);
+            Graphics.RenderMeshInstanced(renderParams, mesh, 0, matrices, n, start);
+        }
+    }
+}
+</code></pre>
+    <div class="runtime">
+      <p><strong>What happens at runtime</strong></p>
+      <ol>
+        <li>Every frame, <code>RenderMeshInstanced</code> sends the GPU the mesh once, the material once, and a buffer of up to 1023 matrices.</li>
+        <li>The GPU draws the mesh once per matrix. The shader reads a per-instance index to find which matrix to use.</li>
+        <li>5,000 asteroids become about 5 draw calls instead of 5,000.</li>
+        <li>These instances have no colliders and aren't GameObjects. For interaction, keep your own data (positions) and do the math yourself, or use a few real GameObjects near the player.</li>
+      </ol>
+    </div>
+
+    <h2>Per-instance colors</h2>
+    <p><code>MaterialPropertyBlock</code> lets renderers share one material but override properties such as color, without creating material copies.</p>
+    <pre><code class="language-csharp">private static readonly int ColorId = Shader.PropertyToID("_BaseColor"); // "_Color" in Built-in shaders
+private MaterialPropertyBlock block;
+
+void Awake()
+{
+    block = new MaterialPropertyBlock();
+    GetComponent&lt;Renderer&gt;().GetPropertyBlock(block);
+    block.SetColor(ColorId, Random.ColorHSV());
+    GetComponent&lt;Renderer&gt;().SetPropertyBlock(block);
+}
+</code></pre>
+    <p>With GPU instancing, a shader must declare the property as <em>per-instance</em> for different values to stay in one batch (Shader Graph and URP's built-in shaders handle the common cases). Note: in URP, a renderer with a MaterialPropertyBlock is no longer SRP Batcher compatible.</p>
+
+    <h2>Other big rendering wins</h2>
+    <ul>
+      <li><strong>Share materials.</strong> Reading <code>renderer.material</code> creates a copy per object, which breaks batching and instancing. Use <code>sharedMaterial</code> or property blocks.</li>
+      <li><strong>Texture atlases:</strong> pack several textures into one so objects can share a material.</li>
+      <li><strong>LOD Groups:</strong> swap to simpler meshes at a distance.</li>
+      <li><strong>Occlusion culling</strong> (Window &gt; Rendering &gt; Occlusion Culling): skip objects hidden behind walls. Good for indoor levels.</li>
+      <li><strong>Shadows</strong> are drawn in extra passes. Reduce shadow distance and turn off <em>Cast Shadows</em> on small objects.</li>
+      <li><strong>Overdraw:</strong> many layers of transparent particles or UI covering the screen are expensive on the GPU, especially on mobile. Check with the Scene view's <em>Overdraw</em> mode (Built-in) or the URP Rendering Debugger.</li>
+    </ul>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Instancing with different materials.</strong> Instancing only groups the <em>same mesh and same material</em>. Two materials with the same settings are still different materials.</li>
+      <li><strong>Expecting it to help when GPU-bound.</strong> Fewer draw calls saves CPU time. If the GPU is struggling with pixels (resolution, post-processing, overdraw), batching won't fix it.</li>
+      <li><strong>Skinned meshes.</strong> Animated characters (<code>SkinnedMeshRenderer</code>) aren't instanced by these features. Crowds need special techniques (e.g. baked vertex animation).</li>
+      <li><strong>Forgetting worldBounds.</strong> Too small, and instances pop out of view when the bounds leave the camera.</li>
+      <li><strong>Calling RenderMeshInstanced only once.</strong> It draws for one frame; call it every frame.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="optimization-practices.html">Optimization Best Practices</a></li>
+      <li><a href="object-pooling.html">Object Pooling</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/Manual/GPUInstancing.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

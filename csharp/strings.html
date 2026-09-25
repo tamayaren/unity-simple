@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Strings &amp; Formatting | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="csharp/strings.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; C# Concepts &rsaquo; Strings & Formatting</div>
+    <div class="infobox">
+      <div class="infobox-title">Strings</div>
+      <table>
+        <tr><th>Keywords</th><td><code>string</code>, <code>$"..."</code>, <code>@"..."</code>, <code>StringBuilder</code></td></tr>
+        <tr><th>Namespace</th><td><code>System</code>, <code>System.Text</code></td></tr>
+        <tr><th>In Unity</th><td>UI text, <code>Debug.Log</code>, save keys, dialogue</td></tr>
+      </table>
+    </div>
+    <h1>Strings &amp; Formatting</h1>
+    <p class="summary">A <code>string</code> is text. This page covers building strings for UI and logs (interpolation and number formatting), common string methods, and how to avoid the performance trap of rebuilding text every frame.</p>
+
+    <h2>String interpolation</h2>
+    <p>Put <code>$</code> before the quotes and write values inside <code>{ }</code>. It's the clearest way to build text.</p>
+    <pre><code class="language-csharp">int coins = 42;
+float time = 83.456f;
+
+string a = "Coins: " + coins + " Time: " + time; // old way: concatenation
+string b = $"Coins: {coins} Time: {time}";        // interpolation: same result, easier to read
+
+Debug.Log($"{name} is at {transform.position}");
+</code></pre>
+
+    <h2>Formatting numbers</h2>
+    <p>Add <code>:format</code> after the value inside the braces:</p>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Code</th><th>Result for 1234.5678</th><th>Use for</th></tr>
+      <tr><td><code>$"{x:F0}"</code></td><td>1235</td><td>Whole numbers (rounded)</td></tr>
+      <tr><td><code>$"{x:F2}"</code></td><td>1234.57</td><td>2 decimal places</td></tr>
+      <tr><td><code>$"{x:N0}"</code></td><td>1,235</td><td>Thousands separators (scores)</td></tr>
+      <tr><td><code>$"{x:0000}"</code></td><td>1235</td><td>Pad with zeros: 7 → 0007</td></tr>
+      <tr><td><code>$"{0.75f:P0}"</code></td><td>75%</td><td>Percentages</td></tr>
+      <tr><td><code>$"{x,8}"</code></td><td>"&nbsp;&nbsp;1234.5678"</td><td>Right-align in 8 characters</td></tr>
+    </table>
+    </div>
+    <p>Separators and decimal points follow the player's system language (e.g. "1.234,57" in German) unless you pass <code>CultureInfo.InvariantCulture</code>.</p>
+    <h3>A timer display</h3>
+    <pre><code class="language-csharp">float seconds = 83.456f;
+int m = (int)(seconds / 60f);
+float s = seconds % 60f;
+timerText.text = $"{m:00}:{s:00.00}"; // "01:23.46"
+
+// Or with TimeSpan
+var t = System.TimeSpan.FromSeconds(seconds);
+timerText.text = t.ToString(@"mm\:ss"); // "01:23"
+</code></pre>
+
+    <h2>Useful string methods</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Example</th><th>Result</th></tr>
+      <tr><td><code>Length</code></td><td><code>"Hello".Length</code></td><td>5</td></tr>
+      <tr><td><code>ToUpper()</code> / <code>ToLower()</code></td><td><code>"Hi".ToUpper()</code></td><td>"HI"</td></tr>
+      <tr><td><code>Contains(s)</code></td><td><code>"Goblin King".Contains("King")</code></td><td>true</td></tr>
+      <tr><td><code>StartsWith</code> / <code>EndsWith</code></td><td><code>name.StartsWith("Enemy_")</code></td><td>true/false</td></tr>
+      <tr><td><code>Replace(a, b)</code></td><td><code>"(Clone)".Replace("(Clone)", "")</code></td><td>""</td></tr>
+      <tr><td><code>Split(c)</code></td><td><code>"a,b,c".Split(',')</code></td><td>["a","b","c"]</td></tr>
+      <tr><td><code>Trim()</code></td><td><code>"  hi  ".Trim()</code></td><td>"hi"</td></tr>
+      <tr><td><code>Substring(start, len)</code></td><td><code>"Unity".Substring(0, 3)</code></td><td>"Uni"</td></tr>
+      <tr><td><code>string.IsNullOrEmpty(s)</code></td><td><code>string.IsNullOrEmpty(input)</code></td><td>true if null or ""</td></tr>
+      <tr><td><code>string.Join(sep, items)</code></td><td><code>string.Join(", ", names)</code></td><td>"Ana, Ben"</td></tr>
+      <tr><td><code>string.Equals(a, b, StringComparison.OrdinalIgnoreCase)</code></td><td>compare ignoring case</td><td>true/false</td></tr>
+    </table>
+    </div>
+
+    <h2>Special characters</h2>
+    <pre><code class="language-csharp">string line  = "First line\nSecond line";   // \n = new line
+string quote = "She said \"hi\"";           // \" = a quote inside the string
+string path  = @"C:\Games\Save";            // @ = backslashes are literal (verbatim)
+string brace = $"Use {{braces}} like this";  // {{ }} = literal braces in interpolation
+</code></pre>
+
+    <h2>StringBuilder: building big strings</h2>
+    <p>Strings can't be changed. Every <code>+</code> makes a new string and throws the old one away. For building long text in a loop, use <code>StringBuilder</code>, which grows one buffer instead.</p>
+    <div class="analogy"><p>Writing a letter in pen. With plain strings, fixing one word means rewriting the whole letter on a fresh sheet and throwing the old one away. A <code>StringBuilder</code> is a notepad in pencil: you keep adding and editing the same page, and only copy it out neatly (<code>ToString()</code>) at the end.</p></div>
+    <pre><code class="language-csharp">using System.Text;
+
+private readonly StringBuilder sb = new StringBuilder(256); // reuse this one
+
+void ShowInventory(List&lt;Item&gt; items)
+{
+    sb.Clear();
+    sb.AppendLine("Inventory:");
+    foreach (Item item in items)
+    {
+        sb.Append("- ").Append(item.displayName).Append(" x").Append(item.count).AppendLine();
+    }
+    inventoryText.text = sb.ToString();
+}
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>Each new string is a heap allocation. <code>$"Score: {score}"</code> in <code>Update</code> creates garbage every frame, even if the score didn't change.</li>
+        <li>Setting a TextMeshPro <code>text</code> property also makes it rebuild its mesh, which costs time.</li>
+        <li>So: <strong>only update text when the value actually changes</strong>.</li>
+      </ol>
+    </div>
+    <pre><code class="language-csharp">private int shownScore = -1;
+
+void Update()
+{
+    if (score == shownScore) return;      // nothing changed: no new string, no mesh rebuild
+    shownScore = score;
+    scoreText.text = $"Score: {score:N0}";
+}
+// Even better: update from a "score changed" event instead of polling in Update.
+</code></pre>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Comparing with <code>==</code> for user input</strong> when case doesn't matter. Use <code>string.Equals(a, b, StringComparison.OrdinalIgnoreCase)</code>.</li>
+      <li><strong><code>float.Parse("3.5")</code> failing on some computers.</strong> In languages that use a comma for decimals, it throws or gives the wrong number. Use <code>float.Parse(s, CultureInfo.InvariantCulture)</code> for data you save and load.</li>
+      <li><strong>Rebuilding UI text every frame.</strong> See above.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../guides/optimization.html">Optimizing Your Code</a></li>
+      <li><a href="exceptions.html">Exceptions &amp; try/catch</a> (<code>TryParse</code>)</li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/tokens/interpolated">official Microsoft C# documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

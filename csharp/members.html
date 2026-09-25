@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fields, Properties &amp; Modifiers | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="csharp/members.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; C# Concepts &rsaquo; Fields, Properties & Modifiers</div>
+    <div class="infobox">
+      <div class="infobox-title">Fields, Properties &amp; Modifiers</div>
+      <table>
+        <tr><th>Keywords</th><td><code>public</code>, <code>private</code>, <code>protected</code>, <code>internal</code>, <code>static</code>, <code>const</code>, <code>readonly</code>, <code>get</code>, <code>set</code></td></tr>
+        <tr><th>Category</th><td>Classes</td></tr>
+        <tr><th>In Unity</th><td><code>[SerializeField] private</code> fields, <code>Time.deltaTime</code> (static property)</td></tr>
+      </table>
+    </div>
+    <h1>Fields, Properties &amp; Modifiers</h1>
+    <p class="summary">A <strong>field</strong> is a variable that belongs to a class. A <strong>property</strong> looks like a field from the outside but runs code when you read or write it. <strong>Modifiers</strong> control who can see a member (<code>public</code>, <code>private</code>) and how it behaves (<code>static</code>, <code>const</code>, <code>readonly</code>).</p>
+
+    <h2>Access modifiers</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Modifier</th><th>Who can use it</th></tr>
+      <tr><td><code>private</code></td><td>Only code inside this class. <strong>The default</strong> if you write nothing.</td></tr>
+      <tr><td><code>protected</code></td><td>This class and classes that inherit from it.</td></tr>
+      <tr><td><code>internal</code></td><td>Any code in the same assembly (for most Unity projects, all your scripts).</td></tr>
+      <tr><td><code>public</code></td><td>Anyone.</td></tr>
+    </table>
+    </div>
+    <div class="analogy"><p>Rooms in a house. <code>private</code> is your bedroom: only you go in. <code>protected</code> is the family room: you and your children. <code>internal</code> is the whole house: anyone who lives there. <code>public</code> is the front yard: anyone passing by.</p></div>
+    <p>Unity adds a twist: whether a field shows in the <strong>Inspector</strong> is separate from who can access it in code. <code>public</code> fields and <code>[SerializeField] private</code> fields show up; plain <code>private</code> ones don't. See <a href="../guides/best-practices.html">Better Ways to Do Things</a>.</p>
+
+    <h2>Properties</h2>
+    <p>A property has a <code>get</code> (runs when read) and/or a <code>set</code> (runs when assigned; the new value is called <code>value</code>).</p>
+    <pre><code class="language-csharp">public class Health : MonoBehaviour
+{
+    [SerializeField] private float max = 100f;
+    private float current;
+
+    // Read-only from outside: others can see it but not change it.
+    public float Current =&gt; current;          // "=&gt;" is short for a get that returns this
+
+    // Computed property: no stored value, calculated each time.
+    public float Percent =&gt; current / max;
+    public bool IsDead =&gt; current &lt;= 0f;
+
+    // Full property with validation.
+    public float Max
+    {
+        get { return max; }
+        set
+        {
+            max = Mathf.Max(1f, value);     // never allow 0 or negative
+            current = Mathf.Min(current, max);
+        }
+    }
+
+    // Auto-property: C# creates the hidden field for you.
+    public int Deaths { get; private set; } // anyone can read, only this class can write
+}
+</code></pre>
+    <pre><code class="language-csharp">// Using it: looks just like fields
+if (health.IsDead) Respawn();
+healthBar.fillAmount = health.Percent;
+health.Max = 150f;       // runs the set code
+// health.Deaths = 0;    // error: the setter is private
+</code></pre>
+    <div class="analogy"><p>A field is an open box: anyone can reach in and swap what's inside. A property is a box with a shop assistant in front. When you ask for the contents, the assistant can check, calculate or refuse. From the outside, you just "ask the box".</p></div>
+    <div class="note"><strong>Properties don't show in the Inspector</strong>Unity only serializes fields. To show an auto-property, target its hidden field: <code>[field: SerializeField] public int Deaths { get; private set; } </code>.</div>
+
+    <h2>static</h2>
+    <p>A <code>static</code> member belongs to the <em>class itself</em>, not to any one object. There's only one copy, shared by everything.</p>
+    <pre><code class="language-csharp">public class Enemy : MonoBehaviour
+{
+    public static int AliveCount;       // one number shared by ALL enemies
+
+    void OnEnable()  { AliveCount++; }
+    void OnDisable() { AliveCount--; }
+}
+
+// Read it without any enemy reference:
+if (Enemy.AliveCount == 0) OpenExitDoor();
+</code></pre>
+    <p>You've used static members already: <code>Time.deltaTime</code>, <code>Mathf.Clamp</code>, <code>Vector3.zero</code>, <code>Debug.Log</code>. A <code>static class</code> can only contain static members and can't be instantiated; it's used for helpers like <code>Mathf</code>.</p>
+    <div class="warning"><strong>Static fields survive scene loads</strong>A static field keeps its value when you load a new scene (and, in the Editor, can even keep it between Play sessions if "Enter Play Mode Options" disables domain reload). Reset static state yourself when a level starts. Static fields also don't show in the Inspector.</div>
+
+    <h2>const and readonly</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th></th><th><code>const</code></th><th><code>readonly</code></th></tr>
+      <tr><td>Set when?</td><td>At compile time, in the declaration</td><td>In the declaration or the constructor</td></tr>
+      <tr><td>Allowed types</td><td>Numbers, <code>bool</code>, <code>char</code>, <code>string</code>, enums</td><td>Any type</td></tr>
+      <tr><td>Automatically static?</td><td>Yes</td><td>No (add <code>static</code> yourself)</td></tr>
+      <tr><td>Example</td><td><code>const string SaveKey = "Save";</code></td><td><code>static readonly int SpeedId = Animator.StringToHash("Speed");</code></td></tr>
+    </table>
+    </div>
+    <pre><code class="language-csharp">public class Player : MonoBehaviour
+{
+    private const int MaxLives = 3;                        // never changes
+    private static readonly Color HurtColor = new Color(1f, 0.3f, 0.3f); // not a compile-time constant
+    private readonly List&lt;Item&gt; items = new List&lt;Item&gt;();  // the LIST can't be replaced, but you can Add to it
+}
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>Each object gets its own copy of every non-static field. 100 enemies = 100 <code>current</code> health values.</li>
+        <li>Static fields exist once, created the first time the class is used, and live until the app (or the Editor's script domain) reloads.</li>
+        <li>A property is really a pair of hidden methods (<code>get_Current()</code>, <code>set_Max(value)</code>). Simple ones are usually inlined, so they cost about the same as a field.</li>
+        <li><code>const</code> values are pasted directly into the code where they're used at compile time.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Making everything public "so it works".</strong> Now any script can break your object's state. Default to private; open up only what's needed.</li>
+      <li><strong>Using static to share data between objects that aren't really global.</strong> Two players in local multiplayer would share one "static health". Use references instead.</li>
+      <li><strong>A property that calls itself:</strong> <code>public float Speed { get { return Speed; } } </code> causes a <code>StackOverflowException</code>. Return the backing field (<code>speed</code>), not the property (<code>Speed</code>).</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="inheritance.html">Inheritance &amp; Interfaces</a></li>
+      <li><a href="attributes.html">Attributes</a> (<code>[SerializeField]</code> and friends)</li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://learn.microsoft.com/dotnet/csharp/programming-guide/classes-and-structs/properties">official Microsoft C# documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Types &amp; Type Checking | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="csharp/types.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; C# Concepts &rsaquo; Types & Type Checking</div>
+    <div class="infobox">
+      <div class="infobox-title">Types &amp; Type Checking</div>
+      <table>
+        <tr><th>Keywords</th><td><code>GetType()</code>, <code>typeof</code>, <code>is</code>, <code>as</code>, <code>(T)</code> cast, <code>nameof</code>, <code>var</code></td></tr>
+        <tr><th>Category</th><td>Type system</td></tr>
+        <tr><th>In Unity</th><td><code>RequireComponent(typeof(Rigidbody))</code>, <code>if (other is IDamageable d)</code></td></tr>
+      </table>
+    </div>
+    <h1>Types &amp; Type Checking</h1>
+    <p class="summary">Sometimes you have a variable of a general type (<code>Component</code>, <code>Enemy</code>, <code>object</code>) and need to know what it <em>actually</em> is, or treat it as something more specific. C# gives you several tools: <code>GetType()</code>, <code>typeof</code>, <code>is</code>, <code>as</code> and casts.</p>
+    <div class="analogy"><p>A parcel labeled "Package". <code>GetType()</code> is reading the exact label inside: "Blue Ceramic Mug". <code>is</code> is asking "is this some kind of Mug?" (yes for a blue mug, a red mug or a travel mug). <code>as</code> is "open it as a mug; if it's not a mug, give me nothing". A <strong>cast</strong> is "this IS a mug, trust me", and if you're wrong, it throws an error.</p></div>
+
+    <h2>Quick reference</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Tool</th><th>Returns</th><th>If the type doesn't match</th><th>Example</th></tr>
+      <tr><td><code>obj.GetType()</code></td><td>The exact runtime <code>Type</code></td><td>n/a</td><td><code>enemy.GetType().Name</code> → "Goblin"</td></tr>
+      <tr><td><code>typeof(T)</code></td><td>The <code>Type</code> for a class name you write</td><td>n/a</td><td><code>typeof(Rigidbody)</code></td></tr>
+      <tr><td><code>obj is T</code></td><td><code>bool</code></td><td><code>false</code></td><td><code>if (enemy is Goblin)</code></td></tr>
+      <tr><td><code>obj is T t</code></td><td><code>bool</code> + a typed variable</td><td><code>false</code>, <code>t</code> unusable</td><td><code>if (enemy is Goblin g) g.Taunt();</code></td></tr>
+      <tr><td><code>obj as T</code></td><td><code>T</code> or <code>null</code></td><td><code>null</code></td><td><code>Goblin g = enemy as Goblin;</code></td></tr>
+      <tr><td><code>(T)obj</code></td><td><code>T</code></td><td>Throws <code>InvalidCastException</code></td><td><code>Goblin g = (Goblin)enemy;</code></td></tr>
+      <tr><td><code>nameof(x)</code></td><td>The name as a <code>string</code></td><td>Compile error if it doesn't exist</td><td><code>Invoke(nameof(Respawn), 2f)</code></td></tr>
+    </table>
+    </div>
+
+    <h2>GetType() vs typeof</h2>
+    <p>Both give you a <code>System.Type</code> object that describes a type. The difference is <em>when</em> the type is known.</p>
+    <pre><code class="language-csharp">Enemy e = GetComponent&lt;Enemy&gt;();     // the variable's type is Enemy...
+Debug.Log(e.GetType().Name);         // ..."Goblin": GetType() asks the OBJECT at runtime
+Debug.Log(typeof(Enemy).Name);       // "Enemy": typeof() is decided when you write the code
+
+// Exact type check (subclasses do NOT match)
+if (e.GetType() == typeof(Goblin)) { }
+
+// Where Unity wants a Type
+[RequireComponent(typeof(Rigidbody))]
+public class Hover : MonoBehaviour { }
+
+Component c = gameObject.AddComponent(typeof(BoxCollider)); // non-generic version
+</code></pre>
+    <div class="note"><strong>GetType() vs is</strong><code>e.GetType() == typeof(Enemy)</code> is <em>false</em> for a Goblin, because it checks the exact type. <code>e is Enemy</code> is <em>true</em> for a Goblin, because a Goblin is a kind of Enemy. You almost always want <code>is</code>.</div>
+
+    <h2>is: check and convert in one step</h2>
+    <pre><code class="language-csharp">void OnTriggerEnter(Collider other)
+{
+    Component c = other.GetComponent&lt;Enemy&gt;();
+
+    // Pattern matching: if it's a Boss, give me a Boss variable called "boss"
+    if (c is Boss boss)
+    {
+        boss.StartPhaseTwo();
+    }
+    else if (c is Enemy enemy)
+    {
+        enemy.TakeDamage(10);
+    }
+}
+</code></pre>
+    <p>Modern C# also allows <code>is not</code>: <code>if (target is not null)</code>. <strong>But</strong> for Unity objects, prefer <code>!= null</code>; see the warning below.</p>
+
+    <h2>switch on type</h2>
+    <pre><code class="language-csharp">string Describe(Item item)
+{
+    switch (item)
+    {
+        case Weapon w when w.damage &gt; 50: return "A deadly weapon";
+        case Weapon w:                    return $"A weapon ({w.damage} dmg)";
+        case Potion p:                    return $"A potion that heals {p.healAmount}";
+        case null:                        return "Nothing";
+        default:                          return item.name;
+    }
+}
+</code></pre>
+
+    <h2>Casting numbers</h2>
+    <p>Casts also convert between number types. Going to a "smaller" type needs an explicit cast and can lose information.</p>
+    <pre><code class="language-csharp">float f = 3.9f;
+int i = (int)f;               // 3: casting cuts off the decimals (doesn't round)
+int r = Mathf.RoundToInt(f);  // 4: rounds properly
+
+int hp = 37, max = 120;
+float bad  = hp / max;        // 0: int / int is integer division, THEN converted
+float good = (float)hp / max; // 0.308...
+</code></pre>
+
+    <h2>var</h2>
+    <p><code>var</code> lets the compiler figure out the type from the right-hand side. The variable still has a fixed type; you just don't write it.</p>
+    <pre><code class="language-csharp">var rb = GetComponent&lt;Rigidbody&gt;();   // rb is a Rigidbody
+var enemies = new List&lt;Enemy&gt;();     // enemies is a List&lt;Enemy&gt;
+// var x;                             // error: nothing to infer from
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>Every object remembers its real type. <code>GetType()</code> reads it; <code>is</code>, <code>as</code> and casts compare against it.</li>
+        <li><code>typeof</code> and <code>nameof</code> are resolved when the code compiles, so they cost nothing at runtime.</li>
+        <li><code>is</code>, <code>as</code> and casts are fast, but <code>GetType()</code> plus <em>reflection</em> (reading methods and fields by name through <code>Type</code>) is slow. Avoid reflection in <code>Update</code>.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong><code>is null</code> / <code>as</code> with destroyed Unity objects.</strong> These skip Unity's special null check, so a destroyed object still "is" a GameObject. Use <code>== null</code> / <code>!= null</code> for Unity objects. See <a href="null.html">Null &amp; Nullable Types</a>.</li>
+      <li><strong><code>as</code> followed by no null check.</strong> <code>(enemy as Boss).StartPhaseTwo()</code> throws <code>NullReferenceException</code> for non-bosses. Use <code>if (enemy is Boss b)</code>.</li>
+      <li><strong>Casting when you should use GetComponent.</strong> A <code>GameObject</code> is never a <code>Rigidbody</code>; <code>(Rigidbody)gameObject</code> doesn't compile. Components are <em>attached</em> to GameObjects, not the same object.</li>
+      <li><strong>Comparing type names as strings</strong> (<code>GetType().Name == "Goblin"</code>). A rename breaks it silently. Use <code>is Goblin</code>.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="inheritance.html">Inheritance &amp; Interfaces</a></li>
+      <li><a href="generics.html">Generics</a> (<code>GetComponent&lt;T&gt;</code>)</li>
+      <li><a href="attributes.html">Attributes</a> (reading attributes with reflection)</li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/operators/type-testing-and-cast">official Microsoft C# documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

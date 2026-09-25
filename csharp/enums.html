@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Enums &amp; switch | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="csharp/enums.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; C# Concepts &rsaquo; Enums & switch</div>
+    <div class="infobox">
+      <div class="infobox-title">Enums &amp; switch</div>
+      <table>
+        <tr><th>Keywords</th><td><code>enum</code>, <code>switch</code>, <code>case</code>, <code>[Flags]</code></td></tr>
+        <tr><th>Category</th><td>Types &amp; control flow</td></tr>
+        <tr><th>In Unity</th><td><code>KeyCode</code>, <code>ForceMode</code>, <code>Space</code>, <code>LoopType</code>, AI states</td></tr>
+      </table>
+    </div>
+    <h1>Enums &amp; switch</h1>
+    <p class="summary">An <code>enum</code> is a type with a fixed list of named options, like <code>Easy</code>, <code>Normal</code>, <code>Hard</code>. It's safer and clearer than using numbers or strings for choices. In the Inspector, enums appear as a dropdown.</p>
+    <div class="analogy"><p>A restaurant menu with numbered dishes. You could shout "number 3!", but it's clearer to say "Pizza". An enum gives names to numbers, and the kitchen (the compiler) rejects anything that isn't on the menu.</p></div>
+
+    <h2>Declaring and using</h2>
+    <pre><code class="language-csharp">public enum Difficulty { Easy, Normal, Hard }   // 0, 1, 2 behind the scenes
+
+public class GameSettings : MonoBehaviour
+{
+    [SerializeField] private Difficulty difficulty = Difficulty.Normal; // a dropdown in the Inspector
+
+    public float DamageMultiplier()
+    {
+        if (difficulty == Difficulty.Easy) return 0.5f;
+        if (difficulty == Difficulty.Hard) return 1.5f;
+        return 1f;
+    }
+}
+</code></pre>
+
+    <h2>switch statements</h2>
+    <pre><code class="language-csharp">public enum EnemyState { Patrol, Chase, Attack, Flee }
+private EnemyState state;
+
+void Update()
+{
+    switch (state)
+    {
+        case EnemyState.Patrol:
+            Patrol();
+            if (CanSeePlayer()) state = EnemyState.Chase;
+            break;                        // every case needs break (or return)
+
+        case EnemyState.Chase:
+            MoveToPlayer();
+            if (InAttackRange()) state = EnemyState.Attack;
+            break;
+
+        case EnemyState.Attack:
+            Attack();
+            break;
+
+        case EnemyState.Flee:
+        default:                          // several labels can share code
+            RunAway();
+            break;
+    }
+}
+</code></pre>
+
+    <h2>switch expressions (short form)</h2>
+    <p>When each case just produces a value:</p>
+    <pre><code class="language-csharp">float multiplier = difficulty switch
+{
+    Difficulty.Easy =&gt; 0.5f,
+    Difficulty.Hard =&gt; 1.5f,
+    _               =&gt; 1f,   // _ means "anything else"
+};
+
+Color StateColor(EnemyState s) =&gt; s switch
+{
+    EnemyState.Patrol =&gt; Color.green,
+    EnemyState.Chase  =&gt; Color.yellow,
+    EnemyState.Attack =&gt; Color.red,
+    _                 =&gt; Color.gray,
+};
+</code></pre>
+
+    <h2>Converting enums</h2>
+    <pre><code class="language-csharp">int n = (int)Difficulty.Hard;                    // 2
+Difficulty d = (Difficulty)1;                    // Normal
+string s = Difficulty.Hard.ToString();           // "Hard"
+bool ok = System.Enum.TryParse("Easy", out Difficulty parsed); // string -&gt; enum
+
+// Loop over all values
+foreach (Difficulty level in System.Enum.GetValues(typeof(Difficulty)))
+    Debug.Log(level);
+
+// Save to PlayerPrefs as an int
+PlayerPrefs.SetInt("Difficulty", (int)difficulty);
+</code></pre>
+
+    <h2>[Flags]: several options at once</h2>
+    <p>Give each option its own bit (1, 2, 4, 8...) and you can combine them. Unity shows flag enums as a multi-select dropdown.</p>
+    <pre><code class="language-csharp">[System.Flags]
+public enum DamageType
+{
+    None   = 0,
+    Fire   = 1 &lt;&lt; 0,  // 1
+    Ice    = 1 &lt;&lt; 1,  // 2
+    Poison = 1 &lt;&lt; 2,  // 4
+}
+
+[SerializeField] private DamageType immuneTo = DamageType.Fire | DamageType.Poison; // combine with |
+
+bool IsImmune(DamageType type) =&gt; (immuneTo &amp; type) != 0; // check with &amp;
+// or: immuneTo.HasFlag(type)
+</code></pre>
+    <p>Layer masks work the same way: <code>1 &lt;&lt; 8</code> is "layer 8".</p>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>An enum is just an <code>int</code> with names. Comparing and switching on enums is as fast as on numbers.</li>
+        <li>Unity saves enum fields in scenes/prefabs as their <em>number</em>.</li>
+        <li><code>ToString()</code> and <code>Enum.Parse</code> use reflection and allocate a string, so avoid them in <code>Update</code>.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Inserting a new value in the middle</strong> (<code>Easy, Medium, Normal, Hard</code>). Saved Inspector values are numbers, so everything set to "Normal" (1) silently becomes "Medium". Add new values at the end, or give values explicit numbers (<code>Hard = 2</code>).</li>
+      <li><strong>Forgetting <code>break</code></strong> in a switch case: compile error CS0163.</li>
+      <li><strong>No <code>default</code>.</strong> If you add a new enum value later, a switch without a default silently does nothing for it. A <code>default</code> that logs a warning helps catch it.</li>
+      <li><strong>Using strings for states</strong> (<code>state == "chasing"</code>). Typos compile fine. Use an enum.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../guides/best-practices.html">Better Ways to Do Things</a> (state machines)</li>
+      <li><a href="types.html">Types &amp; Type Checking</a> (switch on type)</li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/enum">official Microsoft C# documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

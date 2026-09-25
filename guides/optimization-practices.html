@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Optimization Best Practices | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="guides/optimization-practices.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Performance &rsaquo; Optimization Best Practices</div>
+    <h1>Optimization Best Practices</h1>
+    <p class="summary">How professional teams approach performance: set budgets, measure on real hardware, find whether you're CPU- or GPU-bound, fix the biggest problem first, and keep it from coming back. This page covers the process and the engine-level settings. For script-level tips, see <a href="optimization.html">Optimizing Your Code</a>.</p>
+    <div class="analogy"><p>A household budget. You don't save money by randomly skipping coffee. You write down how much you can spend (the frame budget), track where the money actually goes (profiling), cut the biggest expense first, and check your statement every month so it doesn't creep back up (regular profiling).</p></div>
+
+    <h2>1. Decide your targets early</h2>
+    <p>Performance is much cheaper to plan for than to fix at the end. Before production, write down:</p>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Target</th><th>Example</th></tr>
+      <tr><td>Frame rate per platform</td><td>PC 60 FPS (16.6 ms), Switch-class 30 FPS (33.3 ms), mobile 30 or 60 FPS</td></tr>
+      <tr><td>Minimum-spec device</td><td>"A 4-year-old mid-range Android phone"</td></tr>
+      <tr><td>Memory budget</td><td>Stay well below what the weakest device allows, leaving room for the OS</td></tr>
+      <tr><td>Load time</td><td>"Any level loads in under 10 seconds"</td></tr>
+      <tr><td>Rough per-system split (example)</td><td>Of 16.6 ms: gameplay scripts 3 ms, physics 2 ms, animation 2 ms, rendering 6 ms, headroom 3 ms</td></tr>
+    </table>
+    </div>
+    <p>Aim below the limit. A game that takes exactly 16.6 ms per frame drops frames whenever anything extra happens. Leave <em>headroom</em> for spikes like explosions and loading.</p>
+
+    <h2>2. Profile on the target hardware</h2>
+    <ul>
+      <li>The Editor is slower and behaves differently than a build. Make a <strong>Development Build</strong> with <strong>Autoconnect Profiler</strong> and profile the real device.</li>
+      <li>Profile the <strong>weakest</strong> device you support, not your development PC.</li>
+      <li>On mobile, test for 20-30 minutes. Phones get hot and <strong>thermal throttling</strong> lowers CPU/GPU speed, so a game that runs well for 2 minutes may not at minute 15.</li>
+      <li>Profile the heaviest moments (big fights, busy areas), not an empty test scene.</li>
+    </ul>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Tool</th><th>Use it to find</th></tr>
+      <tr><td>Profiler (Window &gt; Analysis)</td><td>Where CPU time goes each frame; GC allocations; rendering, physics, audio, memory overview</td></tr>
+      <tr><td>Profile Analyzer (package)</td><td>Compare many frames, or before/after a change, statistically</td></tr>
+      <tr><td>Memory Profiler (package)</td><td>What's using memory: textures, meshes, leaked objects</td></tr>
+      <tr><td>Frame Debugger</td><td>Every draw call and why objects didn't batch</td></tr>
+      <tr><td>Platform tools</td><td>Xcode Instruments (iOS), Android GPU Inspector, RenderDoc, PIX: deep GPU analysis</td></tr>
+    </table>
+    </div>
+
+    <h2>3. Find out what's limiting you</h2>
+    <p>Fixing the wrong side wastes time. Figure out what you're bound by first:</p>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Bound by</th><th>Signs</th><th>Typical fixes</th></tr>
+      <tr><td><strong>CPU: scripts</strong></td><td>Profiler shows your <code>Update</code> methods, <code>BehaviourUpdate</code> or coroutines taking most of the frame</td><td>Cache, do less per frame, pooling, Jobs + Burst</td></tr>
+      <tr><td><strong>CPU: rendering</strong></td><td>Lots of time preparing draw calls on the main/render thread; high Batches/SetPass counts</td><td>Batching, instancing, fewer materials, LODs, culling</td></tr>
+      <tr><td><strong>CPU: physics</strong></td><td><code>Physics.Simulate</code> / <code>FixedUpdate</code> is large</td><td>Simpler colliders, layer matrix, larger fixed timestep</td></tr>
+      <tr><td><strong>GPU</strong></td><td>The CPU spends time <em>waiting</em> for the GPU (markers such as <code>Gfx.WaitForPresentOnGfxThread</code>); lowering resolution raises FPS</td><td>Lower resolution/render scale, cheaper shaders and post-processing, less overdraw and fewer shadows</td></tr>
+      <tr><td><strong>Garbage collector</strong></td><td>Regular spikes labeled <code>GC.Collect</code></td><td>Remove per-frame allocations; enable incremental GC</td></tr>
+    </table>
+    </div>
+
+    <h2>4. Measure, change one thing, measure again</h2>
+    <ol>
+      <li>Record a baseline in a repeatable situation (same scene, same camera path).</li>
+      <li>Change <strong>one</strong> thing.</li>
+      <li>Record again and compare (the Profile Analyzer is ideal).</li>
+      <li>Keep it only if it helped. Write down what you changed and the result.</li>
+    </ol>
+    <p>Add your own markers so your systems show up clearly in the Profiler:</p>
+    <pre><code class="language-csharp">using Unity.Profiling;
+using UnityEngine;
+
+public class EnemyAI : MonoBehaviour
+{
+    private static readonly ProfilerMarker ThinkMarker = new ProfilerMarker("EnemyAI.Think");
+
+    void Update()
+    {
+        using (ThinkMarker.Auto())   // everything in this block is timed under "EnemyAI.Think"
+        {
+            Think();
+        }
+    }
+
+    void Think() { /* ... */ }
+}
+</code></pre>
+
+    <h2>5. Architecture choices that scale</h2>
+    <ul>
+      <li><strong>Event-driven over polling.</strong> React when something changes instead of checking every frame.</li>
+      <li><strong>Do less, less often.</strong> AI doesn't need to think 60 times a second; far-away objects don't need full updates. See <a href="update-fixedupdate.html">Update &amp; FixedUpdate</a> for staggering.</li>
+      <li><strong>Pool</strong> frequently spawned objects. See <a href="object-pooling.html">Object Pooling</a>.</li>
+      <li><strong>Data-oriented code for big numbers.</strong> Thousands of units? Store data in arrays of structs and process them in tight loops. Unity's <strong>C# Job System</strong> spreads work over CPU cores, and the <strong>Burst compiler</strong> turns that code into highly optimized machine code. For very large simulations, Unity's <strong>Entities (ECS)</strong> package is built around this.</li>
+      <li><strong>Draw without GameObjects</strong> where possible (see <a href="gpu-instancing.html">GPU Instancing</a>).</li>
+      <li><strong>Spread spikes over frames</strong> ("time slicing"): generate a level chunk per frame rather than everything in one frame, and load scenes asynchronously.</li>
+    </ul>
+
+    <h2>6. Assets and memory</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Asset</th><th>Good practice</th></tr>
+      <tr><td>Textures</td><td>Use platform compression (e.g. ASTC on mobile). Set <em>Max Size</em> to what's actually visible. Mipmaps on for 3D, off for UI. Atlases for UI and 2D sprites.</td></tr>
+      <tr><td>Meshes</td><td>Turn off <em>Read/Write Enabled</em> unless scripts read the mesh (saves a CPU-side copy). Use LODs. Compress meshes if precision allows.</td></tr>
+      <tr><td>Audio</td><td>Music: <em>Streaming</em>. Short, frequent sounds: <em>Decompress On Load</em>. Everything else: <em>Compressed In Memory</em>. Mono for 3D sounds.</td></tr>
+      <tr><td>Animation</td><td>Compress clips; set Animators' <em>Culling Mode</em> so off-screen characters don't update fully.</td></tr>
+      <tr><td>Loading</td><td>Use <strong>Addressables</strong> to load and unload content on demand. Avoid the <code>Resources</code> folder for large content: everything in it is packed into the build and indexed at startup.</td></tr>
+    </table>
+    </div>
+
+    <h2>7. Engine and build settings</h2>
+    <ul>
+      <li><strong>Incremental GC</strong> (Player Settings, on by default in recent versions): spreads garbage collection over several frames to avoid big spikes. It doesn't replace reducing allocations.</li>
+      <li><strong>IL2CPP</strong> scripting backend for release builds: converts C# to C++ for faster code (required on iOS). Combine with <strong>Managed Stripping</strong> to reduce build size.</li>
+      <li><strong>Target frame rate on mobile:</strong> mobile platforms default to 30 FPS. Set <code>Application.targetFrameRate = 60;</code> if you want 60, or keep 30 to save battery and heat.</li>
+      <li><strong>Physics:</strong> set the Layer Collision Matrix, keep <em>Auto Sync Transforms</em> off, and choose the largest fixed timestep that still feels right.</li>
+      <li><strong>Quality levels:</strong> provide Low/Medium/High presets (shadow distance, render scale, post-processing) and pick a default per device.</li>
+      <li><strong>Strip logs</strong> from release builds, and don't ship Development Builds.</li>
+    </ul>
+
+    <h2>8. Keep it fast</h2>
+    <ul>
+      <li><strong>Profile regularly</strong>, not just before release. A weekly check catches problems while it's still obvious which change caused them.</li>
+      <li><strong>Automate:</strong> the Performance Testing package (<code>com.unity.test-framework.performance</code>) can record timings in tests, so a CI build can flag regressions.</li>
+      <li><strong>Performance is part of "done".</strong> A feature that breaks the frame budget isn't finished.</li>
+      <li><strong>Don't micro-optimize blindly.</strong> Readable code that's fast enough beats clever code that's slightly faster. Optimize what the Profiler points at.</li>
+    </ul>
+
+    <h2>Checklist</h2>
+    <ol>
+      <li>Targets and budgets written down per platform.</li>
+      <li>Profiled a development build on the minimum-spec device, including a long session.</li>
+      <li>Know whether you're CPU-bound (which part?) or GPU-bound.</li>
+      <li>No per-frame GC allocations in gameplay.</li>
+      <li>Frequently spawned objects are pooled.</li>
+      <li>Draw calls checked in the Frame Debugger; materials shared; instancing where it helps.</li>
+      <li>Texture, audio and mesh import settings reviewed.</li>
+      <li>Release build: IL2CPP, no dev logs, correct target frame rate.</li>
+    </ol>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="optimization.html">Optimizing Your Code</a></li>
+      <li><a href="gpu-instancing.html">GPU Instancing &amp; Batching</a></li>
+      <li><a href="object-pooling.html">Object Pooling</a></li>
+      <li><a href="update-fixedupdate.html">Working with Update &amp; FixedUpdate</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/Manual/Profiler.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>
