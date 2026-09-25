@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NavMesh in Depth | Unity Simple Docs</title>
+<meta name="description" content="Teach a character where it can walk, give it a destination, and help it find a way around walls.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="guides/navmesh.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Guides &rsaquo; NavMesh in Depth</div>
+<h1>NavMesh in Depth</h1>
+<p class="summary">Teach a character where it can walk, give it a destination, and help it find a way around walls.</p>
+<div class="analogy"><p>A NavMesh is like a map of footpaths. The agent is a person following the map. You choose the destination; Unity finds a route and helps the person walk around nearby people. A map cannot decide whether your enemy should chase the player or go home—that is your game’s rule.</p></div>
+<div class="tip"><strong>Start here</strong><p>Bake a floor and try the short walk-to-target script first. Once that works, use the longer example to handle moving targets and places the character cannot reach.</p></div>
+<nav aria-label="On this page"><strong>On this page</strong><ul><li><a href="#a-few-words-first">A few words first</a></li><li><a href="#the-pieces">The pieces</a></li><li><a href="#1-bake-a-small-test-level">1. Bake a small test level</a></li><li><a href="#first-walk-to-one-place">First, walk to one place</a></li><li><a href="#2-follow-a-target-without-requesting-a-path-every-frame">2. Follow a target without requesting a path every frame</a></li><li><a href="#request-accepted-does-not-mean-destination-reachable">Request accepted does not mean destination reachable</a></li><li><a href="#movement-settings-and-animation">Going further: Movement settings and animation</a></li><li><a href="#areas-and-route-preferences">Areas and route preferences</a></li><li><a href="#doors-and-moving-obstacles">Doors and moving obstacles</a></li><li><a href="#links-jumps-ladders-and-disconnected-platforms">Links: jumps, ladders and disconnected platforms</a></li><li><a href="#runtime-building-and-changing-levels">Going further: Runtime building and changing levels</a></li><li><a href="#troubleshooting-checklist">Troubleshooting checklist</a></li><li><a href="#common-mistakes">Common Mistakes</a></li><li><a href="#see-also">See also</a></li><li><a href="#official-references">Official references</a></li></ul></nav>
+<h2 id="a-few-words-first">A few words first</h2><p>A <strong>NavMesh</strong> is a map of the places a character can walk. <strong>Baking</strong> means asking Unity to build that map from your level. An <strong>agent</strong> is a character that follows it. A <strong>path</strong> is a route from the character to its destination.</p>
+
+
+<div class="note"><strong>Unity 6 with AI Navigation 2.x</strong><p>Install <code>com.unity.ai.navigation</code> through Package Manager. This guide uses NavMeshSurface and NavMeshLink from the package, not the older Navigation-window-only baking workflow. Agent and query APIs are in <code>UnityEngine.AI</code>; package components such as NavMeshSurface are in <code>Unity.AI.Navigation</code>.</p></div>
+<h2 id="the-pieces">The pieces</h2><div class="table-wrap"><table><tr><th>Piece</th><th>Job</th></tr><tr><td>NavMeshSurface</td><td>Looks at the floor and walls, then builds a walking map for one kind of character.</td></tr><tr><td>NavMeshAgent</td><td>Requests paths and steers a character along them.</td></tr><tr><td>NavMeshObstacle</td><td>Represents an obstacle for avoidance and optionally carving.</td></tr><tr><td>NavMeshLink</td><td>Connects otherwise separated walkable regions, such as a jump or doorway.</td></tr><tr><td>NavMeshModifier / ModifierVolume</td><td>Changes how geometry or regions contribute to the bake.</td></tr><tr><td>Areas and area costs</td><td>Control which regions an agent may use and which routes it prefers.</td></tr></table></div>
+
+<h2 id="1-bake-a-small-test-level">1. Bake a small test level</h2><ol><li>Create a floor and walls with colliders. Leave a doorway and add a separate platform across a gap.</li><li>Add NavMeshSurface to a level root. Choose an Agent Type and collect the intended level objects or layers. With Use Geometry set to Physics Colliders, confirm all required floor/wall colliders exist.</li><li>In the agent-type bake settings, choose radius, height, maximum slope and step height matching your character. Bake from the Surface Inspector.</li><li>Inspect the navigation overlay: the doorway must remain connected; walls and the gap must not be walkable.</li><li>Create a character with NavMeshAgent using the same Agent Type. Place its root on the baked surface and adjust the visual child or Base Offset as needed.</li><li>Create a target Transform somewhere on the same walkable region. Assign it to the script below and enter Play mode.</li></ol>
+<p>During baking, Unity leaves a gap near walls and edges so the character’s body has room to fit. Radius controls the size of that gap. Making an agent's runtime radius smaller does not magically add a doorway removed by the bake. If a large monster should avoid gaps that a small character can use, give them different agent types and bake a map for each. Agent height determines clearance under ceilings; step and slope settings determine which changes in elevation connect.</p>
+<h2 id="first-walk-to-one-place">First, walk to one place</h2><p>Save this as <code>WalkToTarget.cs</code> and attach it to your character. Drag the target object into Destination. Press Play: the character should walk toward it. If it does not, check that both objects are on connected parts of the baked map.</p><pre><code class="language-csharp">using UnityEngine;
+using UnityEngine.AI;
+
+[RequireComponent(typeof(NavMeshAgent))]
+public class WalkToTarget : MonoBehaviour
+{
+    [SerializeField] private Transform destination;
+
+    void Start()
+    {
+        NavMeshAgent agent = GetComponent&lt;NavMeshAgent&gt;();
+        if (destination == null || !agent.isOnNavMesh) return;
+        agent.SetDestination(destination.position);
+    }
+}
+</code></pre><p><code>GetComponent</code> finds the agent on this object. <code>isOnNavMesh</code> checks that it is on the walking map. <code>SetDestination</code> asks it to go somewhere. This script asks once in Start; moving the target later will not update the request.</p><p>For your next experiment, put the target behind a wall with a doorway. The character should go through the doorway. Then put it in a sealed room: the short script does not explain failure, which is what the longer example below adds. Remove WalkToTarget before adding FollowNavTarget so only one script gives movement orders.</p>
+<h2 id="2-follow-a-target-without-requesting-a-path-every-frame">2. Follow a target without requesting a path every frame</h2><p>This example checks the target a few times per second. It looks for a walkable spot nearby and remembers whether Unity accepted the request. It stops rather than silently continuing toward an old destination when a new request fails. For a large crowd, give different characters different update times so they do not all ask for a route at once.</p><pre><code class="language-csharp">using UnityEngine;
+using UnityEngine.AI;
+
+[RequireComponent(typeof(NavMeshAgent))]
+public class FollowNavTarget : MonoBehaviour
+{
+    [SerializeField] private Transform target;
+    [SerializeField, Min(0.05f)] private float repathInterval = 0.25f;
+    [SerializeField, Min(0.01f)] private float targetMoveThreshold = 0.5f;
+    private NavMeshAgent agent;
+    private Vector3 requestedTarget;
+    private float nextRequest;
+    private bool requested;
+    public string Status { get; private set; } = "Idle";
+
+    void Awake() { agent = GetComponent&lt;NavMeshAgent&gt;(); }
+
+    void OnDisable()
+    {
+        if (agent != null &amp;&amp; agent.isActiveAndEnabled &amp;&amp; agent.isOnNavMesh)
+            agent.ResetPath();
+        requested = false;
+        nextRequest = 0;
+    }
+
+    void Update()
+    {
+        if (!agent.isActiveAndEnabled || !agent.isOnNavMesh)
+        {
+            requested = false;
+            Status = "Agent is not on a NavMesh";
+            return;
+        }
+        if (target == null)
+        {
+            if (requested) agent.ResetPath();
+            requested = false;
+            Status = "No target";
+            return;
+        }
+
+        if (Time.time &gt;= nextRequest &amp;&amp; !agent.pathPending)
+        {
+            nextRequest = Time.time + Mathf.Max(0.05f, repathInterval);
+            bool moved = (target.position - requestedTarget).sqrMagnitude &gt;
+                targetMoveThreshold * targetMoveThreshold;
+            if (!requested || moved)
+            {
+                var filter = new NavMeshQueryFilter {
+                    agentTypeID = agent.agentTypeID, areaMask = agent.areaMask
+                };
+                if (!NavMesh.SamplePosition(target.position, out NavMeshHit hit, 1f, filter))
+                {
+                    agent.ResetPath();
+                    requested = false;
+                    Status = "No nearby destination";
+                    return;
+                }
+                requested = agent.SetDestination(hit.position);
+                requestedTarget = target.position;
+                if (!requested)
+                {
+                    agent.ResetPath();
+                    Status = "Request rejected";
+                    return;
+                }
+                Status = "Path requested";
+                return; // allow the asynchronous request to progress
+            }
+        }
+
+        if (!requested) return;
+        if (agent.pathPending) { Status = "Calculating"; return; }
+        if (agent.pathStatus != NavMeshPathStatus.PathComplete)
+        {
+            Status = "Destination unreachable";
+            agent.ResetPath();
+            requested = false; // retry after the rate limit
+            return;
+        }
+        bool close = !float.IsInfinity(agent.remainingDistance) &amp;&amp;
+            agent.remainingDistance &lt;= agent.stoppingDistance + 0.05f;
+        Status = close &amp;&amp; agent.velocity.sqrMagnitude &lt; 0.01f
+            ? "Arrived" : "Moving";
+    }
+}
+</code></pre>
+<h2 id="request-accepted-does-not-mean-destination-reachable">Request accepted does not mean destination reachable</h2><p>SetDestination returns whether Unity accepted the request. Path calculation can take later frames. While <code>pathPending</code> is true, do not interpret remainingDistance as a finished result. Once ready, PathComplete reaches the destination, PathPartial reaches only an accessible endpoint, and PathInvalid means no usable route. remainingDistance can be infinity while unknown.</p>
+<p>SamplePosition finds nearby NavMesh; it does not test a walkable connection from the agent, or line of sight through walls. In a multi-storey building it can choose another floor. Keep the search radius small, constrain the agent type and area mask, and validate the resulting path. The example's “Arrived” refers to the sampled destination, which may differ from the exact target Transform.</p><figure class="diagram"><div class="diagram-scroll"><svg viewBox="0 0 840 80" role="img" aria-label="Arrival is meaningful only after an accepted request has produced a usable path." style="max-width:840px;min-width:480px"><rect x="5" y="15" width="180" height="50" rx="4" class="dg-box"/><text x="95" y="45" text-anchor="middle" class="dg-t">Destination request</text><text x="197" y="45">→</text><rect x="215" y="15" width="180" height="50" rx="4" class="dg-box"/><text x="305" y="45" text-anchor="middle" class="dg-t">Pending calculation</text><text x="407" y="45">→</text><rect x="425" y="15" width="180" height="50" rx="4" class="dg-box"/><text x="515" y="45" text-anchor="middle" class="dg-t">Check path status</text><text x="617" y="45">→</text><rect x="635" y="15" width="180" height="50" rx="4" class="dg-box"/><text x="725" y="45" text-anchor="middle" class="dg-t">Move / report failure</text></svg></div><figcaption>Arrival is meaningful only after an accepted request has produced a usable path.</figcaption></figure>
+<h2 id="movement-settings-and-animation">Going further: Movement settings and animation</h2><p>Speed is a maximum, acceleration controls how quickly the agent reaches it, angularSpeed limits turning, and stoppingDistance defines the arrival region. Enable autoBraking when it should slow near a destination; continuous patrols may need different behavior. Use desiredVelocity to understand steering intent and velocity for actual agent motion.</p>
+<p>Choose one position owner. In the simplest setup the agent updates Transform and the Animator only animates a child model. For root motion, disable updatePosition and explicitly synchronize the animated Transform with the agent's nextPosition; otherwise the simulation and model drift apart. A dynamic Rigidbody and an agent updating position will fight. A kinematic Rigidbody can support trigger interaction without becoming another motion solver.</p>
+<h2 id="areas-and-route-preferences">Areas and route preferences</h2><p>An area mask prohibits travel through excluded areas. Area cost makes allowed travel more expensive, such as mud compared with pavement; it does not enforce a hard prohibition. A longer low-cost route can win over a shorter expensive one. NavMeshModifiers affect the bake, so changing one does not instantly rewrite an existing NavMesh.</p>
+<h2 id="doors-and-moving-obstacles">Doors and moving obstacles</h2><p>Avoidance is like stepping around a person in front of you; it does not redraw the route on the map. Carving is like marking a blocked section on the map. It cuts a hole in the walking area so Unity can plan around a stationary obstacle. Moving carving obstacles have update thresholds and timing; enabling carving does not guarantee an immediate rebuilt route in the same frame.</p>
+<p>For a door, align collision and navigation state: an open doorway should be both physically passable and navigable. A closed door can use a carving obstacle or a controlled link depending on your layout. Do not enable a carving NavMeshObstacle and a moving NavMeshAgent on the same character at the same time; it may try to avoid its own hole. Test many agents at a narrow doorway; local avoidance does not guarantee that crowds can never deadlock.</p>
+<h2 id="links-jumps-ladders-and-disconnected-platforms">Links: jumps, ladders and disconnected platforms</h2><p>Add a NavMeshLink with endpoints landing on the intended surfaces, the correct agent type, width and directionality. A link adds connectivity; it does not author a jump animation or physics. With automatic traversal enabled, the agent can traverse a supported link itself. For authored traversal, disable autoTraverseOffMeshLink, detect isOnOffMeshLink, take temporary ownership of movement, animate to the endpoint and call CompleteOffMeshLink when finished.</p>
+<p>Account for cancellation, object disable and a destination becoming invalid during traversal. ResetPath while on an off-mesh link can complete the link immediately, so a production traversal state should handle stopping deliberately. Teleport using <code>agent.Warp</code> and check its return value after finding a valid location; merely writing transform.position can desynchronize navigation.</p>
+<h2 id="runtime-building-and-changing-levels">Going further: Runtime building and changing levels</h2><p><code>NavMeshSurface.BuildNavMesh()</code> builds from the current collected geometry and can cause a noticeable main-thread cost. For updates to an existing surface, <code>UpdateNavMesh(surface.navMeshData)</code> returns an AsyncOperation; schedule and track it instead of rebuilding every frame. Do not start overlapping builds on the same surface. Chunk large worlds, limit collected sources, and wait for new data before sending agents into a region.</p>
+<p>Moving a platform is not the same as updating walkable connectivity. Design boarding, travel and disembarking states, keep links/endpoints synchronized, and test the AI Navigation version you ship. A static baked route is not a general solution for elevators and vehicles.</p>
+<h2 id="troubleshooting-checklist">Troubleshooting checklist</h2><div class="table-wrap"><table><tr><th>Symptom</th><th>Inspect</th></tr><tr><td>Agent not on NavMesh</td><td>Surface baked and enabled; matching agent type; spawn position close to that surface.</td></tr><tr><td>No route through a door</td><td>Bake radius/clearance, disconnected polygons, area mask, closed obstacle or missing link.</td></tr><tr><td>Stops short</td><td>stoppingDistance, target sampling offset, partial path and collision ownership.</td></tr><tr><td>Jitter / snapping</td><td>Two movement systems writing the same Transform; animation and nextPosition disagree.</td></tr><tr><td>Spikes with crowds</td><td>Too many simultaneous path requests, expensive avoidance and excessive runtime rebakes.</td></tr></table></div>
+<div class="runtime"><p><strong>What happens at runtime</strong></p><ol><li>Your gameplay logic picks a goal.</li><li>Unity searches the baked connectivity to build a path.</li><li>The agent steers along that path and applies local avoidance.</li><li>Your code monitors success, retries or failure and drives animation or interactions.</li></ol></div>
+<h2 id="common-mistakes">Common Mistakes</h2><ul><li>Using a collider as proof that an area was baked into navigation.</li><li>Treating a successful SamplePosition as proof of reachability.</li><li>Testing only a path to an accessible target: also try another floor and a sealed room.</li><li>Repathing every Update for a stationary target.</li><li>Assuming local avoidance replaces level-design clearance or crowd planning.</li></ul><h2 id="see-also">See also</h2><ul><li><a href="../guides/character-controller.html">Working with CharacterController</a></li><li><a href="../api/animator.html">Animator</a></li><li><a href="../guides/optimization-practices.html">Optimization Best Practices</a></li></ul><h2 id="official-references">Official references</h2><ul><li><a href="https://docs.unity3d.com/Packages/com.unity.ai.navigation@2.0/manual/index.html">AI Navigation package</a></li><li><a href="https://docs.unity3d.com/Packages/com.unity.ai.navigation@2.0/manual/NavMeshSurface.html">NavMeshSurface</a></li><li><a href="https://docs.unity3d.com/Packages/com.unity.ai.navigation@2.0/manual/NavMeshLink.html">NavMeshLink</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshAgent.SetDestination.html">SetDestination</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMesh.SamplePosition.html">SamplePosition</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshObstacle.html">NavMeshObstacle</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshAgent-remainingDistance.html">remainingDistance</a></li></ul><p class="official-link">This page is a simplified, AI-assisted interpretation. Check the linked Unity documentation for authoritative details and your installed package version.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

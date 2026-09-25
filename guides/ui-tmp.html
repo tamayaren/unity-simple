@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UI &amp; TextMeshPro in Depth | Unity Simple Docs</title>
+<meta name="description" content="Build menus, health bars and readable text that still fit when the screen size changes.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="guides/ui-tmp.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Guides &rsaquo; UI &amp; TextMeshPro in Depth</div>
+<h1>UI &amp; TextMeshPro in Depth</h1>
+<p class="summary">Build menus, health bars and readable text that still fit when the screen size changes.</p>
+<div class="analogy"><p>Think of a noticeboard. The Canvas is the board, UI elements are the notes pinned to it, and anchors say which part of the board each note should stay near. TextMeshPro prints the words on the notes.</p></div>
+<div class="tip"><strong>Start here</strong><p>Build one health bar and one text label first. Resize the Game view to see how anchors work. Then connect health changes to the display.</p></div>
+<nav aria-label="On this page"><strong>On this page</strong><ul><li><a href="#a-few-words-first">A few words first</a></li><li><a href="#choose-a-ui-system">Choose a UI system</a></li><li><a href="#canvas-modes">Canvas modes</a></li><li><a href="#1-build-a-responsive-hud">1. Build a responsive HUD</a></li><li><a href="#anchors-pivot-and-offsets">Anchors, pivot and offsets</a></li><li><a href="#change-one-label-first">Change one label first</a></li><li><a href="#2-keep-a-hud-synchronized-without-polling">2. Update the health display when health changes</a></li><li><a href="#textmeshpro-fundamentals">TextMeshPro fundamentals</a></li><li><a href="#3-respect-screen-safe-areas">3. Respect screen safe areas</a></li><li><a href="#input-and-menu-focus">Input and menu focus</a></li><li><a href="#better-performance-practices">Going further: Better performance practices</a></li><li><a href="#accessibility-and-validation">Accessibility and validation</a></li><li><a href="#common-mistakes">Common Mistakes</a></li><li><a href="#see-also">See also</a></li><li><a href="#official-references">Official references</a></li></ul></nav>
+<h2 id="a-few-words-first">A few words first</h2><p><strong>UI</strong> means user interface: buttons, menus, labels and other things a player reads or uses. A <strong>HUD</strong> is the information shown during play, such as health or score. <strong>TMP</strong> is short for TextMeshPro, Unity’s text tool. A <strong>RectTransform</strong> stores a UI element’s position and size.</p>
+
+
+<h2 id="choose-a-ui-system">Choose a UI system</h2><p>This guide uses <strong>Unity UI (uGUI)</strong>, where buttons and text are GameObjects inside a Canvas. It is a practical starting point when you already know how to add components in the Inspector. Unity also has UI Toolkit and IMGUI, but their instructions differ. Follow uGUI examples while working through this page.</p>
+<h2 id="canvas-modes">Canvas modes</h2><div class="table-wrap"><table><tr><th>Mode</th><th>Use</th><th>Watch for</th></tr><tr><td>Screen Space - Overlay</td><td>Menus and HUD drawn over the screen.</td><td>Usually bypasses scene camera post-processing.</td></tr><tr><td>Screen Space - Camera</td><td>UI placed in a camera plane.</td><td>Assign Render Camera; inspect plane distance, culling and camera stacks.</td></tr><tr><td>World Space</td><td>Nameplates, signs and in-world panels.</td><td>World size, distance, occlusion and event camera affect readability and interaction.</td></tr></table></div>
+<h2 id="1-build-a-responsive-hud">1. Build a responsive HUD</h2><ol><li>Create UI &gt; Canvas. Use Screen Space - Overlay for the first HUD.</li><li>Set Canvas Scaler to Scale With Screen Size, Reference Resolution 1920×1080, and Match around 0.5 as a starting point. Test your actual aspect ratios; this is not a universal preset.</li><li>Create a Panel named SafeArea stretched to all four edges with zero offsets.</li><li>Inside it, create a top-left panel anchored and pivoted at (0,1), with a margin such as (24,-24).</li><li>Add a Slider for health and a Text - TextMeshPro label. Import TMP Essential Resources if prompted. Disable Slider interaction for a display-only bar.</li><li>Use a Horizontal or Vertical Layout Group for related elements, with padding and spacing. Use Layout Elements to specify flexible or preferred sizes.</li></ol>
+<h2 id="anchors-pivot-and-offsets">Anchors, pivot and offsets</h2><p>Anchors are normalized positions in the parent rectangle. Equal min/max anchors pin an element to a point; different anchors stretch it across an area. The pivot is the element's own origin for position, scale and rotation. Anchored Position is relative to the anchor reference, not a world position. A top-right counter should follow the parent's top-right anchor rather than a hard-coded screen X coordinate.</p><figure class="diagram"><div class="diagram-scroll"><svg viewBox="0 0 840 80" role="img" aria-label="Screen size sets the available rectangle; anchors and layout decide where content fits." style="max-width:840px;min-width:480px"><rect x="5" y="15" width="180" height="50" rx="4" class="dg-box"/><text x="95" y="45" text-anchor="middle" class="dg-t">Canvas Scaler</text><text x="197" y="45">→</text><rect x="215" y="15" width="180" height="50" rx="4" class="dg-box"/><text x="305" y="45" text-anchor="middle" class="dg-t">Parent anchors</text><text x="407" y="45">→</text><rect x="425" y="15" width="180" height="50" rx="4" class="dg-box"/><text x="515" y="45" text-anchor="middle" class="dg-t">Layout constraints</text><text x="617" y="45">→</text><rect x="635" y="15" width="180" height="50" rx="4" class="dg-box"/><text x="725" y="45" text-anchor="middle" class="dg-t">Text wrapping</text></svg></div><figcaption>Screen size sets the available rectangle; anchors and layout decide where content fits.</figcaption></figure>
+<p>A layout group owns its children's layout axes. A Content Size Fitter sizes its own RectTransform from content. Do not make a child fitter and a parent layout group fight over the same size. For a scrolling list, a common arrangement is ScrollRect &gt; Viewport (RectMask2D) &gt; Content with a Vertical Layout Group and a vertical preferred-size fitter. Give rows predictable preferred heights, or measure variable rows deliberately.</p>
+<h2 id="change-one-label-first">Change one label first</h2><p>Create a Text - TextMeshPro object. Attach this script to an empty object, then drag the text object into its Label field. Press Play: it should say “Coins: 10.” Use a public method like this when your game awards coins.</p><pre><code class="language-csharp">using TMPro;
+using UnityEngine;
+
+public class CoinLabel : MonoBehaviour
+{
+    [SerializeField] private TMP_Text label;
+
+    void Start() { ShowCoins(10); }
+
+    public void ShowCoins(int coins)
+    {
+        if (label != null) label.SetText("Coins: {0}", coins);
+    }
+}
+</code></pre><p><code>{0}</code> is a placeholder: SetText replaces it with the first number you provide. You do not have to update a label every frame if its value has not changed.</p>
+<p>An <strong>event</strong> is a notification. Think of a doorbell: the health script rings it when health changes, and the HUD responds. <strong>Subscribing</strong> means listening for the bell; unsubscribing means stopping. The two scripts below separate the health rules from the display.</p>
+<h2 id="2-keep-a-hud-synchronized-without-polling">2. Update the health display when health changes</h2><p>Save these as two separate scripts. Put HealthModel on the player. Put HealthHud on the HUD panel and assign the model, Slider and TMP label. In Play mode use the model's Take 10 Damage context menu: both views should update immediately.</p><pre><code class="language-csharp">using System;
+using UnityEngine;
+
+public class HealthModel : MonoBehaviour
+{
+    [SerializeField, Min(1)] private int maximum = 100;
+    public int Current { get; private set; }
+    public int Maximum =&gt; maximum;
+    public event Action&lt;int, int&gt; Changed;
+
+    void Awake() { maximum = Mathf.Max(1, maximum); Current = maximum; }
+
+    public void Damage(int amount)
+    {
+        int next = Mathf.Clamp(Current - Mathf.Max(0, amount), 0, maximum);
+        if (next == Current) return;
+        Current = next;
+        Changed?.Invoke(Current, maximum);
+    }
+
+    [ContextMenu("Take 10 Damage")]
+    private void TestDamage() { Damage(10); }
+}
+</code></pre><pre><code class="language-csharp">using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class HealthHud : MonoBehaviour
+{
+    [SerializeField] private HealthModel model;
+    [SerializeField] private Slider bar;
+    [SerializeField] private TMP_Text label;
+
+    void OnEnable()
+    {
+        if (model == null || bar == null || label == null) return;
+        model.Changed += Refresh;
+        Refresh(model.Current, model.Maximum);
+    }
+
+    // All scene Awake calls finish before Start: refresh initial model state.
+    void Start()
+    {
+        if (model != null &amp;&amp; bar != null &amp;&amp; label != null)
+            Refresh(model.Current, model.Maximum);
+    }
+
+    void OnDisable()
+    {
+        if (model != null) model.Changed -= Refresh;
+    }
+
+    private void Refresh(int current, int maximum)
+    {
+        bar.SetValueWithoutNotify(current / (float)Mathf.Max(1, maximum));
+        label.SetText("Health: {0} / {1}", current, maximum);
+    }
+}
+</code></pre>
+<p>Set the Slider range to 0–1 and Whole Numbers off. The model owns health; the view only displays it. This avoids reading text back as game state and avoids rebuilding the same text every frame. The example assumes the serialized model reference stays fixed while enabled; if you switch players, unsubscribe from the old model before subscribing to the new one.</p>
+<h2 id="textmeshpro-fundamentals">TextMeshPro fundamentals</h2><p>Use <code>TextMeshProUGUI</code> for Canvas text and <code>TextMeshPro</code> for mesh text in the world. Both derive from <code>TMP_Text</code>, making it a useful serialized field type. TMP font assets store glyph and atlas information, not just a reference to a font file. Signed-distance-field rendering helps text stay crisp over a useful scale range, but tiny text still needs readable size and contrast.</p>
+<ul><li><strong>Fonts and fallbacks:</strong> choose a primary font, then explicit fallbacks for missing scripts and symbols. Test real localized strings, accents and numerals. A missing glyph is not fixed by changing text color.</li><li><strong>Static versus dynamic atlases:</strong> a static atlas gives predictable glyph coverage. A dynamic atlas can add glyphs as needed but may incur work and memory growth; plan coverage and test on the target device.</li><li><strong>Wrapping and overflow:</strong> decide whether a label wraps, truncates, uses ellipsis or grows. Reserve enough space for translations and larger accessibility text sizes.</li><li><strong>Auto Size:</strong> use bounded minimum/maximum values for constrained labels. It can involve repeated layout work and make neighboring labels inconsistent; it is not a substitute for a flexible layout.</li><li><strong>Rich text:</strong> useful for authored emphasis. Disable <code>richText</code> for raw player names or chat when markup must not be interpreted.</li><li><strong>Materials:</strong> share font material presets where possible. Per-label material instances and different atlases can split batches.</li></ul>
+<h2 id="3-respect-screen-safe-areas">3. Respect screen safe areas</h2><p>Attach this to SafeArea, which must be a direct child of a full-screen Overlay Canvas. It maps Screen.safeArea to normalized anchors when dimensions or safe-area values change. This example does not handle camera viewports or multiple displays; those need conversion relative to their own pixel rectangle.</p><pre><code class="language-csharp">using UnityEngine;
+
+[RequireComponent(typeof(RectTransform))]
+public class SafeAreaPanel : MonoBehaviour
+{
+    private RectTransform panel;
+    private Rect previous;
+    private Vector2Int previousSize;
+
+    void Awake() { panel = GetComponent&lt;RectTransform&gt;(); }
+
+    void Update()
+    {
+        if (Screen.width &lt;= 0 || Screen.height &lt;= 0) return;
+        Rect safe = Screen.safeArea;
+        Vector2Int size = new Vector2Int(Screen.width, Screen.height);
+        if (safe == previous &amp;&amp; size == previousSize) return;
+        previous = safe;
+        previousSize = size;
+        panel.anchorMin = new Vector2(safe.xMin / size.x, safe.yMin / size.y);
+        panel.anchorMax = new Vector2(safe.xMax / size.x, safe.yMax / size.y);
+        panel.offsetMin = panel.offsetMax = Vector2.zero;
+    }
+}
+</code></pre>
+<h2 id="input-and-menu-focus">Input and menu focus</h2><p>Use an EventSystem with the input module matching your project: InputSystemUIInputModule for the new Input System, or StandaloneInputModule for legacy input. Avoid duplicate active EventSystems or competing modules. Keep a GraphicRaycaster on interactive Canvases; turn Raycast Target off on decorative labels and images so they do not intercept clicks.</p>
+<p>When opening a modal menu, select a sensible default Button for keyboard/gamepad use and restore the prior selection when closing. Test explicit navigation where automatic navigation picks the wrong neighbor. A CanvasGroup can control visibility and interaction: hiding via alpha alone leaves invisible UI able to block clicks. Set interactable and blocksRaycasts consistently. Disabling gameplay's action map while a menu is open prevents one button press controlling both systems.</p>
+<h2 id="better-performance-practices">Going further: Better performance practices</h2><p>Changing text, layout or graphics can dirty parts of the Canvas and trigger rebuilds. Split Canvases by update frequency when profiling shows a benefit—for example a mostly static frame versus a changing HUD. Every Canvas also has batching costs; one Canvas per element is not a good default.</p>
+<p>Avoid deep nested layout groups in rapidly changing lists. Reuse row objects (pooling) and show only the rows currently visible (virtualization) instead of creating thousands of active entries. Prefer RectMask2D for a rectangular viewport when suitable. Limit transparent full-screen layers because overlapping UI spends GPU time even when most of it is visually redundant. Avoid repeatedly calling ForceUpdateCanvases or ForceMeshUpdate; request immediate layout only when code genuinely needs the freshly computed geometry.</p>
+<h2 id="accessibility-and-validation">Accessibility and validation</h2><p>Test 16:9, ultrawide, narrow portrait, a notched device and increased text size. Use meaningful labels, strong contrast and a visible focus state. Do not encode health or rarity using color alone. Make touch targets generous and ensure a controller can reach and leave every modal. Keep long localization strings in the test set, not just short English placeholders.</p>
+<div class="runtime"><p><strong>What happens at runtime</strong></p><ol><li>The model changes once and emits a notification.</li><li>The HUD updates the numeric label and bar.</li><li>Layout and graphics rebuild as needed before Canvas rendering.</li><li>The EventSystem routes input to eligible UI graphics and the selected control.</li></ol></div>
+<h2 id="common-mistakes">Common Mistakes</h2><ul><li>Reassigning identical text every Update instead of responding to changes.</li><li>Subscribing on every enable without unsubscribing on disable.</li><li>Hard-coding screen positions rather than anchors and margins.</li><li>Scaling down a whole menu until small text becomes unreadable.</li><li>Using alpha 0 as the only way to hide an interactive panel.</li></ul><h2 id="see-also">See also</h2><ul><li><a href="../tutorials/unityevents.html">UnityEvents in a Game</a></li><li><a href="../tutorials/input-system.html">Using the Input System</a></li><li><a href="../guides/urp-post-processing.html">URP &amp; Post-processing</a></li></ul><h2 id="official-references">Official references</h2><ul><li><a href="https://docs.unity3d.com/Packages/com.unity.ugui@2.0/manual/UICanvas.html">uGUI Canvas</a></li><li><a href="https://docs.unity3d.com/Packages/com.unity.ugui@2.0/manual/UIBasicLayout.html">RectTransform layout</a></li><li><a href="https://docs.unity3d.com/Packages/com.unity.textmeshpro@3.0/manual/index.html">TextMeshPro concepts (package UI varies by Unity version)</a></li><li><a href="https://unity.com/how-to/unity-ui-optimization-tips">Unity UI optimization guidance</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Screen-safeArea.html">Screen.safeArea</a></li></ul><p class="official-link">This page is a simplified, AI-assisted interpretation. Check the linked Unity documentation for authoritative details and your installed package version.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

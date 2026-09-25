@@ -47,8 +47,21 @@ var NAV = [
     ]
   },
   {
+    heading: "HLSL & Shaders",
+    pages: [
+      { title: "Your First HLSL Shader", path: "hlsl/first-shader.html" },
+      { title: "Camera-facing Billboards", path: "hlsl/billboards.html" }
+    ]
+  },
+  {
     heading: "Guides",
     pages: [
+      { title: "Procedural Meshes without GameObjects", path: "guides/procedural-meshes.html" },
+      { title: "Dot, Cross & Reflect", path: "guides/vector-math.html" },
+      { title: "Working with CharacterController", path: "guides/character-controller.html" },
+      { title: "URP & Post-processing", path: "guides/urp-post-processing.html" },
+      { title: "UI & TextMeshPro in Depth", path: "guides/ui-tmp.html" },
+      { title: "NavMesh in Depth", path: "guides/navmesh.html" },
       { title: "Update & FixedUpdate", path: "guides/update-fixedupdate.html" },
       { title: "Interpolation & Easing", path: "guides/interpolation.html" },
       { title: "Bezier Curves", path: "guides/bezier-curves.html" },
@@ -77,6 +90,7 @@ var NAV = [
   {
     heading: "Math & Data Types",
     pages: [
+      { title: "Matrix4x4", path: "api/matrix4x4.html" },
       { title: "Vector3", path: "api/vector3.html" },
       { title: "Quaternion", path: "api/quaternion.html" },
       { title: "Mathf", path: "api/mathf.html" }

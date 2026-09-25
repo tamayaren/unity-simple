@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>URP &amp; Post-processing | Unity Simple Docs</title>
+<meta name="description" content="Set up Unity’s URP graphics system, then add effects such as glow, color changes and darkened screen edges.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="guides/urp-post-processing.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Guides &rsaquo; URP &amp; Post-processing</div>
+<h1>URP &amp; Post-processing</h1>
+<p class="summary">Set up Unity’s URP graphics system, then add effects such as glow, color changes and darkened screen edges.</p>
+<div class="analogy"><p>Think of filming a scene and then adding a photo filter. URP is the crew that draws the scene. Post-processing is the filter applied to the picture afterward. A Volume Profile is a saved recipe for that filter.</p></div>
+<div class="tip"><strong>Start here</strong><p>Start in a Universal 3D project. Make the screen black and white with Color Adjustments before trying the code example or more effects.</p></div>
+<nav aria-label="On this page"><strong>On this page</strong><ul><li><a href="#a-few-words-first">A few words first</a></li><li><a href="#which-asset-controls-what">Which asset controls what?</a></li><li><a href="#1-verify-urp-is-actually-active">1. Verify URP is actually active</a></li><li><a href="#2-create-a-visible-post-processing-effect">2. Create a visible post-processing effect</a></li><li><a href="#global-versus-local-volumes">Global versus local Volumes</a></li><li><a href="#3-control-a-private-runtime-profile">Going further: 3. Control a private runtime profile</a></li><li><a href="#choose-effects-deliberately">Choose effects deliberately</a></li><li><a href="#cameras-ui-and-custom-effects">Going further: Cameras, UI and custom effects</a></li><li><a href="#performance-and-troubleshooting">Performance and troubleshooting</a></li><li><a href="#common-mistakes">Common Mistakes</a></li><li><a href="#see-also">See also</a></li><li><a href="#official-references">Official references</a></li></ul></nav>
+<h2 id="a-few-words-first">A few words first</h2><p><strong>URP</strong> means Universal Render Pipeline: a system Unity uses to draw your game. <strong>Post-processing</strong> changes the camera image after the scene is drawn. A <strong>Volume</strong> tells Unity which effect settings to use, and a <strong>Profile</strong> stores those settings.</p>
+
+
+<h2 id="which-asset-controls-what">Which asset controls what?</h2><div class="table-wrap"><table><tr><th>Thing</th><th>Responsibility</th></tr><tr><td>URP Pipeline Asset</td><td>A saved settings file for how URP draws the game, including shadows and quality.</td></tr><tr><td>Renderer Data</td><td>Chooses the drawing steps a camera uses. Use Universal Renderer for this 3D tutorial; 2D Renderer is designed for 2D features.</td></tr><tr><td>Camera</td><td>Selects a renderer, culling, post-processing and Volume settings.</td></tr><tr><td>Volume</td><td>Where and how strongly a set of settings applies: global/local, priority and weight.</td></tr><tr><td>Volume Profile</td><td>Saved effect settings. An override replaces a default setting, such as the default color saturation.</td></tr></table></div>
+<h2 id="1-verify-urp-is-actually-active">1. Verify URP is actually active</h2><p>These steps target Unity 6 / URP 17. A Universal 3D template includes the pipeline. For an existing project, install the compatible URP package, create a URP Pipeline Asset with a Universal Renderer, and assign it in Project Settings &gt; Graphics. Check Project Settings &gt; Quality too: a per-quality pipeline override can replace the Graphics default.</p>
+<p>Converting a project is more than changing that asset. Convert supported materials with Unity's Render Pipeline Converter and inspect custom shaders separately. Keep conversion changes reviewable in version control. Built-in Standard materials and Surface Shaders do not automatically work in URP; pink usually means an incompatible or failed shader.</p>
+<h2 id="2-create-a-visible-post-processing-effect">2. Create a visible post-processing effect</h2><ol><li>On the gameplay camera, enable Post Processing in its Rendering settings.</li><li>Create a Global Volume and click New beside its Profile. Keep Weight at 1.</li><li>Add Color Adjustments. Enable the checkbox next to Saturation and set it to -100 for an obvious grayscale test.</li><li>Check the camera's Volume Mask includes the Volume object's layer. This is separate from its geometry Culling Mask.</li><li>Restore Saturation to 0, then add Bloom and enable its Intensity override. Use a material with a bright Emission color to test glow. Emission makes the surface look bright; HDR allows brightness values above the usual display range.</li></ol>
+<p>A component being present is not enough: its active checkbox and each intended property's override checkbox must be enabled. A Volume's weight blends its contribution. Priority determines the order for overlapping volumes; a higher-priority volume can replace values from a lower-priority one.</p><figure class="diagram"><div class="diagram-scroll"><svg viewBox="0 0 840 80" role="img" aria-label="Volume settings control camera image processing; a Volume is not a visible fog box." style="max-width:840px;min-width:480px"><rect x="5" y="15" width="180" height="50" rx="4" class="dg-box"/><text x="95" y="45" text-anchor="middle" class="dg-t">Scene color</text><text x="197" y="45">→</text><rect x="215" y="15" width="180" height="50" rx="4" class="dg-box"/><text x="305" y="45" text-anchor="middle" class="dg-t">Blended Volume settings</text><text x="407" y="45">→</text><rect x="425" y="15" width="180" height="50" rx="4" class="dg-box"/><text x="515" y="45" text-anchor="middle" class="dg-t">Post-processing</text><text x="617" y="45">→</text><rect x="635" y="15" width="180" height="50" rx="4" class="dg-box"/><text x="725" y="45" text-anchor="middle" class="dg-t">Display output</text></svg></div><figcaption>Volume settings control camera image processing; a Volume is not a visible fog box.</figcaption></figure>
+<h2 id="global-versus-local-volumes">Global versus local Volumes</h2><p>Global affects the camera regardless of distance. For a local effect, untick Is Global and add a collider defining its region; a trigger collider avoids physically blocking the player. Blend Distance softens the transition near the region. URP evaluates local influence using the camera's Volume Trigger transform (normally the camera unless configured otherwise), not every character in the region.</p>
+<p>Try a low-priority global neutral profile and a higher-priority local cold-color profile inside a cave. Set a nonzero Blend Distance and walk the camera into it. You do not need an OnTriggerEnter script for this effect. The Volume system checks where the camera is and blends the settings for you.</p>
+<p>You can finish a useful setup without writing any code. Save the Profile, enter Play mode, and check that the effect appears. Continue below when you want an effect to respond to gameplay, such as taking damage.</p>
+<h2 id="3-control-a-private-runtime-profile">Going further: 3. Control a private runtime profile</h2><p>Add Vignette to a Volume Profile first. Attach this script to that Volume. Call <code>Flash()</code> from gameplay or its component context menu during Play mode. It clones the profile and its override objects so editing the effect does not change the shared project asset.</p><pre><code class="language-csharp">using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
+
+[RequireComponent(typeof(Volume))]
+public class DamageVignette : MonoBehaviour
+{
+    private Volume volume;
+    private VolumeProfile original;
+    private VolumeProfile owned;
+    private Vignette vignette;
+    private float strength;
+
+    void OnEnable()
+    {
+        volume = GetComponent&lt;Volume&gt;();
+        original = volume.sharedProfile;
+        owned = ScriptableObject.CreateInstance&lt;VolumeProfile&gt;();
+        if (original != null)
+            foreach (VolumeComponent component in original.components)
+                owned.components.Add(Instantiate(component));
+        volume.profile = owned;
+        if (!owned.TryGet(out vignette)) vignette = owned.Add&lt;Vignette&gt;(true);
+        vignette.active = true;
+        vignette.intensity.overrideState = true;
+        strength = 0;
+    }
+
+    [ContextMenu("Flash")]
+    public void Flash() { strength = 0.45f; }
+
+    void Update()
+    {
+        strength = Mathf.MoveTowards(strength, 0f, Time.unscaledDeltaTime);
+        vignette.intensity.value = strength;
+    }
+
+    void OnDisable()
+    {
+        volume.profile = null; // fall back to the unchanged shared profile
+        volume.sharedProfile = original;
+        if (owned != null)
+        {
+            foreach (VolumeComponent component in owned.components) Destroy(component);
+            Destroy(owned);
+        }
+        owned = null;
+    }
+}
+</code></pre>
+<p>This script owns the Volume's runtime profile slot; do not have another script replace it concurrently. The camera still needs to see this Volume, and other higher-priority overrides can affect the final value. The effect fades while paused because it uses unscaledDeltaTime.</p>
+<h2 id="choose-effects-deliberately">Choose effects deliberately</h2><div class="table-wrap"><table><tr><th>Effect</th><th>Use and cost</th></tr><tr><td>Bloom</td><td>Glow around bright pixels. It does not make an emissive material illuminate nearby geometry.</td></tr><tr><td>Tonemapping / Color Adjustments</td><td>Fit scene brightness to display and establish a consistent grade. Fix exposure and lighting before compensating with extreme grading.</td></tr><tr><td>Depth of Field</td><td>Focus cues; needs appropriate depth and can be expensive or blur gameplay targets.</td></tr><tr><td>Motion Blur</td><td>Motion cue; assess comfort and performance, and offer a setting to disable it.</td></tr><tr><td>Vignette / Film Grain</td><td>Stylistic image treatment; keep text and important edges legible.</td></tr></table></div>
+<h2 id="cameras-ui-and-custom-effects">Going further: Cameras, UI and custom effects</h2><p>Screen Space Overlay UI is rendered after the scene camera and generally bypasses that camera's post-processing. World Space and camera-rendered UI participate differently; verify the actual camera stack and final output. Avoid applying the same treatment twice across cameras.</p>
+<p>URP has its own integrated Volume-based post-processing; do not add the Built-in Post Processing Stack v2 workflow. Custom full-screen effects can use a Full Screen Pass Renderer Feature and a suitable material. Advanced ScriptableRendererFeatures in Unity 6 involve Render Graph APIs; old tutorials using legacy render passes may need migration. Depth Texture and Opaque Texture are additional inputs, not universal switches to turn on for every effect.</p>
+<h2 id="performance-and-troubleshooting">Performance and troubleshooting</h2><p>Use the Frame Debugger to see passes and the GPU profiler on target hardware to measure cost. Resolution and render scale affect full-screen effects strongly. Disable effects one at a time to isolate cost. If an effect is missing, check camera Post Processing, active renderer, Volume Mask, profile assignment, weight, component activation, override checkboxes and competing priorities—in that order.</p>
+<div class="runtime"><p><strong>What happens at runtime</strong></p><ol><li>The active quality setting selects a pipeline asset.</li><li>Each camera uses its renderer to draw the scene.</li><li>The Volume system blends applicable overrides.</li><li>Enabled effects process the camera image before final presentation.</li></ol></div>
+<h2 id="common-mistakes">Common Mistakes</h2><ul><li>Editing one URP asset while the active quality tier uses another.</li><li>Editing sharedProfile during gameplay and unintentionally changing a shared asset.</li><li>Assuming a Bloom effect is a physical light.</li><li>Expecting every Universal Renderer feature to behave identically in the 2D Renderer.</li></ul><h2 id="see-also">See also</h2><ul><li><a href="../hlsl/first-shader.html">Your First HLSL Shader</a></li><li><a href="../guides/ui-tmp.html">UI &amp; TextMeshPro in Depth</a></li><li><a href="../guides/optimization-practices.html">Optimization Best Practices</a></li></ul><h2 id="official-references">Official references</h2><ul><li><a href="https://docs.unity3d.com/6000.0/Documentation/Manual/urp/InstallURPIntoAProject.html">Install URP</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/Manual/urp/add-post-processing.html">Add post-processing</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/Manual/urp/Volumes.html">Volume blending</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/Manual/urp/integration-with-post-processing.html">URP post-processing integration</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/Manual/urp/renderer-features/renderer-feature-full-screen-pass.html">Full Screen Pass Renderer Feature</a></li></ul><p class="official-link">This page is a simplified, AI-assisted interpretation. Check the linked Unity documentation for authoritative details and your installed package version.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>
