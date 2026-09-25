@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Debug | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="api/debug.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; API Reference &rsaquo; Debug</div>
+    <div class="infobox">
+      <div class="infobox-title">Debug</div>
+      <table>
+        <tr><th>Type</th><td>Class (static members)</td></tr>
+        <tr><th>Namespace</th><td><code>UnityEngine</code></td></tr>
+        <tr><th>Output</th><td>Console window, Scene view</td></tr>
+      </table>
+    </div>
+    <h1>Debug</h1>
+    <p class="summary">Debug prints messages to the Console and draws lines in the Scene view. It's the quickest way to find out what your code is actually doing.</p>
+
+    <h2>Static Methods</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Description</th></tr>
+      <tr><td><code>Log(object message)</code></td><td>Print a normal (white) message.</td></tr>
+      <tr><td><code>Log(object message, Object context)</code></td><td>Same, and clicking the message highlights <code>context</code> in the Hierarchy. Pass <code>this</code> or <code>gameObject</code>.</td></tr>
+      <tr><td><code>LogWarning(object message)</code></td><td>Yellow warning.</td></tr>
+      <tr><td><code>LogError(object message)</code></td><td>Red error. Doesn't stop the game.</td></tr>
+      <tr><td><code>LogException(Exception e)</code></td><td>Log a caught exception with its stack trace.</td></tr>
+      <tr><td><code>DrawLine(start, end, color, duration)</code></td><td>Draw a line in the Scene view. <code>duration</code> in seconds (0 = one frame).</td></tr>
+      <tr><td><code>DrawRay(start, direction, color, duration)</code></td><td>Draw a line from a point in a direction. The length of <code>direction</code> is the length drawn.</td></tr>
+      <tr><td><code>Assert(bool condition, message)</code></td><td>Logs an error if the condition is false. Removed from release builds.</td></tr>
+      <tr><td><code>Break()</code></td><td>Pauses the Editor, as if you'd clicked Pause.</td></tr>
+    </table>
+    </div>
+
+    <h2>Code Samples</h2>
+    <h3>Useful logging</h3>
+    <pre><code class="language-csharp">// String interpolation ($"...") makes logs readable.
+Debug.Log($"{name} took {damage} damage, health now {health}", this);
+
+if (target == null)
+{
+    Debug.LogWarning($"{name} has no target assigned!", this);
+}
+</code></pre>
+
+    <h3>Visualize a raycast</h3>
+    <pre><code class="language-csharp">Vector3 origin = transform.position;
+Vector3 dir = transform.forward * 10f;
+bool hit = Physics.Raycast(origin, transform.forward, 10f);
+Debug.DrawRay(origin, dir, hit ? Color.green : Color.red);
+</code></pre>
+
+    <h3>Gizmos: always-visible helpers in the Scene view</h3>
+    <pre><code class="language-csharp">[SerializeField] private float detectRadius = 5f;
+
+void OnDrawGizmosSelected() // only when this object is selected
+{
+    Gizmos.color = Color.yellow;
+    Gizmos.DrawWireSphere(transform.position, detectRadius);
+}
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li><code>Debug.Log</code> builds a message, captures a stack trace and sends it to the Console. This is relatively slow, especially with thousands per second.</li>
+        <li>Logs also run in built games. They go to a log file (<code>Player.log</code>), so leftover logs in <code>Update</code> still cost performance.</li>
+        <li><code>Debug.DrawLine</code>/<code>DrawRay</code> only show in the Scene view, or in the Game view when the <strong>Gizmos</strong> button is on. They do nothing in builds.</li>
+      </ol>
+    </div>
+
+    <h2>Tips</h2>
+    <ul>
+      <li>Use <strong>Collapse</strong> in the Console to group identical messages.</li>
+      <li>Double-click a message to open your code at that line.</li>
+      <li>For step-by-step debugging, attach your code editor's debugger (Visual Studio / Rider / VS Code: "Attach to Unity") and set breakpoints. Often faster than adding logs.</li>
+    </ul>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Logging every frame and leaving it in.</strong> Hurts performance, even in builds. Remove it, or wrap it in a condition.</li>
+      <li><strong>Console shows nothing.</strong> Check that the Log/Warning/Error filter buttons (top right of the Console) aren't turned off.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="physics.html">Physics</a></li>
+      <li><a href="../guides/optimization.html">Optimizing Your Code</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/Debug.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

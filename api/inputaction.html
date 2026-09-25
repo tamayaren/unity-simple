@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>InputAction | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="api/inputaction.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; API Reference &rsaquo; InputAction</div>
+    <div class="infobox">
+      <div class="infobox-title">InputAction</div>
+      <table>
+        <tr><th>Type</th><td>Class</td></tr>
+        <tr><th>Namespace</th><td><code>UnityEngine.InputSystem</code></td></tr>
+        <tr><th>Package</th><td>Input System (<code>com.unity.inputsystem</code>)</td></tr>
+        <tr><th>Related</th><td><code>InputActionAsset</code>, <code>InputActionMap</code>, <code>InputActionReference</code>, <code>PlayerInput</code></td></tr>
+      </table>
+    </div>
+    <h1>InputAction</h1>
+    <p class="summary">An InputAction is a named thing the player can do, like "Move", "Jump" or "Fire", in the new Input System. Keys and buttons (<em>bindings</em>) are attached to it. Your code reads the action and doesn't care which device triggered it.</p>
+    <div class="analogy"><p>A restaurant order. Your code is the kitchen: it only needs to hear "one Jump, please". Whether the order came from the counter (keyboard), the drive-through (gamepad) or an app (touchscreen) is the waiter's job. The bindings are the waiters. Add a new waiter (a new device binding) and the kitchen code doesn't change at all.</p></div>
+
+    <h2>How the pieces fit</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Piece</th><th>What it is</th><th>Example</th></tr>
+      <tr><td>Input Action Asset</td><td>A file holding all your input setup</td><td><code>InputSystem_Actions.inputactions</code></td></tr>
+      <tr><td>Action Map</td><td>A group of actions used together. Enable one map at a time for different modes.</td><td>"Player", "UI", "Vehicle"</td></tr>
+      <tr><td>Action</td><td>One thing the player can do</td><td>"Jump" (Button), "Move" (Value, Vector2)</td></tr>
+      <tr><td>Binding</td><td>A control that triggers the action</td><td>Space key, gamepad South button</td></tr>
+      <tr><td>Composite binding</td><td>Several keys combined into one value</td><td>WASD → a Vector2</td></tr>
+    </table>
+    </div>
+
+    <h2>Action types</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Type</th><th>Use for</th></tr>
+      <tr><td>Button</td><td>Press/release: jump, fire, interact</td></tr>
+      <tr><td>Value</td><td>Continuous values: movement stick (Vector2), trigger pressure (float)</td></tr>
+      <tr><td>Pass Through</td><td>Like Value, but reports every device separately. Advanced.</td></tr>
+    </table>
+    </div>
+
+    <h2>Properties</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+      <tr><td><code>name</code></td><td><code>string</code></td><td>The action's name.</td></tr>
+      <tr><td><code>enabled</code></td><td><code>bool</code></td><td>Disabled actions report nothing.</td></tr>
+      <tr><td><code>bindings</code></td><td>list of <code>InputBinding</code></td><td>All bindings on this action.</td></tr>
+      <tr><td><code>actionMap</code></td><td><code>InputActionMap</code></td><td>The map this action belongs to.</td></tr>
+    </table>
+    </div>
+
+    <h2>Methods</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+      <tr><td><code>ReadValue&lt;T&gt;()</code></td><td><code>T</code></td><td>Current value, e.g. <code>ReadValue&lt;Vector2&gt;()</code> for Move, <code>ReadValue&lt;float&gt;()</code> for a trigger.</td></tr>
+      <tr><td><code>WasPressedThisFrame()</code></td><td><code>bool</code></td><td>Like <code>GetKeyDown</code>.</td></tr>
+      <tr><td><code>WasReleasedThisFrame()</code></td><td><code>bool</code></td><td>Like <code>GetKeyUp</code>.</td></tr>
+      <tr><td><code>IsPressed()</code></td><td><code>bool</code></td><td>Like <code>GetKey</code>: true while held.</td></tr>
+      <tr><td><code>WasPerformedThisFrame()</code></td><td><code>bool</code></td><td>True the frame the action completed, respecting interactions like Hold or Tap.</td></tr>
+      <tr><td><code>Enable()</code> / <code>Disable()</code></td><td><code>void</code></td><td>Turn on/off. Actions from your own assets start disabled; project-wide actions (<code>InputSystem.actions</code>) are enabled automatically.</td></tr>
+      <tr><td><code>GetBindingDisplayString(int bindingIndex)</code></td><td><code>string</code></td><td>Human-readable name, e.g. "Space" or "A". For "Press [E] to interact" prompts.</td></tr>
+    </table>
+    </div>
+
+    <h2>Events</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Event</th><th>Fires when</th></tr>
+      <tr><td><code>started</code></td><td>Input began (button went down, stick left the center).</td></tr>
+      <tr><td><code>performed</code></td><td>The action "happened" (button pressed; for Value actions, every time the value changes).</td></tr>
+      <tr><td><code>canceled</code></td><td>Input ended (released, stick back to center).</td></tr>
+    </table>
+    </div>
+    <p>All three pass an <code>InputAction.CallbackContext</code>. Use <code>ctx.ReadValue&lt;T&gt;()</code> to get the value.</p>
+
+    <h2>Code Samples</h2>
+    <h3>Polling (read every frame)</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+using UnityEngine.InputSystem;
+
+public class PollingPlayer : MonoBehaviour
+{
+    private InputAction move;
+    private InputAction jump;
+
+    void Awake()
+    {
+        move = InputSystem.actions.FindAction("Move");
+        jump = InputSystem.actions.FindAction("Jump");
+    }
+
+    void Update()
+    {
+        Vector2 input = move.ReadValue&lt;Vector2&gt;();
+        transform.position += new Vector3(input.x, 0f, input.y) * 5f * Time.deltaTime;
+
+        if (jump.WasPressedThisFrame()) Debug.Log("Jump");
+    }
+}
+</code></pre>
+
+    <h3>Callbacks (react to events)</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+using UnityEngine.InputSystem;
+
+public class CallbackPlayer : MonoBehaviour
+{
+    [SerializeField] private InputActionReference fireAction; // pick the action in the Inspector
+
+    void OnEnable()
+    {
+        fireAction.action.performed += OnFire;
+        fireAction.action.Enable();
+    }
+
+    void OnDisable()
+    {
+        fireAction.action.performed -= OnFire;
+    }
+
+    private void OnFire(InputAction.CallbackContext ctx)
+    {
+        Debug.Log("Fire!");
+    }
+}
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>Devices send events (key down, stick moved) to the Input System as they happen.</li>
+        <li>By default, just before each frame's <code>Update</code>, the Input System processes those events and checks which bindings they match.</li>
+        <li>Matching actions change phase (Waiting → Started → Performed → Canceled) and fire the corresponding C# events.</li>
+        <li>The values you poll with <code>ReadValue</code> and <code>WasPressedThisFrame</code> reflect this processed state for the whole frame.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Action never fires.</strong> It isn't enabled. Call <code>Enable()</code> (or its map/asset's <code>Enable()</code>).</li>
+      <li><strong><code>FindAction</code> returns null.</strong> The name doesn't match, or you're using <code>InputSystem.actions</code> without a project-wide asset set in <strong>Project Settings &gt; Input System Package</strong>.</li>
+      <li><strong>Subscribing without unsubscribing.</strong> After the object is destroyed, the callback still runs and throws <code>MissingReferenceException</code>. Always <code>-=</code> in <code>OnDisable</code>.</li>
+      <li><strong>Movement "sticks" after releasing keys</strong> when using only <code>performed</code>. Also handle <code>canceled</code> (which gives zero), or just poll with <code>ReadValue</code>.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../tutorials/input-system.html">Tutorial: Using the Input System</a></li>
+      <li><a href="../manual/input.html">Handling Input</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/Packages/com.unity.inputsystem@latest">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

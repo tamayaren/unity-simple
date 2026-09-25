@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Time | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="api/time.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; API Reference &rsaquo; Time</div>
+    <div class="infobox">
+      <div class="infobox-title">Time</div>
+      <table>
+        <tr><th>Type</th><td>Class (static members)</td></tr>
+        <tr><th>Namespace</th><td><code>UnityEngine</code></td></tr>
+      </table>
+    </div>
+    <h1>Time</h1>
+    <p class="summary">The <code>Time</code> class tells you how much time has passed: since the last frame, since the game started, and at what speed the game is running. It's the key to making things move at the same speed on every computer.</p>
+    <div class="analogy"><p>Frames are like the steps you take while walking. A fast computer takes many small steps per second; a slow one takes fewer, bigger steps. <code>Time.deltaTime</code> is the length of your last step in seconds. Multiply your speed by it and you cover the same distance per second no matter how many steps you take.</p></div>
+
+    <h2>Static Properties</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+      <tr><td><code>deltaTime</code></td><td><code>float</code></td><td>Seconds since the last frame (e.g. 0.016 at 60 FPS). Multiply movement by this. Inside <code>FixedUpdate</code> it returns <code>fixedDeltaTime</code>.</td></tr>
+      <tr><td><code>fixedDeltaTime</code></td><td><code>float</code></td><td>Seconds between physics steps. Default 0.02 (50 per second).</td></tr>
+      <tr><td><code>time</code></td><td><code>float</code></td><td>Seconds since the game started (scaled by <code>timeScale</code>). Good for cooldowns.</td></tr>
+      <tr><td><code>timeScale</code></td><td><code>float</code></td><td>Game speed. 1 = normal, 0.5 = slow motion, 0 = paused.</td></tr>
+      <tr><td><code>unscaledDeltaTime</code></td><td><code>float</code></td><td>Like <code>deltaTime</code> but ignores <code>timeScale</code>. Use for pause menus and UI.</td></tr>
+      <tr><td><code>unscaledTime</code></td><td><code>float</code></td><td>Like <code>time</code> but ignores <code>timeScale</code>.</td></tr>
+      <tr><td><code>realtimeSinceStartup</code></td><td><code>float</code></td><td>Real seconds since the app launched. Keeps counting even when paused.</td></tr>
+      <tr><td><code>frameCount</code></td><td><code>int</code></td><td>How many frames have been started.</td></tr>
+    </table>
+    </div>
+
+    <h2>Code Samples</h2>
+    <h3>Frame-rate independent movement</h3>
+    <pre><code class="language-csharp">// BAD: moves 0.1 units per frame. 60 FPS = 6 units/s, 144 FPS = 14.4 units/s.
+transform.position += Vector3.forward * 0.1f;
+
+// GOOD: moves 5 units per second on every machine.
+transform.position += Vector3.forward * 5f * Time.deltaTime;
+</code></pre>
+
+    <h3>A cooldown timer</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class Dash : MonoBehaviour
+{
+    [SerializeField] private float cooldown = 2f;
+    private float readyAt;
+
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.LeftShift) &amp;&amp; Time.time &gt;= readyAt)
+        {
+            Debug.Log("Dash!");
+            readyAt = Time.time + cooldown;
+        }
+    }
+}
+</code></pre>
+
+    <h3>Pause and slow motion</h3>
+    <pre><code class="language-csharp">public void Pause()      { Time.timeScale = 0f; }
+public void Resume()     { Time.timeScale = 1f; }
+public void SlowMotion() { Time.timeScale = 0.3f; }
+</code></pre>
+
+    <h3>UI that still animates while paused</h3>
+    <pre><code class="language-csharp">void Update()
+{
+    // Spins even when Time.timeScale is 0.
+    loadingIcon.Rotate(0f, 0f, -180f * Time.unscaledDeltaTime);
+}
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <p><strong>When you set timeScale = 0:</strong></p>
+      <ol>
+        <li><code>Time.deltaTime</code> becomes 0, so anything multiplied by it stops moving.</li>
+        <li><code>Time.time</code> stops increasing, so cooldowns freeze.</li>
+        <li><code>FixedUpdate</code> stops being called, so physics freezes.</li>
+        <li>Animators (in Normal update mode) freeze. <code>WaitForSeconds</code> never finishes.</li>
+        <li><strong><code>Update</code> still runs every frame.</strong> Input still works, which is how you can un-pause.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Forgetting deltaTime</strong> in <code>Update</code> movement, or using it where you shouldn't: <code>rb.linearVelocity = dir * speed</code> is already "per second", so don't multiply velocity by deltaTime.</li>
+      <li><strong>Thinking timeScale 0 stops everything.</strong> Your own <code>Update</code> code that doesn't use deltaTime keeps running.</li>
+      <li><strong>Forgetting to reset timeScale</strong> when loading a new scene from a pause menu. It stays at 0 and the new scene is frozen.</li>
+      <li><strong>Slow motion looks choppy?</strong> Physics still steps every 0.02 <em>game</em> seconds, so it steps less often in real time. Also scale <code>Time.fixedDeltaTime</code> by the same factor, or enable Interpolate on Rigidbodies.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../manual/script-lifecycle.html">Script Lifecycle</a></li>
+      <li><a href="../manual/coroutines.html">Coroutines</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/Time.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

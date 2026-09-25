@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unity Simple Docs</title>
+<meta name="description" content="Simplified, beginner-friendly Unity documentation with examples and runtime explanations.">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-root="" data-page="index.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <h1>Unity Simple Docs</h1>
+    <p class="summary">A beginner-friendly rewrite of the Unity documentation. Every page explains what an API does, shows how to use it with a working example, and describes what actually happens while your game is running.</p>
+
+    <div class="disclaimer">
+      <strong>Disclaimer: AI-assisted content</strong>
+      <p>The pages on this site were written with the help of AI, which was used to interpret and simplify the official Unity documentation. We try to keep everything accurate, but simplification can leave out details and mistakes are possible.</p>
+      <p>This site is <strong>not</strong> a replacement for the official docs. When something matters (exact behavior, edge cases, newer versions), check the original sources:</p>
+      <ul>
+        <li><a href="https://docs.unity3d.com/Manual/index.html">Unity Manual</a>: how the editor and engine features work</li>
+        <li><a href="https://docs.unity3d.com/ScriptReference/index.html">Unity Scripting API</a>: every class, property and method</li>
+      </ul>
+      <p>This is an unofficial community project and is not affiliated with Unity Technologies.</p>
+    </div>
+
+    <h2>Which Unity version?</h2>
+    <p>Examples target <strong>Unity 6</strong> and use C#. The pages assume you know basic C# (variables, methods, classes, if statements) but are new to Unity. Most of it also works in Unity 2021 and 2022. When a name changed in Unity 6 (for example <code>Rigidbody.velocity</code> became <code>Rigidbody.linearVelocity</code>), the page says so.</p>
+
+    <h2>New to Unity? Start here</h2>
+    <p>Read these in order. Each one builds on the last.</p>
+    <ol>
+      <li><a href="manual/what-is-unity.html">What is Unity?</a>: GameObjects, Components, Scenes and the Editor windows</li>
+      <li><a href="manual/first-script.html">Your First Script</a>: write a C# script and attach it to an object</li>
+      <li><a href="manual/script-lifecycle.html">Script Lifecycle</a>: when Unity calls <code>Awake</code>, <code>Start</code>, <code>Update</code> and the others</li>
+      <li><a href="manual/prefabs.html">Prefabs &amp; Spawning</a>: reusable objects and <code>Instantiate</code></li>
+      <li><a href="manual/coroutines.html">Coroutines</a>: waiting and doing things over time</li>
+      <li><a href="manual/physics-basics.html">Physics Basics</a>: Rigidbodies, Colliders and triggers</li>
+      <li><a href="manual/input.html">Handling Input</a>: keyboard, mouse and gamepad</li>
+    </ol>
+
+    <h2>Tutorials</h2>
+    <p>Step-by-step builds of real game features. Each one ends with something you can play.</p>
+    <div class="card-grid">
+      <div class="card"><h3><a href="tutorials/unityevents.html">UnityEvents in a Game</a></h3><p>Pressure plates, doors, health bars and a game-over screen, connected in the Inspector.</p></div>
+      <div class="card"><h3><a href="tutorials/input-system.html">Using the Input System</a></h3><p>Keyboard and gamepad movement, dash, pause menu, button prompts and key rebinding.</p></div>
+      <div class="card"><h3><a href="tutorials/scriptableobjects.html">ScriptableObjects in a Game</a></h3><p>Enemy types, shared health, event channels and wave tracking without singletons.</p></div>
+      <div class="card"><h3><a href="tutorials/dotween.html">Game Feel with DOTween</a></h3><p>Bobbing pickups, coin pops, squishy buttons, sliding menus and screen shake.</p></div>
+    </div>
+
+    <h2>Guides</h2>
+    <ul>
+      <li><a href="guides/optimization.html">Optimizing Your Code</a>: profiling, caching, garbage, pooling and other ways to speed up your scripts</li>
+      <li><a href="guides/best-practices.html">Better Ways to Do Things</a>: beginner habits that cause trouble later, and what to do instead</li>
+    </ul>
+
+    <h2>API Reference</h2>
+    <div class="card-grid">
+      <div class="card"><h3><a href="api/gameobject.html">GameObject</a></h3><p>Every object in your scene. Find, activate and add components.</p></div>
+      <div class="card"><h3><a href="api/monobehaviour.html">MonoBehaviour</a></h3><p>The base class for your scripts. Update loops, events and coroutines.</p></div>
+      <div class="card"><h3><a href="api/transform.html">Transform</a></h3><p>Position, rotation, scale and parent/child relationships.</p></div>
+      <div class="card"><h3><a href="api/object.html">Object</a></h3><p>Spawning with Instantiate and removing with Destroy.</p></div>
+      <div class="card"><h3><a href="api/vector3.html">Vector3</a></h3><p>Positions, directions and distances in 3D.</p></div>
+      <div class="card"><h3><a href="api/quaternion.html">Quaternion</a></h3><p>Rotations without the headache.</p></div>
+      <div class="card"><h3><a href="api/rigidbody.html">Rigidbody</a></h3><p>Make objects move with physics: forces, gravity and velocity.</p></div>
+      <div class="card"><h3><a href="api/physics.html">Physics</a></h3><p>Raycasts and overlap checks. "Is there something there?"</p></div>
+      <div class="card"><h3><a href="api/time.html">Time</a></h3><p>deltaTime, pausing the game and slow motion.</p></div>
+      <div class="card"><h3><a href="api/scenemanager.html">SceneManager</a></h3><p>Load levels, menus and loading screens.</p></div>
+      <div class="card"><h3><a href="api/animator.html">Animator</a></h3><p>Control animations from code.</p></div>
+      <div class="card"><h3><a href="api/playerprefs.html">PlayerPrefs</a></h3><p>Save simple settings and high scores.</p></div>
+      <div class="card"><h3><a href="api/unityevent.html">UnityEvent</a></h3><p>Events you can connect in the Inspector, like a Button's On Click.</p></div>
+      <div class="card"><h3><a href="api/inputaction.html">InputAction</a></h3><p>The new Input System: actions, bindings and callbacks.</p></div>
+      <div class="card"><h3><a href="api/dotween.html">DOTween</a></h3><p>Third-party tweening library: move, fade, scale and shake in one line.</p></div>
+    </div>
+    <p>See the sidebar for the full list.</p>
+
+    <h2>How to read an API page</h2>
+    <p>API pages follow the same layout so you always know where to look:</p>
+    <ul>
+      <li><strong>Infobox</strong> (top right): what kind of type it is, what it inherits from, and which namespace to put in your <code>using</code> line.</li>
+      <li><strong>Summary</strong>: what it is, in one or two plain sentences.</li>
+      <li><strong>Think of it like...</strong>: a real-world comparison for the trickier ideas, shown in a purple box.</li>
+      <li><strong>Properties / Methods / Events</strong>: tables of the members you will actually use. Rarely used members are left out.</li>
+      <li><strong>Code Samples</strong>: complete scripts you can copy into a project.</li>
+      <li><strong>What happens at runtime</strong>: what Unity does behind the scenes, step by step.</li>
+      <li><strong>Common Mistakes</strong>: the things that trip most beginners up.</li>
+    </ul>
+
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="js/nav.js"></script>
+</body>
+</html>

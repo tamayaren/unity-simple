@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rigidbody | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="api/rigidbody.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; API Reference &rsaquo; Rigidbody</div>
+    <div class="infobox">
+      <div class="infobox-title">Rigidbody</div>
+      <table>
+        <tr><th>Type</th><td>Class (Component)</td></tr>
+        <tr><th>Namespace</th><td><code>UnityEngine</code></td></tr>
+        <tr><th>Inherits</th><td>Component &gt; <a href="object.html">Object</a></td></tr>
+        <tr><th>2D version</th><td><code>Rigidbody2D</code></td></tr>
+      </table>
+    </div>
+    <h1>Rigidbody</h1>
+    <p class="summary">Adding a Rigidbody hands an object over to the physics engine. It now has mass, falls with gravity, gets pushed by other objects and can be moved with forces. It needs a <a href="collider.html">Collider</a> to actually bump into things.</p>
+    <div class="analogy"><p>Without a Rigidbody, your script is a puppeteer holding the object on strings: it goes exactly where you put it. With a Rigidbody, you cut the strings and hand it to the laws of physics. You can still influence it, like kicking a ball (<code>AddForce</code>) or setting how fast it's rolling (<code>linearVelocity</code>), but if you grab it and teleport it (<code>transform.position</code>), physics gets confused.</p></div>
+
+    <h2>Properties</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+      <tr><td><code>linearVelocity</code></td><td><code>Vector3</code></td><td>Current speed and direction in units per second. <em>(Called <code>velocity</code> before Unity 6.)</em></td></tr>
+      <tr><td><code>angularVelocity</code></td><td><code>Vector3</code></td><td>Spin speed, in radians per second.</td></tr>
+      <tr><td><code>mass</code></td><td><code>float</code></td><td>Weight in kilograms (roughly). Heavier objects need more force to move. Mass doesn't change how fast things fall.</td></tr>
+      <tr><td><code>linearDamping</code></td><td><code>float</code></td><td>Air resistance. Higher = slows down faster. <em>(Called <code>drag</code> before Unity 6.)</em></td></tr>
+      <tr><td><code>angularDamping</code></td><td><code>float</code></td><td>Resistance to spinning. <em>(Called <code>angularDrag</code> before Unity 6.)</em></td></tr>
+      <tr><td><code>useGravity</code></td><td><code>bool</code></td><td>Whether gravity affects it.</td></tr>
+      <tr><td><code>isKinematic</code></td><td><code>bool</code></td><td>If true, physics won't move it; you do, using <code>MovePosition</code>. It still pushes other objects.</td></tr>
+      <tr><td><code>constraints</code></td><td><code>RigidbodyConstraints</code></td><td>Lock movement or rotation on certain axes, e.g. <code>RigidbodyConstraints.FreezeRotation</code> so a character doesn't tip over.</td></tr>
+      <tr><td><code>interpolation</code></td><td><code>RigidbodyInterpolation</code></td><td>Set to <em>Interpolate</em> on the player or anything the camera follows, to remove jitter.</td></tr>
+      <tr><td><code>collisionDetectionMode</code></td><td><code>CollisionDetectionMode</code></td><td><em>Continuous</em> stops fast objects from passing through walls. Costs more.</td></tr>
+      <tr><td><code>position</code>, <code>rotation</code></td><td><code>Vector3</code>, <code>Quaternion</code></td><td>The physics engine's own position/rotation for the body.</td></tr>
+    </table>
+    </div>
+
+    <h2>Methods</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+      <tr><td><code>AddForce(Vector3 force, ForceMode mode = ForceMode.Force)</code></td><td><code>void</code></td><td>Push the object. See ForceMode below.</td></tr>
+      <tr><td><code>AddTorque(Vector3 torque, ForceMode mode)</code></td><td><code>void</code></td><td>Spin the object.</td></tr>
+      <tr><td><code>AddForceAtPosition(force, position)</code></td><td><code>void</code></td><td>Push at a specific point, which also causes spin (hitting the edge of a crate).</td></tr>
+      <tr><td><code>AddExplosionForce(force, center, radius)</code></td><td><code>void</code></td><td>Push away from a point, weaker further away.</td></tr>
+      <tr><td><code>MovePosition(Vector3 position)</code></td><td><code>void</code></td><td>Move to a position during the next physics step. The right way to move kinematic bodies.</td></tr>
+      <tr><td><code>MoveRotation(Quaternion rotation)</code></td><td><code>void</code></td><td>Rotate during the next physics step.</td></tr>
+      <tr><td><code>Sleep()</code> / <code>WakeUp()</code></td><td><code>void</code></td><td>Resting bodies "sleep" to save CPU. They wake up automatically when hit.</td></tr>
+    </table>
+    </div>
+
+    <h2>ForceMode: which one do I use?</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Mode</th><th>Uses mass?</th><th>Timing</th><th>Good for</th></tr>
+      <tr><td><code>Force</code> (default)</td><td>Yes</td><td>Continuous: call every <code>FixedUpdate</code></td><td>Engines, wind, steady pushing</td></tr>
+      <tr><td><code>Acceleration</code></td><td>No</td><td>Continuous</td><td>Custom gravity, pushing everything equally</td></tr>
+      <tr><td><code>Impulse</code></td><td>Yes</td><td>Once, instantly</td><td>Jumps, explosions, getting hit</td></tr>
+      <tr><td><code>VelocityChange</code></td><td>No</td><td>Once, instantly</td><td>Dashes that feel the same for any mass</td></tr>
+    </table>
+    </div>
+
+    <h2>Code Samples</h2>
+    <h3>Physics-based player with a jump</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+[RequireComponent(typeof(Rigidbody))]
+public class PhysicsPlayer : MonoBehaviour
+{
+    [SerializeField] private float moveSpeed = 6f;
+    [SerializeField] private float jumpForce = 5f;
+
+    private Rigidbody rb;
+    private Vector2 moveInput;
+    private bool jumpRequested;
+
+    void Awake()
+    {
+        rb = GetComponent&lt;Rigidbody&gt;();
+        rb.constraints = RigidbodyConstraints.FreezeRotation; // don't fall over
+    }
+
+    void Update()
+    {
+        // 1. Read input in Update (so no key press is missed).
+        moveInput = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
+        if (Input.GetButtonDown("Jump")) jumpRequested = true;
+    }
+
+    void FixedUpdate()
+    {
+        // 2. Apply physics in FixedUpdate.
+        Vector3 move = new Vector3(moveInput.x, 0f, moveInput.y).normalized * moveSpeed;
+        // Keep current vertical speed so gravity and jumping still work.
+        rb.linearVelocity = new Vector3(move.x, rb.linearVelocity.y, move.z);
+
+        if (jumpRequested)
+        {
+            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            jumpRequested = false;
+        }
+    }
+}
+</code></pre>
+    <p><code>[RequireComponent(typeof(Rigidbody))]</code> makes Unity add a Rigidbody automatically when you add this script, and prevents it from being removed.</p>
+
+    <h3>A moving platform (kinematic)</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class MovingPlatform : MonoBehaviour
+{
+    [SerializeField] private Vector3 offset = new Vector3(0f, 0f, 5f);
+    [SerializeField] private float speed = 1f;
+    private Rigidbody rb;
+    private Vector3 start;
+
+    void Awake()
+    {
+        rb = GetComponent&lt;Rigidbody&gt;();
+        rb.isKinematic = true;
+        start = rb.position;
+    }
+
+    void FixedUpdate()
+    {
+        float t = Mathf.PingPong(Time.time * speed, 1f);
+        rb.MovePosition(start + offset * t);
+    }
+}
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li><code>AddForce</code> doesn't move anything right away. It adds to a total that's applied during the next physics step.</li>
+        <li>Each physics step (every <code>Time.fixedDeltaTime</code> seconds, 0.02 by default): gravity is added to velocity, forces are converted to velocity changes (dividing by mass where relevant), then position is moved by velocity × time.</li>
+        <li>The engine checks for overlaps and pushes objects apart, then calls collision messages.</li>
+        <li>Unity writes the new position into the Transform. With <em>Interpolate</em> on, the Transform is smoothed between physics steps so it looks fluid at high frame rates.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Moving with <code>transform.position</code> or <code>transform.Translate</code>.</strong> Skips physics: objects tunnel through walls and collisions are jittery. Use <code>linearVelocity</code>, <code>AddForce</code> or <code>MovePosition</code>.</li>
+      <li><strong>Calling continuous <code>AddForce</code> in Update.</strong> The push then depends on frame rate. Put it in <code>FixedUpdate</code>.</li>
+      <li><strong>Old tutorial code doesn't compile.</strong> In Unity 6, <code>rb.velocity</code> → <code>rb.linearVelocity</code>, <code>rb.drag</code> → <code>rb.linearDamping</code>, <code>rb.angularDrag</code> → <code>rb.angularDamping</code>.</li>
+      <li><strong>Huge mass differences</strong> (1 vs 10000) make the simulation unstable. Keep ratios under about 100:1.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../manual/physics-basics.html">Physics Basics</a></li>
+      <li><a href="collider.html">Collider</a></li>
+      <li><a href="physics.html">Physics</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/Rigidbody.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

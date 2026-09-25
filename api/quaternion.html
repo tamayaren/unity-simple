@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quaternion | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="api/quaternion.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; API Reference &rsaquo; Quaternion</div>
+    <div class="infobox">
+      <div class="infobox-title">Quaternion</div>
+      <table>
+        <tr><th>Type</th><td>Struct (value type)</td></tr>
+        <tr><th>Namespace</th><td><code>UnityEngine</code></td></tr>
+        <tr><th>Used by</th><td><code>Transform.rotation</code>, <code>Instantiate</code>, <code>Rigidbody.MoveRotation</code></td></tr>
+      </table>
+    </div>
+    <h1>Quaternion</h1>
+    <p class="summary">A Quaternion stores a rotation. Internally it's four numbers (<code>x</code>, <code>y</code>, <code>z</code>, <code>w</code>) that you should <strong>never edit directly</strong>. Instead, you create and combine rotations with the helper methods on this page. You can think in degrees and let Unity do the math.</p>
+    <div class="analogy"><p>Describing a rotation as three angles (X, Y, Z) is like steering with three dials, one per axis. It works most of the time, but in some positions two dials end up turning the same way and you lose one direction of control. This is called <em>gimbal lock</em>. A quaternion is more like saying "point along <em>this</em> arrow, then twist <em>this</em> much". It has no dials, so nothing can jam. You don't need to understand the four numbers, just like you don't need to understand a car engine to drive.</p></div>
+
+    <h2>Static Properties</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Name</th><th>Description</th></tr>
+      <tr><td><code>Quaternion.identity</code></td><td>"No rotation". Use it when spawning something that shouldn't be rotated.</td></tr>
+    </table>
+    </div>
+
+    <h2>Properties</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+      <tr><td><code>eulerAngles</code></td><td><code>Vector3</code></td><td>The rotation as X/Y/Z degrees. Reading it can give surprising (but equivalent) numbers.</td></tr>
+    </table>
+    </div>
+
+    <h2>Static Methods</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+      <tr><td><code>Euler(x, y, z)</code></td><td><code>Quaternion</code></td><td>Make a rotation from degrees. The most common way to create one.</td></tr>
+      <tr><td><code>AngleAxis(angle, axis)</code></td><td><code>Quaternion</code></td><td>Rotate <code>angle</code> degrees around an axis, e.g. <code>AngleAxis(90, Vector3.up)</code>.</td></tr>
+      <tr><td><code>LookRotation(forward, up = Vector3.up)</code></td><td><code>Quaternion</code></td><td>A rotation that faces a direction.</td></tr>
+      <tr><td><code>FromToRotation(from, to)</code></td><td><code>Quaternion</code></td><td>The rotation that turns one direction into another. E.g. align an object with a slope.</td></tr>
+      <tr><td><code>RotateTowards(from, to, maxDegrees)</code></td><td><code>Quaternion</code></td><td>Turn toward a target by at most <code>maxDegrees</code>. Constant turn speed, never overshoots.</td></tr>
+      <tr><td><code>Slerp(a, b, t)</code></td><td><code>Quaternion</code></td><td>A rotation part-way between <code>a</code> and <code>b</code>. Smooth blending.</td></tr>
+      <tr><td><code>Angle(a, b)</code></td><td><code>float</code></td><td>Degrees between two rotations.</td></tr>
+      <tr><td><code>Inverse(q)</code></td><td><code>Quaternion</code></td><td>The opposite rotation.</td></tr>
+    </table>
+    </div>
+
+    <h2>Operators</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Code</th><th>Meaning</th></tr>
+      <tr><td><code>a * b</code></td><td>Combine: first apply <code>b</code>, then <code>a</code>. <strong>Order matters:</strong> <code>a * b</code> is usually not the same as <code>b * a</code>.</td></tr>
+      <tr><td><code>q * vector</code></td><td>Rotate a Vector3 by <code>q</code>. E.g. <code>transform.rotation * Vector3.forward</code> equals <code>transform.forward</code>.</td></tr>
+    </table>
+    </div>
+
+    <h2>Code Samples</h2>
+    <h3>Setting a rotation with degrees</h3>
+    <pre><code class="language-csharp">transform.rotation = Quaternion.Euler(0f, 90f, 0f); // face +X (turned right 90 degrees)
+</code></pre>
+
+    <h3>Turn smoothly to face a target (turret)</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class SmoothTurret : MonoBehaviour
+{
+    [SerializeField] private Transform target;
+    [SerializeField] private float turnSpeed = 90f; // degrees per second
+
+    void Update()
+    {
+        Vector3 dir = target.position - transform.position;
+        dir.y = 0f; // stay level: only turn left/right
+        if (dir == Vector3.zero) return;
+
+        Quaternion wanted = Quaternion.LookRotation(dir);
+        transform.rotation = Quaternion.RotateTowards(
+            transform.rotation, wanted, turnSpeed * Time.deltaTime);
+    }
+}
+</code></pre>
+
+    <h3>Spawn a bullet with a random spread</h3>
+    <pre><code class="language-csharp">Quaternion spread = Quaternion.Euler(Random.Range(-3f, 3f), Random.Range(-3f, 3f), 0f);
+Instantiate(bulletPrefab, muzzle.position, muzzle.rotation * spread);
+</code></pre>
+
+    <h3>Keep your own angle instead of reading eulerAngles</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class MouseLook : MonoBehaviour
+{
+    [SerializeField] private float sensitivity = 2f;
+    private float pitch; // up/down, kept by us so it never "flips"
+    private float yaw;   // left/right
+
+    void Update()
+    {
+        yaw   += Input.GetAxis("Mouse X") * sensitivity;
+        pitch -= Input.GetAxis("Mouse Y") * sensitivity;
+        pitch  = Mathf.Clamp(pitch, -80f, 80f); // don't look past straight up/down
+
+        transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
+    }
+}
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li><code>Quaternion.Euler(x, y, z)</code> converts your degrees into a quaternion. Unity applies them in the order Z, then X, then Y.</li>
+        <li>When you read <code>eulerAngles</code>, Unity converts back. Many different sets of angles describe the same rotation, so you might get (180, 0, 180) where you expected (0, 180, 0). Both are correct; they're just two ways of writing it.</li>
+        <li>Like Vector3, Quaternion is a struct: it's copied on assignment and creates no garbage.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Setting <code>x/y/z/w</code> directly.</strong> <code>rotation.y = 90</code> does not mean 90 degrees. Use <code>Quaternion.Euler</code>.</li>
+      <li><strong>Adding to eulerAngles every frame</strong> and reading them back. Can jump or flip near 90 degrees on X. Keep your own float angles (see the MouseLook example).</li>
+      <li><strong><code>LookRotation(Vector3.zero)</code></strong> logs "Look rotation viewing vector is zero". Check that the direction isn't zero first.</li>
+      <li><strong>Wrong multiplication order.</strong> <code>transform.rotation * extra</code> rotates around the object's own axes; <code>extra * transform.rotation</code> rotates around world axes.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="transform.html">Transform</a></li>
+      <li><a href="vector3.html">Vector3</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/Quaternion.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

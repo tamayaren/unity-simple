@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Camera | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="api/camera.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; API Reference &rsaquo; Camera</div>
+    <div class="infobox">
+      <div class="infobox-title">Camera</div>
+      <table>
+        <tr><th>Type</th><td>Class (Component)</td></tr>
+        <tr><th>Namespace</th><td><code>UnityEngine</code></td></tr>
+        <tr><th>Inherits</th><td>Behaviour &gt; Component &gt; <a href="object.html">Object</a></td></tr>
+      </table>
+    </div>
+    <h1>Camera</h1>
+    <p class="summary">A Camera decides what the player sees. It also converts between <em>screen</em> positions (pixels, like where the mouse is) and <em>world</em> positions (where things are in the scene).</p>
+    <div class="analogy"><p>The camera is a window you look through at the world. The screen is the glass. <code>ScreenPointToRay</code> is putting your finger on the glass and asking "what am I pointing at out there?" <code>WorldToScreenPoint</code> is the reverse: "where on the glass do I see that tree?"</p></div>
+
+    <h2>Coordinate systems</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Space</th><th>Units</th><th>Example</th></tr>
+      <tr><td>Screen</td><td>Pixels. (0,0) bottom-left, (<code>Screen.width</code>, <code>Screen.height</code>) top-right</td><td><code>Input.mousePosition</code></td></tr>
+      <tr><td>Viewport</td><td>0 to 1. (0.5, 0.5) is the center</td><td>"Center of the screen" on any resolution</td></tr>
+      <tr><td>World</td><td>Scene units (meters)</td><td><code>transform.position</code></td></tr>
+    </table>
+    </div>
+
+    <h2>Static Properties</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+      <tr><td><code>Camera.main</code></td><td><code>Camera</code></td><td>The first enabled camera tagged "MainCamera". <code>null</code> if none is tagged.</td></tr>
+    </table>
+    </div>
+
+    <h2>Properties</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+      <tr><td><code>fieldOfView</code></td><td><code>float</code></td><td>Vertical view angle in degrees (perspective). Lower = zoomed in.</td></tr>
+      <tr><td><code>orthographic</code></td><td><code>bool</code></td><td>True for flat 2D-style views with no perspective.</td></tr>
+      <tr><td><code>orthographicSize</code></td><td><code>float</code></td><td>Half the height of the view in world units (orthographic). Lower = zoomed in.</td></tr>
+      <tr><td><code>nearClipPlane</code> / <code>farClipPlane</code></td><td><code>float</code></td><td>Things closer/further than these aren't drawn.</td></tr>
+      <tr><td><code>backgroundColor</code></td><td><code>Color</code></td><td>Fill color when Clear Flags / Background Type is Solid Color.</td></tr>
+      <tr><td><code>cullingMask</code></td><td><code>int</code></td><td>Which layers this camera draws.</td></tr>
+      <tr><td><code>depth</code></td><td><code>float</code></td><td>Draw order when there are several cameras (Built-in pipeline). Higher draws on top.</td></tr>
+    </table>
+    </div>
+
+    <h2>Methods</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+      <tr><td><code>ScreenPointToRay(Vector3 pos)</code></td><td><code>Ray</code></td><td>A ray from the camera through a screen pixel. Use with <code>Physics.Raycast</code> for mouse picking.</td></tr>
+      <tr><td><code>ViewportPointToRay(Vector3 pos)</code></td><td><code>Ray</code></td><td>Same with viewport coordinates. (0.5, 0.5) = crosshair.</td></tr>
+      <tr><td><code>ScreenToWorldPoint(Vector3 pos)</code></td><td><code>Vector3</code></td><td>Pixel → world. <code>pos.z</code> must be the distance from the camera.</td></tr>
+      <tr><td><code>WorldToScreenPoint(Vector3 pos)</code></td><td><code>Vector3</code></td><td>World → pixel. <code>z</code> is the distance; negative means behind the camera.</td></tr>
+      <tr><td><code>WorldToViewportPoint(Vector3 pos)</code></td><td><code>Vector3</code></td><td>World → 0-1 viewport. Handy for "is this on screen?"</td></tr>
+    </table>
+    </div>
+
+    <h2>Code Samples</h2>
+    <h3>2D: move an object to the mouse</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class FollowMouse2D : MonoBehaviour
+{
+    private Camera cam;
+
+    void Awake() { cam = Camera.main; } // cache it
+
+    void Update()
+    {
+        Vector3 mouse = Input.mousePosition;
+        mouse.z = -cam.transform.position.z; // distance from camera to the z = 0 plane
+        Vector3 world = cam.ScreenToWorldPoint(mouse);
+        transform.position = new Vector3(world.x, world.y, 0f);
+    }
+}
+</code></pre>
+
+    <h3>Health bar over an enemy's head (Screen Space UI)</h3>
+    <pre><code class="language-csharp">[SerializeField] private Transform enemyHead;
+[SerializeField] private RectTransform healthBarUI;
+
+void LateUpdate()
+{
+    Vector3 screen = Camera.main.WorldToScreenPoint(enemyHead.position);
+    bool inFront = screen.z &gt; 0f;
+    healthBarUI.gameObject.SetActive(inFront);
+    if (inFront) healthBarUI.position = screen;
+}
+</code></pre>
+
+    <h3>Is an object on screen?</h3>
+    <pre><code class="language-csharp">Vector3 v = cam.WorldToViewportPoint(target.position);
+bool onScreen = v.z &gt; 0f &amp;&amp; v.x &gt;= 0f &amp;&amp; v.x &lt;= 1f &amp;&amp; v.y &gt;= 0f &amp;&amp; v.y &lt;= 1f;
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>After <code>LateUpdate</code>, every enabled camera renders what it can see on its <code>cullingMask</code> layers, between its near and far clip planes.</li>
+        <li>That's why camera movement belongs in <code>LateUpdate</code>: everything has moved for this frame, and the camera renders right after.</li>
+        <li><code>Camera.main</code> is cached by Unity in recent versions, so it's cheap, but it's still tidy to store it in a field.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong><code>Camera.main</code> is null.</strong> Your camera isn't tagged "MainCamera".</li>
+      <li><strong>ScreenToWorldPoint always returns the camera position.</strong> You left <code>z = 0</code>. For a perspective camera, <code>z</code> must be how far in front of the camera you want the point.</li>
+      <li><strong>Jittery follow camera.</strong> Move it in <code>LateUpdate</code>, and if following a Rigidbody, turn on Interpolate on that Rigidbody.</li>
+      <li><strong>For polished cameras,</strong> consider the <strong>Cinemachine</strong> package: follow, look-at, screen shake and blending between shots without code.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="physics.html">Physics</a> (raycasting from the camera)</li>
+      <li><a href="../manual/script-lifecycle.html">Script Lifecycle</a> (LateUpdate)</li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/Camera.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prefabs &amp; Spawning | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="manual/prefabs.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Getting Started &rsaquo; Prefabs & Spawning</div>
+    <h1>Prefabs &amp; Spawning</h1>
+    <p class="summary">A prefab is a saved GameObject template, like a blueprint. You design something once (an enemy, a bullet, a coin) and then create as many copies as you want, in the Editor or from code with <code>Instantiate</code>.</p>
+
+    <h2>Making a prefab</h2>
+    <div class="analogy"><p>A cookie cutter. The <strong>prefab asset</strong> is the cutter in the drawer, and each <strong>instance</strong> in the scene is a cookie. Reshape the cutter and every future cookie changes, and Unity even updates the cookies already placed in your scenes. Adding sprinkles to one cookie (an <em>override</em>) doesn't change the cutter or the other cookies.</p></div>
+    <ol>
+      <li>Build the GameObject in your scene with all its components and children.</li>
+      <li>Drag it from the <strong>Hierarchy</strong> into the <strong>Project</strong> window. It turns blue in the Hierarchy and a prefab asset appears in the Project.</li>
+      <li>You can now delete it from the scene. The prefab asset stays.</li>
+    </ol>
+
+    <h2>Prefab asset vs. prefab instance</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th></th><th>Prefab asset</th><th>Prefab instance</th></tr>
+      <tr><td>Where it lives</td><td>Project window (a <code>.prefab</code> file)</td><td>In a scene / the Hierarchy</td></tr>
+      <tr><td>Editing it</td><td>Double-click to open Prefab Mode. Changes apply to <em>every</em> instance.</td><td>Changes apply only to this copy (an "override", shown in bold in the Inspector)</td></tr>
+      <tr><td>Exists at runtime?</td><td>Only as data to copy from</td><td>Yes, it's a real object in the scene</td></tr>
+    </table>
+    </div>
+    <p>To push an instance's overrides back to the asset, use the <strong>Overrides</strong> dropdown at the top of the Inspector and choose <strong>Apply All</strong>.</p>
+    <p><strong>Prefab Variants</strong> (right-click a prefab &gt; Create &gt; Prefab Variant) inherit from another prefab. For example "FastEnemy" can be a variant of "Enemy" with a different speed. Change the base and the variant updates too.</p>
+
+    <h2>Spawning a prefab from code</h2>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class CoinSpawner : MonoBehaviour
+{
+    [SerializeField] private GameObject coinPrefab; // drag the prefab asset here
+    [SerializeField] private int count = 10;
+
+    void Start()
+    {
+        for (int i = 0; i &lt; count; i++)
+        {
+            Vector3 pos = new Vector3(i * 2f, 1f, 0f);
+            Instantiate(coinPrefab, pos, Quaternion.identity);
+        }
+    }
+}
+</code></pre>
+
+    <h3>Tip: reference the prefab by its script type</h3>
+    <p>If your prefab has a script on it, make the field that type. <code>Instantiate</code> then gives you the script directly, so you don't need <code>GetComponent</code>.</p>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class Gun : MonoBehaviour
+{
+    [SerializeField] private Bullet bulletPrefab; // Bullet is a MonoBehaviour on the prefab
+    [SerializeField] private Transform muzzle;
+
+    void Update()
+    {
+        if (Input.GetButtonDown("Fire1"))
+        {
+            Bullet b = Instantiate(bulletPrefab, muzzle.position, muzzle.rotation);
+            b.speed = 30f; // configure the new copy
+        }
+    }
+}
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li><code>Instantiate</code> makes a full copy of the prefab: the GameObject, all children, and all components with their saved values.</li>
+        <li>The copy is placed in the active scene at the position and rotation you gave.</li>
+        <li><code>Awake</code> and <code>OnEnable</code> run on the copy's scripts <em>immediately</em>, before <code>Instantiate</code> returns.</li>
+        <li><code>Start</code> runs later, just before the copy's first <code>Update</code> (so you can still set fields like <code>b.speed</code> above before <code>Start</code> uses them).</li>
+        <li>The copy is named after the prefab with "(Clone)" added, for example "Bullet(Clone)".</li>
+      </ol>
+    </div>
+
+    <h2>Removing spawned objects</h2>
+    <p>Use <code>Destroy</code>. The optional second argument is a delay in seconds.</p>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class Bullet : MonoBehaviour
+{
+    public float speed = 20f;
+
+    void Start()
+    {
+        Destroy(gameObject, 3f); // clean up after 3 seconds, even if it hits nothing
+    }
+
+    void Update()
+    {
+        transform.Translate(Vector3.forward * speed * Time.deltaTime);
+    }
+}
+</code></pre>
+
+    <h2>Object pooling (for things spawned very often)</h2>
+    <p>Creating and destroying hundreds of objects per second (bullets, particles) creates work for the garbage collector and can cause stutters. A <em>pool</em> reuses objects instead: deactivate them instead of destroying, and reactivate them instead of instantiating. Unity has a built-in <code>ObjectPool&lt;T&gt;</code> in <code>UnityEngine.Pool</code>:</p>
+    <pre><code class="language-csharp">using UnityEngine;
+using UnityEngine.Pool;
+
+public class PooledGun : MonoBehaviour
+{
+    [SerializeField] private GameObject bulletPrefab;
+    private ObjectPool&lt;GameObject&gt; pool;
+
+    void Awake()
+    {
+        pool = new ObjectPool&lt;GameObject&gt;(
+            createFunc:      () =&gt; Instantiate(bulletPrefab),
+            actionOnGet:     b =&gt; b.SetActive(true),
+            actionOnRelease: b =&gt; b.SetActive(false),
+            actionOnDestroy: b =&gt; Destroy(b),
+            defaultCapacity: 20);
+    }
+
+    public GameObject Fire()
+    {
+        GameObject b = pool.Get();
+        b.transform.SetPositionAndRotation(transform.position, transform.rotation);
+        return b;
+    }
+
+    // Call this from the bullet instead of Destroy(gameObject).
+    public void ReturnBullet(GameObject b)
+    {
+        pool.Release(b);
+    }
+}
+</code></pre>
+    <div class="note"><strong>Pooled objects reuse OnEnable</strong>Since pooled objects are reactivated rather than recreated, <code>Awake</code> and <code>Start</code> only run the first time. Put "reset" code (health, timers) in <code>OnEnable</code>.</div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Dragging a scene object instead of the prefab asset</strong> into the field. If that object gets destroyed, the field becomes empty (missing). Always drag from the Project window.</li>
+      <li><strong>Modifying the prefab asset at runtime</strong> (<code>coinPrefab.transform.localScale = ...</code>). That changes the template, not the copy, and in the Editor can even save to disk. Modify the value returned by <code>Instantiate</code>.</li>
+      <li><strong><code>Destroy(this)</code> vs <code>Destroy(gameObject)</code>.</strong> <code>this</code> is only your script component. The object stays. Use <code>gameObject</code> to remove the whole thing.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../api/object.html">Object</a> (Instantiate, Destroy)</li>
+      <li><a href="../api/gameobject.html">GameObject</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/Object.Instantiate.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

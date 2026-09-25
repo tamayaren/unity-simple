@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Collider | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="api/collider.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; API Reference &rsaquo; Collider</div>
+    <div class="infobox">
+      <div class="infobox-title">Collider</div>
+      <table>
+        <tr><th>Type</th><td>Class (Component, base class)</td></tr>
+        <tr><th>Namespace</th><td><code>UnityEngine</code></td></tr>
+        <tr><th>Inherits</th><td>Component &gt; <a href="object.html">Object</a></td></tr>
+        <tr><th>Subclasses</th><td>BoxCollider, SphereCollider, CapsuleCollider, MeshCollider, TerrainCollider, CharacterController</td></tr>
+        <tr><th>2D version</th><td><code>Collider2D</code></td></tr>
+      </table>
+    </div>
+    <h1>Collider</h1>
+    <p class="summary">A Collider gives an object an invisible physical shape. It's what raycasts hit, what Rigidbodies bump into, and what triggers detect. The shape doesn't have to match the visible mesh exactly; simple shapes are faster.</p>
+
+    <h2>Collider types</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Type</th><th>Shape</th><th>Speed</th><th>Use for</th></tr>
+      <tr><td>BoxCollider</td><td>Box</td><td>Fast</td><td>Crates, walls, buildings</td></tr>
+      <tr><td>SphereCollider</td><td>Ball</td><td>Fastest</td><td>Balls, pickup ranges</td></tr>
+      <tr><td>CapsuleCollider</td><td>Pill</td><td>Fast</td><td>Characters</td></tr>
+      <tr><td>MeshCollider</td><td>Matches a mesh</td><td>Slow</td><td>Complex static level geometry. Needs <em>Convex</em> on for dynamic Rigidbodies.</td></tr>
+    </table>
+    </div>
+    <p>For complex moving objects, add several primitive colliders on child objects (a <em>compound collider</em>) instead of one Mesh Collider.</p>
+
+    <h2>Properties</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+      <tr><td><code>enabled</code></td><td><code>bool</code></td><td>Turn the collider on/off.</td></tr>
+      <tr><td><code>isTrigger</code></td><td><code>bool</code></td><td>If true, nothing bounces off it; it only reports when things enter/exit.</td></tr>
+      <tr><td><code>bounds</code></td><td><code>Bounds</code></td><td>The world-space box that fully contains the collider.</td></tr>
+      <tr><td><code>attachedRigidbody</code></td><td><code>Rigidbody</code></td><td>The Rigidbody it belongs to (can be on a parent), or <code>null</code>.</td></tr>
+      <tr><td><code>sharedMaterial</code></td><td><code>PhysicsMaterial</code></td><td>Friction and bounciness. <em>(Called <code>PhysicMaterial</code> before Unity 6.)</em></td></tr>
+    </table>
+    </div>
+
+    <h2>Methods</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+      <tr><td><code>ClosestPoint(Vector3 position)</code></td><td><code>Vector3</code></td><td>The point on (or in) the collider closest to a position.</td></tr>
+      <tr><td><code>Raycast(Ray ray, out RaycastHit hit, float maxDistance)</code></td><td><code>bool</code></td><td>Raycast against <em>only this</em> collider.</td></tr>
+    </table>
+    </div>
+
+    <h2>Events (messages on your scripts)</h2>
+    <p>Write these methods on a script on the same GameObject as the collider (or on the GameObject with the Rigidbody).</p>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Message</th><th>Parameter</th><th>Called when</th></tr>
+      <tr><td><code>OnCollisionEnter</code></td><td><code>Collision</code></td><td>Started touching (solid).</td></tr>
+      <tr><td><code>OnCollisionStay</code></td><td><code>Collision</code></td><td>Every physics step while touching.</td></tr>
+      <tr><td><code>OnCollisionExit</code></td><td><code>Collision</code></td><td>Stopped touching.</td></tr>
+      <tr><td><code>OnTriggerEnter</code></td><td><code>Collider</code></td><td>Something entered a trigger.</td></tr>
+      <tr><td><code>OnTriggerStay</code></td><td><code>Collider</code></td><td>Every physics step while inside.</td></tr>
+      <tr><td><code>OnTriggerExit</code></td><td><code>Collider</code></td><td>Something left a trigger.</td></tr>
+    </table>
+    </div>
+    <h3>Useful members of Collision</h3>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Member</th><th>Description</th></tr>
+      <tr><td><code>collision.gameObject</code></td><td>The object we hit.</td></tr>
+      <tr><td><code>collision.collider</code></td><td>The exact collider we hit.</td></tr>
+      <tr><td><code>collision.relativeVelocity</code></td><td>How fast the two objects hit each other.</td></tr>
+      <tr><td><code>collision.GetContact(0).point</code></td><td>Where they touched (world space).</td></tr>
+      <tr><td><code>collision.GetContact(0).normal</code></td><td>The surface direction at that point (points away from the surface).</td></tr>
+    </table>
+    </div>
+
+    <h2>Code Samples</h2>
+    <h3>Damage zone (trigger)</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class LavaZone : MonoBehaviour
+{
+    [SerializeField] private int damagePerSecond = 20;
+
+    void OnTriggerStay(Collider other)
+    {
+        if (other.TryGetComponent(out Health health))
+        {
+            // OnTriggerStay runs each physics step, so scale by the step length.
+            health.TakeDamage(damagePerSecond * Time.fixedDeltaTime);
+        }
+    }
+}
+</code></pre>
+
+    <h3>Spawn sparks where a bullet hits</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class ImpactEffect : MonoBehaviour
+{
+    [SerializeField] private GameObject sparksPrefab;
+
+    void OnCollisionEnter(Collision collision)
+    {
+        ContactPoint contact = collision.GetContact(0);
+        // Point the sparks out of the surface.
+        Quaternion rot = Quaternion.LookRotation(contact.normal);
+        Instantiate(sparksPrefab, contact.point, rot);
+        Destroy(gameObject);
+    }
+}
+</code></pre>
+
+    <h3>Ground check with a trigger under the feet</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+// Put this on a small trigger collider child object at the character's feet.
+public class GroundSensor : MonoBehaviour
+{
+    public bool IsGrounded =&gt; contacts &gt; 0;
+    private int contacts;
+
+    void OnTriggerEnter(Collider other) { if (!other.isTrigger) contacts++; }
+    void OnTriggerExit(Collider other)  { if (!other.isTrigger) contacts--; }
+}
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>Each physics step, the engine checks which colliders overlap or touch.</li>
+        <li>For solid collisions, it pushes Rigidbodies apart and adjusts their velocity (friction, bounce).</li>
+        <li>It compares this step's contacts with the last step's: new pairs get <code>Enter</code>, continuing pairs get <code>Stay</code>, ended pairs get <code>Exit</code>.</li>
+        <li>Messages are sent to scripts on <em>both</em> objects. On a child collider of a Rigidbody, messages go to the Rigidbody's GameObject.</li>
+        <li>Disabling or destroying a collider while inside a trigger does <strong>not</strong> call <code>OnTriggerExit</code>. Keep that in mind for counters like the ground sensor above.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>No callback at all.</strong> Check: at least one object has a Rigidbody; both are 3D (or both 2D); the method signature is exactly right; the layers are allowed to collide in the Layer Collision Matrix.</li>
+      <li><strong><code>OnTriggerEnter(Collision c)</code></strong>: wrong parameter type. Triggers get a <code>Collider</code>.</li>
+      <li><strong>Scaling colliders to negative values</strong> or very thin shapes. Causes missed collisions. Use the collider's own Size/Radius fields.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../manual/physics-basics.html">Physics Basics</a></li>
+      <li><a href="rigidbody.html">Rigidbody</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/Collider.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

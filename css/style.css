@@ -1,0 +1,260 @@
+/* Unity Simple Docs - plain stylesheet. No animations, no transitions. */
+
+:root {
+  --bg: #ffffff;
+  --bg-alt: #f5f6f7;
+  --text: #1d1f21;
+  --muted: #5c6166;
+  --border: #d5d8dc;
+  --link: #0b5cad;
+  --header-bg: #222629;
+  --header-text: #ffffff;
+  --code-bg: #f2f3f5;
+  --note-bg: #eef5ff;
+  --note-border: #0b5cad;
+  --warn-bg: #fff6e5;
+  --warn-border: #c77700;
+  --tip-bg: #edf8ef;
+  --tip-border: #2e7d32;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ---------- Header ---------- */
+.site-header {
+  background: var(--header-bg);
+  color: var(--header-text);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.site-header .logo {
+  color: var(--header-text);
+  font-weight: bold;
+  font-size: 18px;
+}
+.site-header .logo:hover { text-decoration: none; }
+.site-header .header-links { margin-left: auto; font-size: 14px; }
+.site-header .header-links a { color: #cfd8dc; margin-left: 14px; }
+
+/* ---------- Layout ---------- */
+.layout {
+  display: flex;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.sidebar {
+  width: 250px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  padding: 16px;
+  font-size: 14px;
+  background: var(--bg-alt);
+  min-height: calc(100vh - 48px);
+}
+.sidebar input[type="search"] {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+.sidebar h3 {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 16px 0 4px;
+  letter-spacing: 0.5px;
+}
+.sidebar ul { list-style: none; margin: 0; padding: 0; }
+.sidebar li a {
+  display: block;
+  padding: 2px 6px;
+  color: var(--text);
+}
+.sidebar li a.active {
+  background: #dde6f0;
+  font-weight: bold;
+}
+.sidebar .no-results { color: var(--muted); font-style: italic; }
+
+.content {
+  flex: 1;
+  min-width: 0;
+  padding: 20px 32px 60px;
+}
+
+/* ---------- Typography ---------- */
+h1 { font-size: 30px; margin: 0 0 8px; line-height: 1.25; }
+h2 {
+  font-size: 22px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
+  margin-top: 36px;
+}
+h3 { font-size: 18px; margin-top: 24px; }
+
+.breadcrumbs { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+.summary { font-size: 17px; color: #33373a; }
+
+code {
+  font-family: Consolas, "Courier New", monospace;
+  background: var(--code-bg);
+  padding: 1px 4px;
+  font-size: 0.92em;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  padding: 12px;
+  overflow-x: auto;
+  font-size: 14px;
+  line-height: 1.45;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ---------- Tables (member lists, like DevWiki) ---------- */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 12px 0;
+  font-size: 15px;
+}
+th, td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+th { background: var(--bg-alt); }
+td code { white-space: nowrap; }
+.table-wrap { overflow-x: auto; }
+
+/* ---------- Infobox (right side on API pages) ---------- */
+.infobox {
+  float: right;
+  width: 280px;
+  margin: 0 0 16px 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+  font-size: 14px;
+}
+.infobox .infobox-title {
+  background: var(--header-bg);
+  color: var(--header-text);
+  padding: 6px 10px;
+  font-weight: bold;
+}
+.infobox table { margin: 0; font-size: 14px; }
+.infobox th, .infobox td { border: none; border-top: 1px solid var(--border); background: none; }
+.infobox th { width: 40%; }
+
+/* ---------- Callouts ---------- */
+.note, .warning, .tip, .disclaimer {
+  border-left: 4px solid;
+  padding: 10px 14px;
+  margin: 16px 0;
+}
+.note { background: var(--note-bg); border-color: var(--note-border); }
+.warning { background: var(--warn-bg); border-color: var(--warn-border); }
+.tip { background: var(--tip-bg); border-color: var(--tip-border); }
+.disclaimer { background: var(--warn-bg); border-color: var(--warn-border); }
+.analogy {
+  background: #f6f1fb;
+  border-left: 4px solid #6a3fa0;
+  padding: 10px 14px;
+  margin: 16px 0;
+}
+.analogy::before {
+  content: "Think of it like...";
+  display: block;
+  font-weight: bold;
+  color: #6a3fa0;
+}
+.note strong:first-child, .warning strong:first-child, .tip strong:first-child { display: block; }
+
+/* ---------- Runtime flow box ---------- */
+.runtime {
+  border: 1px solid var(--border);
+  background: #fafbfc;
+  padding: 10px 16px;
+  margin: 12px 0;
+}
+.runtime ol { margin: 6px 0; padding-left: 22px; }
+
+/* ---------- Home page cards ---------- */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+.card {
+  border: 1px solid var(--border);
+  padding: 12px;
+}
+.card h3 { margin: 0 0 6px; font-size: 16px; }
+.card p { margin: 0; font-size: 14px; color: var(--muted); }
+
+.official-link {
+  font-size: 14px;
+  border-top: 1px solid var(--border);
+  margin-top: 40px;
+  padding-top: 10px;
+  color: var(--muted);
+}
+
+.site-footer {
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--muted);
+  padding: 12px 16px;
+  text-align: center;
+}
+
+/* ---------- Mobile ---------- */
+.menu-toggle {
+  display: none;
+  background: none;
+  border: 1px solid #555;
+  color: var(--header-text);
+  padding: 4px 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+@media (max-width: 800px) {
+  .layout { display: block; }
+  .sidebar {
+    width: 100%;
+    min-height: 0;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    display: none;
+  }
+  .sidebar.open { display: block; }
+  .menu-toggle { display: inline-block; }
+  .content { padding: 16px; }
+  .infobox { float: none; width: 100%; margin: 0 0 16px; }
+  .site-header .header-links { margin-left: 0; width: 100%; }
+  .site-header .header-links a { margin: 0 14px 0 0; }
+}

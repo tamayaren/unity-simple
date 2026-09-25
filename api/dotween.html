@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DOTween | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="api/dotween.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Packages &rsaquo; DOTween</div>
+    <div class="infobox">
+      <div class="infobox-title">DOTween</div>
+      <table>
+        <tr><th>Type</th><td>Third-party library (free)</td></tr>
+        <tr><th>Namespace</th><td><code>DG.Tweening</code></td></tr>
+        <tr><th>Author</th><td>Demigiant</td></tr>
+        <tr><th>Get it</th><td>Unity Asset Store: "DOTween (HOTween v2)"</td></tr>
+        <tr><th>Paid version</th><td>DOTween Pro</td></tr>
+      </table>
+    </div>
+    <h1>DOTween</h1>
+    <p class="summary">DOTween is a popular free library for <strong>tweening</strong>: smoothly changing a value from A to B over time. Move a door, fade a menu, pop a coin, shake the camera, each in one line of code instead of a hand-written coroutine.</p>
+    <div class="note"><strong>Not made by Unity</strong>DOTween is a third-party asset by Demigiant, not part of Unity. This page covers the free version. Its official documentation is at <a href="https://dotween.demigiant.com/documentation.php">dotween.demigiant.com</a>.</div>
+    <div class="analogy"><p>You're a film director. Without DOTween you're animating frame by frame, redrawing the door a little more open every frame. With DOTween you tell an assistant: "Open this door to 90 degrees, take one second, ease out at the end, and tell me when you're done." The assistant does all the in-between frames (the <em>tweens</em>) for you.</p></div>
+
+    <h2 id="setup">Setup</h2>
+    <ol>
+      <li>Add "DOTween (HOTween v2)" from the Asset Store to your assets, then import it via <strong>Window &gt; Package Manager &gt; My Assets</strong>.</li>
+      <li>When the setup window appears (or via <strong>Tools &gt; Demigiant &gt; DOTween Utility Panel</strong>), click <strong>Setup DOTween...</strong> and <strong>Apply</strong>. This turns on the modules for UI, Physics, Audio and so on.</li>
+      <li>Add <code>using DG.Tweening;</code> to your scripts.</li>
+    </ol>
+
+    <h2>Shortcuts: Transform</h2>
+    <p>Called directly on components. All return a <code>Tweener</code>.</p>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Description</th></tr>
+      <tr><td><code>DOMove(Vector3 to, float duration)</code></td><td>Move to a world position. Also <code>DOMoveX/Y/Z</code> for one axis.</td></tr>
+      <tr><td><code>DOLocalMove(Vector3 to, float duration)</code></td><td>Move to a local position.</td></tr>
+      <tr><td><code>DORotate(Vector3 to, float duration, RotateMode mode = Fast)</code></td><td>Rotate to euler angles. Use <code>RotateMode.FastBeyond360</code> to spin more than 360.</td></tr>
+      <tr><td><code>DOLocalRotate(...)</code></td><td>Same, in local space.</td></tr>
+      <tr><td><code>DOScale(Vector3 or float to, float duration)</code></td><td>Scale. Pass a float for uniform scale.</td></tr>
+      <tr><td><code>DOLookAt(Vector3 towards, float duration)</code></td><td>Turn to face a point.</td></tr>
+      <tr><td><code>DOJump(Vector3 to, float jumpPower, int numJumps, float duration)</code></td><td>Hop to a position. Returns a <code>Sequence</code>.</td></tr>
+      <tr><td><code>DOPunchScale(Vector3 punch, float duration, int vibrato = 10, float elasticity = 1)</code></td><td>Quick bounce that returns to the start. Also <code>DOPunchPosition</code>, <code>DOPunchRotation</code>.</td></tr>
+      <tr><td><code>DOShakePosition(float duration, float strength = 1)</code></td><td>Random shake, returns to the start. Also <code>DOShakeRotation</code>, <code>DOShakeScale</code>.</td></tr>
+    </table>
+    </div>
+
+    <h2>Shortcuts: other components</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Target</th><th>Methods</th></tr>
+      <tr><td><code>Material</code></td><td><code>DOColor(Color, duration)</code>, <code>DOFade(float alpha, duration)</code></td></tr>
+      <tr><td><code>SpriteRenderer</code></td><td><code>DOColor</code>, <code>DOFade</code></td></tr>
+      <tr><td><code>CanvasGroup</code></td><td><code>DOFade</code>: fades a whole UI panel and its children</td></tr>
+      <tr><td><code>Image</code> (UI)</td><td><code>DOColor</code>, <code>DOFade</code>, <code>DOFillAmount(float, duration)</code></td></tr>
+      <tr><td><code>RectTransform</code></td><td><code>DOAnchorPos(Vector2, duration)</code>: move UI elements</td></tr>
+      <tr><td><code>Camera</code></td><td><code>DOShakePosition</code>, <code>DOFieldOfView</code>, <code>DOOrthoSize</code></td></tr>
+      <tr><td><code>AudioSource</code></td><td><code>DOFade(float volume, duration)</code>, <code>DOPitch</code></td></tr>
+      <tr><td><code>Rigidbody</code></td><td><code>DOMove</code>, <code>DORotate</code>: moves via the physics engine</td></tr>
+    </table>
+    </div>
+    <p>TextMeshPro shortcuts and the visual <code>DOTweenAnimation</code> component are part of <strong>DOTween Pro</strong> (paid).</p>
+
+    <h2>Tweening anything: DOTween.To</h2>
+    <p>For values without a shortcut, give DOTween a getter and a setter:</p>
+    <pre><code class="language-csharp">private float score;
+
+// Count the displayed score up from its current value to 1000 over 1 second.
+DOTween.To(() =&gt; score, x =&gt; score = x, 1000f, 1f)
+       .OnUpdate(() =&gt; scoreText.text = Mathf.RoundToInt(score).ToString());
+</code></pre>
+
+    <h2>Settings (chain after any tween)</h2>
+    <p>Settings return the tween, so you can chain them: <code>transform.DOMoveY(3f, 1f).SetEase(Ease.OutBounce).SetDelay(0.5f);</code></p>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Description</th></tr>
+      <tr><td><code>SetEase(Ease ease)</code></td><td>The "feel" of the motion. <code>Ease.Linear</code>, <code>OutQuad</code> (default-like), <code>OutBack</code> (overshoots a bit), <code>OutBounce</code>, <code>InOutSine</code>...</td></tr>
+      <tr><td><code>SetLoops(int loops, LoopType type)</code></td><td>Repeat. <code>-1</code> = forever. <code>LoopType.Yoyo</code> goes back and forth; <code>Restart</code> jumps back; <code>Incremental</code> keeps adding.</td></tr>
+      <tr><td><code>SetDelay(float seconds)</code></td><td>Wait before starting.</td></tr>
+      <tr><td><code>SetRelative()</code></td><td>Treat the target as an offset: <code>DOMoveY(2f, 1f).SetRelative()</code> moves <em>up by</em> 2.</td></tr>
+      <tr><td><code>From()</code></td><td>Go <em>from</em> the given value to the current one. Great for "appear" animations.</td></tr>
+      <tr><td><code>SetUpdate(true)</code></td><td>Ignore <code>Time.timeScale</code>. Needed for pause menus.</td></tr>
+      <tr><td><code>SetLink(GameObject go)</code></td><td>Kill the tween automatically when <code>go</code> is destroyed. Strongly recommended.</td></tr>
+      <tr><td><code>SetAutoKill(false)</code></td><td>Keep the tween after it finishes so you can replay it.</td></tr>
+      <tr><td><code>SetId(object id)</code></td><td>Tag it, so you can control it later with <code>DOTween.Kill(id)</code>.</td></tr>
+    </table>
+    </div>
+
+    <h2>Callbacks</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Called</th></tr>
+      <tr><td><code>OnStart(callback)</code></td><td>When it starts (after any delay).</td></tr>
+      <tr><td><code>OnUpdate(callback)</code></td><td>Every frame while it runs.</td></tr>
+      <tr><td><code>OnStepComplete(callback)</code></td><td>Each time a loop finishes.</td></tr>
+      <tr><td><code>OnComplete(callback)</code></td><td>When it's completely done.</td></tr>
+      <tr><td><code>OnKill(callback)</code></td><td>When it's killed, whether it finished or not.</td></tr>
+    </table>
+    </div>
+
+    <h2>Controlling tweens</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Description</th></tr>
+      <tr><td><code>tween.Kill(bool complete = false)</code></td><td>Stop and delete it. With <code>true</code>, jump to the end first.</td></tr>
+      <tr><td><code>tween.Pause()</code> / <code>Play()</code></td><td>Pause and resume.</td></tr>
+      <tr><td><code>tween.Restart()</code></td><td>Start over (needs <code>SetAutoKill(false)</code> if it already finished).</td></tr>
+      <tr><td><code>tween.Complete()</code></td><td>Jump to the end.</td></tr>
+      <tr><td><code>tween.PlayBackwards()</code> / <code>PlayForward()</code></td><td>Reverse it. Handy for open/close panels.</td></tr>
+      <tr><td><code>tween.IsActive()</code> / <code>IsPlaying()</code></td><td>Check its state.</td></tr>
+      <tr><td><code>transform.DOKill()</code></td><td>Kill all tweens on that target. Also works on other components.</td></tr>
+      <tr><td><code>DOTween.KillAll()</code></td><td>Kill every tween.</td></tr>
+      <tr><td><code>yield return tween.WaitForCompletion();</code></td><td>Wait for it inside a coroutine.</td></tr>
+    </table>
+    </div>
+
+    <h2>Sequences: chaining tweens</h2>
+    <p>A <code>Sequence</code> is a timeline of tweens. Create one with <code>DOTween.Sequence()</code>.</p>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Description</th></tr>
+      <tr><td><code>Append(tween)</code></td><td>Add at the end: plays after the previous one.</td></tr>
+      <tr><td><code>Join(tween)</code></td><td>Play at the same time as the previously appended tween.</td></tr>
+      <tr><td><code>Insert(float atTime, tween)</code></td><td>Place at an exact time in the timeline.</td></tr>
+      <tr><td><code>AppendInterval(float seconds)</code></td><td>Add a pause.</td></tr>
+      <tr><td><code>AppendCallback(callback)</code></td><td>Run code at that point.</td></tr>
+      <tr><td><code>Prepend(tween)</code></td><td>Add at the start.</td></tr>
+    </table>
+    </div>
+    <pre><code class="language-csharp">Sequence s = DOTween.Sequence();
+s.Append(chest.DOScale(1.2f, 0.2f))                  // 1. grow
+ .Join(chest.DOShakeRotation(0.2f, 15f))             //    while shaking
+ .Append(chest.DOScale(1f, 0.1f))                    // 2. back to normal
+ .AppendCallback(() =&gt; lid.gameObject.SetActive(false))
+ .Append(coin.DOMoveY(2f, 0.5f).SetRelative().SetEase(Ease.OutBack)) // 3. coin pops out
+ .SetLink(chest.gameObject);
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>Calling <code>DOMove</code> (or any shortcut) creates the tween and starts it automatically, <strong>on the next frame</strong>. Settings you chain on the same line are applied before it starts.</li>
+        <li>DOTween has one hidden manager object that updates all active tweens each frame (after <code>Update</code> by default), setting the value based on elapsed time and the ease curve.</li>
+        <li>When the tween finishes, <code>OnComplete</code> runs and the tween is <em>killed</em> (recycled) by default. A killed tween can't be restarted; create a new one or use <code>SetAutoKill(false)</code>.</li>
+        <li>If the target is destroyed while the tween runs, DOTween's safe mode usually catches it and stops the tween, but it's cleaner to use <code>SetLink</code> or call <code>DOKill()</code> in <code>OnDestroy</code>.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Starting a new tween on the same property every frame</strong> (in <code>Update</code>). Tweens pile up and fight. Start tweens on events (click, hit, pickup), not every frame.</li>
+      <li><strong>Two tweens fighting.</strong> Spamming a button starts a new scale tween while the last one runs. Call <code>transform.DOKill()</code> first, or <code>Complete()</code> the previous one.</li>
+      <li><strong>Menu animations don't play while paused.</strong> Add <code>.SetUpdate(true)</code>.</li>
+      <li><strong><code>DOFade</code> doesn't exist on Image.</strong> The UI module wasn't enabled. Open the DOTween Utility Panel and run Setup again.</li>
+      <li><strong>Tweening a Rigidbody's Transform.</strong> Physics and the tween fight. Use the Rigidbody shortcuts or make it kinematic.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../tutorials/dotween.html">Tutorial: Game Feel with DOTween</a></li>
+      <li><a href="../manual/coroutines.html">Coroutines</a> (the manual alternative)</li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://dotween.demigiant.com/documentation.php">official DOTween documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

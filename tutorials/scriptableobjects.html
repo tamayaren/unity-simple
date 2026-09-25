@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ScriptableObjects in a Game | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="tutorials/scriptableobjects.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Tutorials &rsaquo; ScriptableObjects in a Game</div>
+    <h1>ScriptableObjects in a Game</h1>
+    <p class="summary">In this tutorial you'll use ScriptableObjects four ways in a small action game: <strong>data definitions</strong> for enemy types, <strong>shared variables</strong> for player health that the UI reads, <strong>event channels</strong> that let objects in different scenes talk, and <strong>runtime sets</strong> that keep track of every enemy alive.</p>
+    <p><strong>You'll need:</strong> the basics from the <a href="../api/scriptableobject.html">ScriptableObject</a> page. Knowing <a href="../api/unityevent.html">UnityEvent</a> helps for part 3.</p>
+
+    <div class="analogy"><p>Your scene is an office building and your MonoBehaviours are the employees. ScriptableObjects are the shared <strong>filing cabinet</strong> in the hallway. Instead of employees running around asking each other for information ("Hey Player, what's your health?"), they all read from and write to the same folder in the cabinet. Nobody needs to know who else is using that folder.</p></div>
+
+    <h2>Part 1: Data definitions (enemy types)</h2>
+    <p><strong>Problem:</strong> you have slimes, skeletons and bats. Each needs health, speed, damage and a color. If you put those numbers on every enemy prefab, balancing the game means opening dozens of prefabs.</p>
+    <p><strong>Solution:</strong> one asset per enemy <em>type</em>. Every slime points to the same "Slime" asset.</p>
+    <pre><code class="language-csharp">using UnityEngine;
+
+[CreateAssetMenu(fileName = "NewEnemy", menuName = "Game/Enemy Type")]
+public class EnemyType : ScriptableObject
+{
+    [Header("Identity")]
+    public string displayName = "Slime";
+    public Color tint = Color.green;
+
+    [Header("Stats")]
+    [Min(1)] public float maxHealth = 30f;
+    [Min(0)] public float moveSpeed = 2f;
+    [Min(0)] public float contactDamage = 10f;
+
+    [Header("Rewards")]
+    public int scoreValue = 10;
+    public GameObject dropPrefab; // optional loot
+}
+</code></pre>
+    <p>Create three assets: <strong>right-click in Project &gt; Create &gt; Game &gt; Enemy Type</strong>. Name them Slime, Skeleton and Bat, and give them different numbers.</p>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class Enemy : MonoBehaviour
+{
+    [SerializeField] private EnemyType type;
+    [SerializeField] private Renderer rend;
+
+    private float health;        // per-enemy state lives HERE, not in the asset
+    private Transform player;
+
+    public EnemyType Type =&gt; type;
+
+    void Awake()
+    {
+        health = type.maxHealth;
+        rend.material.color = type.tint;
+        player = GameObject.FindWithTag("Player").transform; // once, not every frame
+    }
+
+    void Update()
+    {
+        transform.position = Vector3.MoveTowards(
+            transform.position, player.position, type.moveSpeed * Time.deltaTime);
+    }
+
+    public void TakeDamage(float amount)
+    {
+        health -= amount;
+        if (health &lt;= 0f) Die();
+    }
+
+    private void Die()
+    {
+        if (type.dropPrefab != null)
+            Instantiate(type.dropPrefab, transform.position, Quaternion.identity);
+        Destroy(gameObject);
+    }
+}
+</code></pre>
+    <div class="warning"><strong>The golden rule</strong>Assets hold data that is <em>the same for every instance</em> (max health). Things that <em>change per instance</em> (current health) belong in the MonoBehaviour. If you wrote <code>type.maxHealth -= damage</code>, every slime in the game would share one health pool, and in the Editor the asset would stay damaged after you stop playing.</div>
+    <p>Now balancing is easy: select the Slime asset, change Move Speed, and every slime updates, even while the game is running.</p>
+
+    <h2>Part 2: Shared variables (player health → UI)</h2>
+    <p><strong>Problem:</strong> the health bar needs the player's health. The usual approach gives the UI a reference to the player, but the UI lives in a separate scene, or the player is spawned at runtime, so there's nothing to drag in.</p>
+    <p><strong>Solution:</strong> a "FloatVariable" asset. The player writes to it; the UI reads from it. Neither knows the other exists.</p>
+    <pre><code class="language-csharp">using System;
+using UnityEngine;
+
+[CreateAssetMenu(menuName = "Game/Variables/Float")]
+public class FloatVariable : ScriptableObject
+{
+    [SerializeField] private float value;
+
+    // C# event: fires whenever the value changes.
+    public event Action&lt;float&gt; Changed;
+
+    public float Value
+    {
+        get =&gt; value;
+        set
+        {
+            if (Mathf.Approximately(this.value, value)) return;
+            this.value = value;
+            Changed?.Invoke(value); // ?. is fine here: Changed is a C# delegate, not a Unity object
+        }
+    }
+}
+</code></pre>
+    <p>Create two assets: <strong>PlayerHealth</strong> and <strong>PlayerMaxHealth</strong>.</p>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class PlayerHealth : MonoBehaviour
+{
+    [SerializeField] private FloatVariable health;
+    [SerializeField] private FloatVariable maxHealth;
+    [SerializeField] private float startingMax = 100f;
+
+    void Awake()
+    {
+        // Reset at the start of each play session (the asset keeps old values in the Editor).
+        maxHealth.Value = startingMax;
+        health.Value = startingMax;
+    }
+
+    public void TakeDamage(float amount)
+    {
+        health.Value = Mathf.Max(health.Value - amount, 0f);
+    }
+}
+</code></pre>
+    <pre><code class="language-csharp">using UnityEngine;
+using UnityEngine.UI;
+
+public class HealthBar : MonoBehaviour
+{
+    [SerializeField] private FloatVariable health;
+    [SerializeField] private FloatVariable maxHealth;
+    [SerializeField] private Image fill; // Image Type: Filled
+
+    void OnEnable()
+    {
+        health.Changed += Refresh;
+        Refresh(health.Value);
+    }
+
+    void OnDisable()
+    {
+        health.Changed -= Refresh;
+    }
+
+    private void Refresh(float current)
+    {
+        fill.fillAmount = maxHealth.Value &gt; 0f ? current / maxHealth.Value : 0f;
+    }
+}
+</code></pre>
+    <p>Drag the same PlayerHealth asset into both components. You can now also build a low-health vignette, a heartbeat sound, or an achievement tracker, each just reading the same asset.</p>
+
+    <div class="runtime">
+      <p><strong>What happens at runtime</strong></p>
+      <ol>
+        <li>Both the player and the health bar hold a reference to the <em>same</em> asset object in memory.</li>
+        <li>The player sets <code>health.Value = 70</code>. The property setter stores 70 and fires <code>Changed</code>.</li>
+        <li>The health bar's <code>Refresh</code> runs immediately, in the same frame, and updates the fill.</li>
+        <li>No <code>Update</code> polling is needed. The UI only does work when health actually changes.</li>
+      </ol>
+    </div>
+
+    <h2>Part 3: Event channels (game over across scenes)</h2>
+    <p><strong>Problem:</strong> when the player dies, the music should change, the enemy spawner should stop, the UI should show "Game Over" and the save system should record the score. They're in different scenes and prefabs.</p>
+    <p><strong>Solution:</strong> an event <em>asset</em>. Anyone can raise it; anyone can listen. It's like a UnityEvent that lives in the Project instead of on one object.</p>
+    <div class="analogy"><p>A group chat. The event asset is the chat room. The player posts "I died" to the room. Everyone who joined the room gets the message. The player doesn't need anyone's phone number, and people can join or leave the room anytime.</p></div>
+    <pre><code class="language-csharp">using System;
+using UnityEngine;
+
+[CreateAssetMenu(menuName = "Game/Event Channel")]
+public class GameEvent : ScriptableObject
+{
+    public event Action Raised;
+
+    public void Raise()
+    {
+        Raised?.Invoke();
+    }
+}
+</code></pre>
+    <p>A reusable listener component so designers can react in the Inspector with a UnityEvent:</p>
+    <pre><code class="language-csharp">using UnityEngine;
+using UnityEngine.Events;
+
+public class GameEventListener : MonoBehaviour
+{
+    [SerializeField] private GameEvent gameEvent;
+    [SerializeField] private UnityEvent response;
+
+    void OnEnable()  { gameEvent.Raised += OnRaised; }
+    void OnDisable() { gameEvent.Raised -= OnRaised; }
+
+    private void OnRaised() { response.Invoke(); }
+}
+</code></pre>
+    <p>Create a <strong>PlayerDied</strong> event asset. Then:</p>
+    <ul>
+      <li>In <code>PlayerHealth.TakeDamage</code>, add a <code>[SerializeField] private GameEvent playerDied;</code> field and call <code>playerDied.Raise();</code> when health reaches 0.</li>
+      <li>On the Game Over UI: add a <strong>GameEventListener</strong>, set the event to PlayerDied, and set the response to <code>GameObject.SetActive(true)</code> on the panel.</li>
+      <li>On the music object: another listener with the response <code>AudioSource.Stop()</code>.</li>
+      <li>On the spawner: a listener with the response <code>EnemySpawner.enabled = false</code>.</li>
+    </ul>
+    <p>The player script has one line about dying. Everything else is set up in the Inspector.</p>
+
+    <h3>Events with data</h3>
+    <pre><code class="language-csharp">using System;
+using UnityEngine;
+
+[CreateAssetMenu(menuName = "Game/Event Channel (int)")]
+public class IntGameEvent : ScriptableObject
+{
+    public event Action&lt;int&gt; Raised;
+    public void Raise(int value) =&gt; Raised?.Invoke(value);
+}
+</code></pre>
+    <p>Use it for "EnemyKilled(scoreValue)", "CoinsCollected(amount)" and so on.</p>
+
+    <h2>Part 4: Runtime sets (every enemy alive)</h2>
+    <p><strong>Problem:</strong> the wave spawner needs to know when all enemies are dead, and the minimap needs all enemy positions. <code>FindObjectsByType&lt;Enemy&gt;()</code> every frame is slow.</p>
+    <p><strong>Solution:</strong> a list asset. Enemies add themselves when enabled and remove themselves when disabled.</p>
+    <pre><code class="language-csharp">using System.Collections.Generic;
+using UnityEngine;
+
+[CreateAssetMenu(menuName = "Game/Runtime Set/Enemies")]
+public class EnemySet : ScriptableObject
+{
+    private readonly List&lt;Enemy&gt; items = new List&lt;Enemy&gt;();
+
+    public IReadOnlyList&lt;Enemy&gt; Items =&gt; items;
+    public int Count =&gt; items.Count;
+
+    public void Add(Enemy e)    { if (!items.Contains(e)) items.Add(e); }
+    public void Remove(Enemy e) { items.Remove(e); }
+}
+</code></pre>
+    <p>Add to <code>Enemy</code>:</p>
+    <pre><code class="language-csharp">[SerializeField] private EnemySet allEnemies;
+
+void OnEnable()  { allEnemies.Add(this); }
+void OnDisable() { allEnemies.Remove(this); }
+</code></pre>
+    <p>A wave spawner that uses everything so far:</p>
+    <pre><code class="language-csharp">using System.Collections;
+using UnityEngine;
+
+public class WaveSpawner : MonoBehaviour
+{
+    [System.Serializable]
+    public class Wave
+    {
+        public Enemy prefab;  // the prefab's Enemy component holds its EnemyType
+        public int count = 5;
+    }
+
+    [SerializeField] private Wave[] waves;
+    [SerializeField] private Transform[] spawnPoints;
+    [SerializeField] private EnemySet allEnemies;
+    [SerializeField] private GameEvent allWavesCleared;
+
+    IEnumerator Start()  // Start can be a coroutine
+    {
+        foreach (Wave wave in waves)
+        {
+            for (int i = 0; i &lt; wave.count; i++)
+            {
+                Transform p = spawnPoints[Random.Range(0, spawnPoints.Length)];
+                Instantiate(wave.prefab, p.position, p.rotation);
+                yield return new WaitForSeconds(0.4f);
+            }
+
+            // Wait until the runtime set is empty.
+            yield return new WaitUntil(() =&gt; allEnemies.Count == 0);
+            yield return new WaitForSeconds(2f);
+        }
+        allWavesCleared.Raise();
+    }
+}
+</code></pre>
+
+    <h2>Putting it together</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Asset</th><th>Kind</th><th>Written by</th><th>Read by</th></tr>
+      <tr><td>Slime, Skeleton, Bat</td><td>Data definition</td><td>You, in the Inspector</td><td>Enemy</td></tr>
+      <tr><td>PlayerHealth, PlayerMaxHealth</td><td>Shared variable</td><td>PlayerHealth</td><td>HealthBar, vignette, sounds</td></tr>
+      <tr><td>PlayerDied, AllWavesCleared</td><td>Event channel</td><td>PlayerHealth, WaveSpawner</td><td>GameEventListeners (UI, music, spawner)</td></tr>
+      <tr><td>AllEnemies</td><td>Runtime set</td><td>Enemy (self-registers)</td><td>WaveSpawner, minimap</td></tr>
+    </table>
+    </div>
+    <p>Notice what's missing: no singletons, no <code>GameObject.Find</code> in <code>Update</code>, no script holding references to five other scripts. Each piece can be tested alone. Drop a HealthBar into an empty scene with the asset, change the value in the Inspector during Play Mode, and watch it respond.</p>
+
+    <h2>Things to watch out for</h2>
+    <ul>
+      <li><strong>Values stick around in the Editor.</strong> Changes made during Play Mode stay in the asset after you stop. That's why <code>PlayerHealth.Awake</code> resets the values. Runtime sets fill back up as objects enable, but a list that was never cleared (e.g. after a script error) can contain stale entries.</li>
+      <li><strong>Builds don't save changes.</strong> When the game restarts, assets have their original values again. Don't use this as a save system.</li>
+      <li><strong>Don't overdo it.</strong> Making every single number a FloatVariable asset gets messy fast. Use these patterns where things <em>really</em> need to be shared or decoupled.</li>
+      <li><strong>Find usages.</strong> Right-click an asset &gt; <em>Find References In Scene</em> to see who uses it.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../api/scriptableobject.html">ScriptableObject reference</a></li>
+      <li><a href="unityevents.html">Using UnityEvents in a Game</a></li>
+      <li><a href="../guides/best-practices.html">Better Ways to Do Things</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/ScriptableObject.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

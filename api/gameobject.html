@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GameObject | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="api/gameobject.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; API Reference &rsaquo; GameObject</div>
+    <div class="infobox">
+      <div class="infobox-title">GameObject</div>
+      <table>
+        <tr><th>Type</th><td>Class (sealed)</td></tr>
+        <tr><th>Namespace</th><td><code>UnityEngine</code></td></tr>
+        <tr><th>Inherits</th><td><a href="object.html">Object</a></td></tr>
+        <tr><th>In scripts</th><td><code>gameObject</code> (the one your script is on)</td></tr>
+      </table>
+    </div>
+    <h1>GameObject</h1>
+    <p class="summary">A GameObject is any object in your scene. On its own it's an empty container with a name and a Transform. You make it do things by adding components.</p>
+    <p>Inside a MonoBehaviour, <code>gameObject</code> (lowercase) is the GameObject the script is attached to. <code>GameObject</code> (uppercase) is the class, used for static functions like <code>GameObject.Find</code>.</p>
+
+    <h2>Properties</h2>
+    <div class="analogy"><p><code>SetActive(false)</code> is unplugging an appliance. It's still in the room (in the Hierarchy), keeps its settings, and you can plug it back in anytime. Unplugging a power strip (a parent) turns off everything plugged into it (the children), even if each device's own switch (<code>activeSelf</code>) is still on.</p></div>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+      <tr><td><code>name</code></td><td><code>string</code></td><td>Name shown in the Hierarchy.</td></tr>
+      <tr><td><code>transform</code></td><td><code>Transform</code></td><td>Its position, rotation and scale. Every GameObject has one.</td></tr>
+      <tr><td><code>activeSelf</code></td><td><code>bool</code></td><td>Is this object's own checkbox ticked? (Read only. Use <code>SetActive</code> to change.)</td></tr>
+      <tr><td><code>activeInHierarchy</code></td><td><code>bool</code></td><td>Is it actually active? False if it <em>or any parent</em> is inactive.</td></tr>
+      <tr><td><code>tag</code></td><td><code>string</code></td><td>A label like "Player" or "Enemy". Add tags in the Tags &amp; Layers settings.</td></tr>
+      <tr><td><code>layer</code></td><td><code>int</code></td><td>Layer number (0-31). Used for physics filtering and camera culling.</td></tr>
+      <tr><td><code>scene</code></td><td><code>Scene</code></td><td>The scene it belongs to.</td></tr>
+    </table>
+    </div>
+
+    <h2>Methods</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+      <tr><td><code>SetActive(bool value)</code></td><td><code>void</code></td><td>Turns the object (and all its children) on or off. Off means no rendering, no physics, no <code>Update</code>.</td></tr>
+      <tr><td><code>GetComponent&lt;T&gt;()</code></td><td><code>T</code></td><td>Gets a component of type <code>T</code> on this object, or <code>null</code> if there isn't one.</td></tr>
+      <tr><td><code>TryGetComponent&lt;T&gt;(out T component)</code></td><td><code>bool</code></td><td>Like <code>GetComponent</code> but returns <code>true</code>/<code>false</code>. Cleaner when the component might be missing.</td></tr>
+      <tr><td><code>GetComponentInChildren&lt;T&gt;()</code></td><td><code>T</code></td><td>Searches this object, then its children (depth-first).</td></tr>
+      <tr><td><code>GetComponentInParent&lt;T&gt;()</code></td><td><code>T</code></td><td>Searches this object, then its parents.</td></tr>
+      <tr><td><code>GetComponents&lt;T&gt;()</code></td><td><code>T[]</code></td><td>All components of type <code>T</code> on this object.</td></tr>
+      <tr><td><code>AddComponent&lt;T&gt;()</code></td><td><code>T</code></td><td>Adds a new component and returns it. Its <code>Awake</code> runs immediately.</td></tr>
+      <tr><td><code>CompareTag(string tag)</code></td><td><code>bool</code></td><td>Checks the tag. Faster than <code>tag == "Player"</code>.</td></tr>
+    </table>
+    </div>
+
+    <h2>Static Methods</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+      <tr><td><code>GameObject.Find(string name)</code></td><td><code>GameObject</code></td><td>Finds an <em>active</em> object by name. Slow; avoid in <code>Update</code>.</td></tr>
+      <tr><td><code>GameObject.FindWithTag(string tag)</code></td><td><code>GameObject</code></td><td>Finds one active object with the tag.</td></tr>
+      <tr><td><code>GameObject.FindGameObjectsWithTag(string tag)</code></td><td><code>GameObject[]</code></td><td>Finds all active objects with the tag.</td></tr>
+      <tr><td><code>GameObject.CreatePrimitive(PrimitiveType type)</code></td><td><code>GameObject</code></td><td>Creates a cube, sphere, capsule, etc. with mesh and collider.</td></tr>
+    </table>
+    </div>
+    <p>For <code>Instantiate</code>, <code>Destroy</code> and <code>DontDestroyOnLoad</code>, see <a href="object.html">Object</a>.</p>
+
+    <h2>Code Samples</h2>
+    <h3>Getting components safely</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class Damager : MonoBehaviour
+{
+    void OnTriggerEnter(Collider other)
+    {
+        // Does the thing we hit have a Health script?
+        if (other.TryGetComponent&lt;Health&gt;(out Health health))
+        {
+            health.TakeDamage(10);
+        }
+    }
+}
+</code></pre>
+
+    <h3>Showing and hiding a menu</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class PauseMenu : MonoBehaviour
+{
+    [SerializeField] private GameObject menuPanel; // drag the menu UI object here
+
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            bool show = !menuPanel.activeSelf;
+            menuPanel.SetActive(show);
+            Time.timeScale = show ? 0f : 1f; // freeze the game while the menu is open
+        }
+    }
+}
+</code></pre>
+
+    <h3>Building an object entirely from code</h3>
+    <pre><code class="language-csharp">GameObject go = new GameObject("Enemy");  // an empty GameObject with only a Transform
+go.transform.position = new Vector3(0f, 1f, 5f);
+go.AddComponent&lt;Rigidbody&gt;();
+go.AddComponent&lt;BoxCollider&gt;();
+go.tag = "Enemy"; // the tag must already exist in Tags &amp; Layers
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <p><strong>SetActive(false)</strong></p>
+      <ol>
+        <li><code>OnDisable</code> is called on every script on the object and on all its children.</li>
+        <li>The object stops rendering, its colliders are removed from physics, and <code>Update</code> / <code>FixedUpdate</code> stop being called.</li>
+        <li>Coroutines running on its scripts are stopped (and won't resume when reactivated).</li>
+        <li>Children keep their own <code>activeSelf</code> value, but their <code>activeInHierarchy</code> becomes <code>false</code>.</li>
+      </ol>
+      <p><strong>SetActive(true)</strong></p>
+      <ol>
+        <li><code>OnEnable</code> is called on enabled scripts. If a script's <code>Awake</code> has never run (object started inactive), it runs now, followed later by <code>Start</code>.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong><code>GameObject.Find</code> can't find inactive objects.</strong> Keep a reference in a serialized field instead.</li>
+      <li><strong>Calling Find or GetComponent every frame.</strong> Cache the result in <code>Awake</code> or <code>Start</code>.</li>
+      <li><strong>Comparing tags with <code>==</code>.</strong> Works, but <code>CompareTag</code> is faster and doesn't allocate memory.</li>
+      <li><strong>Checking <code>activeSelf</code> when you mean "is it visible".</strong> A child can be <code>activeSelf == true</code> but hidden because its parent is off. Use <code>activeInHierarchy</code>.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="object.html">Object</a></li>
+      <li><a href="transform.html">Transform</a></li>
+      <li><a href="monobehaviour.html">MonoBehaviour</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/GameObject.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

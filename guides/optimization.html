@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Optimizing Your Code | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="guides/optimization.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Guides &rsaquo; Optimizing Your Code</div>
+    <h1>Optimizing Your Code</h1>
+    <p class="summary">Practical tips for making Unity scripts run faster and stutter less. Each tip shows the slow version, the better version, and why it matters.</p>
+
+    <h2>Rule zero: measure first</h2>
+    <p>Most code is fast enough. Before changing anything, find out what is actually slow using the <strong>Profiler</strong> (<strong>Window &gt; Analysis &gt; Profiler</strong>). Press Play, record a few seconds, click a spike in the CPU graph, and look at the <em>Hierarchy</em> view sorted by time. It tells you exactly which scripts and methods took the most time that frame.</p>
+    <div class="analogy"><p>A doctor doesn't operate before running tests. Optimizing without profiling is guessing: you might spend a day speeding up code that takes 0.01% of the frame while the real problem is somewhere else. The Profiler is your X-ray.</p></div>
+    <div class="tip"><strong>Profile builds, not just the Editor</strong>The Editor adds its own overhead. For real numbers, make a <em>Development Build</em> with <em>Autoconnect Profiler</em> ticked, and profile on your target device (especially phones).</div>
+
+    <h2>The frame budget</h2>
+    <p>At 60 FPS, everything (scripts, physics, animation, rendering) must fit in <strong>16.6 ms</strong> per frame. At 30 FPS you have 33 ms. If a single frame takes 50 ms, the player sees a stutter. So both <em>average</em> cost and <em>spikes</em> matter.</p>
+
+    <h2>1. Cache what you look up</h2>
+    <p><code>GetComponent</code>, <code>GameObject.Find</code>, <code>FindObjectsByType</code> and <code>FindWithTag</code> search for things. Searching every frame is wasted work because the answer is almost always the same.</p>
+    <pre><code class="language-csharp">// SLOW: searches every frame
+void Update()
+{
+    GetComponent&lt;Rigidbody&gt;().AddForce(Vector3.up);
+    GameObject.Find("Player").transform.position = Vector3.zero;
+}
+
+// BETTER: search once, remember the result
+private Rigidbody rb;
+[SerializeField] private Transform player; // or assign in the Inspector: no search at all
+
+void Awake()
+{
+    rb = GetComponent&lt;Rigidbody&gt;();
+}
+
+void Update()
+{
+    rb.AddForce(Vector3.up);
+}
+</code></pre>
+    <div class="analogy"><p>Looking up a friend's number in the phone book every time you call, versus saving it in your contacts. The first time is unavoidable; every time after that is wasted.</p></div>
+
+    <h2>2. Avoid creating garbage every frame</h2>
+    <p>C# automatically frees memory you're no longer using. This is the <em>garbage collector</em> (GC). It's convenient, but when it runs, it can pause your game for a moment. The less garbage you create, the less often it runs.</p>
+    <div class="analogy"><p>Using paper plates at a party. Each plate is cheap, but eventually someone has to stop and take out the trash. If you use thousands of plates a minute, that trash run happens constantly and the party keeps pausing. Reusing real plates (pooling, caching) means no trash runs.</p></div>
+    <p>Common sources of garbage in <code>Update</code>:</p>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Creates garbage</th><th>Better</th></tr>
+      <tr><td><code>"Score: " + score</code> every frame</td><td>Only update the text when the score changes</td></tr>
+      <tr><td><code>new List&lt;Enemy&gt;()</code> every frame</td><td>Create once as a field; call <code>list.Clear()</code> to reuse it</td></tr>
+      <tr><td>LINQ (<code>.Where()</code>, <code>.OrderBy()</code>, <code>.ToList()</code>) in hot code</td><td>A plain <code>for</code> loop</td></tr>
+      <tr><td><code>Physics.RaycastAll</code>, <code>Physics.OverlapSphere</code> (return new arrays)</td><td><code>Physics.RaycastNonAlloc</code>, <code>Physics.OverlapSphereNonAlloc</code> with a reused array</td></tr>
+      <tr><td><code>new WaitForSeconds(1f)</code> inside a coroutine loop</td><td>Store it in a field and reuse it</td></tr>
+      <tr><td><code>gameObject.tag == "Enemy"</code></td><td><code>CompareTag("Enemy")</code></td></tr>
+      <tr><td><code>GetComponents&lt;T&gt;()</code> (returns a new array)</td><td><code>GetComponents&lt;T&gt;(list)</code> with a reused list</td></tr>
+      <tr><td>Lambdas that capture local variables, created every frame</td><td>Named methods or cached delegates</td></tr>
+    </table>
+    </div>
+    <pre><code class="language-csharp">// BETTER: overlap check with no garbage
+private readonly Collider[] hits = new Collider[32]; // max results we care about
+
+void CheckNearby()
+{
+    int count = Physics.OverlapSphereNonAlloc(transform.position, 5f, hits);
+    for (int i = 0; i &lt; count; i++)
+    {
+        // use hits[i]
+    }
+}
+</code></pre>
+    <p>To find garbage, select the <strong>GC Alloc</strong> column in the Profiler's CPU Hierarchy view and sort by it.</p>
+
+    <h2>3. Pool objects you spawn a lot</h2>
+    <p><code>Instantiate</code> and <code>Destroy</code> are expensive when done dozens of times per second (bullets, particles, damage numbers). Reuse objects with an object pool instead. Unity includes <code>UnityEngine.Pool.ObjectPool&lt;T&gt;</code>; see <a href="../manual/prefabs.html">Prefabs &amp; Spawning</a> for a full example.</p>
+
+    <h2>4. Don't run code every frame if you don't have to</h2>
+    <pre><code class="language-csharp">// WASTEFUL: checks a slow thing 60+ times per second
+void Update()
+{
+    FindClosestEnemy();
+}
+
+// BETTER: check 5 times per second, still feels instant for AI
+private float nextCheck;
+
+void Update()
+{
+    if (Time.time &lt; nextCheck) return;
+    nextCheck = Time.time + 0.2f;
+    FindClosestEnemy();
+}
+</code></pre>
+    <ul>
+      <li>React to <strong>events</strong> instead of checking every frame ("health changed" instead of reading health in <code>Update</code>). See <a href="../tutorials/unityevents.html">UnityEvents</a>.</li>
+      <li>Use a <strong>coroutine</strong> with <code>WaitForSeconds</code> for slow-repeating work.</li>
+      <li><strong>Delete empty <code>Update()</code> methods.</strong> Unity still calls them.</li>
+      <li><strong>Disable scripts</strong> (<code>enabled = false</code>) on far-away or off-screen objects. <code>OnBecameVisible</code>/<code>OnBecameInvisible</code> can help.</li>
+    </ul>
+
+    <h2>5. Cheaper math and lookups</h2>
+    <pre><code class="language-csharp">// Distance check without a square root
+if ((a - b).sqrMagnitude &lt; range * range) { }   // instead of Vector3.Distance(a, b) &lt; range
+
+// Animator parameters: hash once
+private static readonly int SpeedId = Animator.StringToHash("Speed");
+animator.SetFloat(SpeedId, speed);              // instead of SetFloat("Speed", speed)
+
+// Shader/material properties: same idea
+private static readonly int ColorId = Shader.PropertyToID("_BaseColor");
+material.SetColor(ColorId, Color.red);
+
+// Set position and rotation together
+transform.SetPositionAndRotation(pos, rot);    // instead of setting each separately
+</code></pre>
+    <p>These are small savings each, but they add up in code that runs on hundreds of objects every frame.</p>
+
+    <h2>6. material vs. sharedMaterial</h2>
+    <p>Reading <code>renderer.material</code> makes a <em>copy</em> of the material for that object the first time (so you can change its color without affecting others). Copies can't be batched together when drawing, and you must <code>Destroy</code> them yourself when you're done or they leak memory.</p>
+    <ul>
+      <li>Changing one object's look? <code>material</code> is fine, but for many objects, prefer a <code>MaterialPropertyBlock</code>.</li>
+      <li>Changing <em>all</em> objects using that material? Use <code>sharedMaterial</code>. (In the Editor this changes the asset on disk.)</li>
+    </ul>
+
+    <h2>7. Physics tips</h2>
+    <ul>
+      <li>Use <strong>primitive colliders</strong> (box, sphere, capsule) over Mesh Colliders whenever possible.</li>
+      <li>Use the <strong>Layer Collision Matrix</strong> to turn off pairs that never need to collide (e.g. "Pickups" vs "Pickups").</li>
+      <li>Pass a <strong>layer mask</strong> and <strong>max distance</strong> to raycasts so they check fewer colliders.</li>
+      <li>Don't move static colliders (no Rigidbody) every frame. If it moves, give it a kinematic Rigidbody.</li>
+      <li>Only raise the physics rate (<code>Time.fixedDeltaTime</code>) if you really need to; each step costs CPU.</li>
+    </ul>
+
+    <h2>8. UI tips</h2>
+    <ul>
+      <li>When anything on a Canvas changes, Unity rebuilds that Canvas's mesh. Put frequently changing UI (timers, health bars) on a <strong>separate Canvas</strong> from static UI.</li>
+      <li>Untick <strong>Raycast Target</strong> on images and text that don't need to be clicked.</li>
+      <li>Hide UI by disabling the Canvas component or setting a CanvasGroup's alpha to 0, rather than repeatedly calling <code>SetActive</code> on many elements.</li>
+    </ul>
+
+    <h2>9. Logging</h2>
+    <p><code>Debug.Log</code> is slow and still runs in builds. Remove logs from <code>Update</code> when you're done debugging, or wrap them:</p>
+    <pre><code class="language-csharp">[System.Diagnostics.Conditional("UNITY_EDITOR")]
+static void EditorLog(string msg) =&gt; Debug.Log(msg); // calls are removed from builds entirely
+</code></pre>
+
+    <h2>Quick checklist</h2>
+    <ol>
+      <li>Profile. Find the actual biggest cost.</li>
+      <li>No <code>Find</code> / <code>GetComponent</code> in <code>Update</code>.</li>
+      <li>No allocations per frame (check the GC Alloc column).</li>
+      <li>Pool anything spawned frequently.</li>
+      <li>Run slow checks on a timer or on events, not every frame.</li>
+      <li>Profile again to confirm it helped.</li>
+    </ol>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="best-practices.html">Better Ways to Do Things</a></li>
+      <li><a href="../api/debug.html">Debug</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/Manual/index.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

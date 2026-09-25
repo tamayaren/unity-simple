@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your First Script | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="manual/first-script.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Getting Started &rsaquo; Your First Script</div>
+    <h1>Your First Script</h1>
+    <p class="summary">Scripts are components written in C#. You create a script file, attach it to a GameObject, and Unity runs its code while the game plays.</p>
+
+    <h2>Step 1: Create the script</h2>
+    <ol>
+      <li>In the <strong>Project</strong> window, right-click inside the <code>Assets</code> folder.</li>
+      <li>Choose <strong>Create &gt; Scripting &gt; MonoBehaviour Script</strong> (in Unity 2022 and older: <strong>Create &gt; C# Script</strong>).</li>
+      <li>Name it <code>Spinner</code> <em>right away</em>, before pressing Enter.</li>
+    </ol>
+    <div class="warning"><strong>The file name must match the class name</strong>If the file is <code>Spinner.cs</code>, the class inside must be <code>public class Spinner : MonoBehaviour</code>. If they don't match, Unity can't attach the script and shows "The script class cannot be found". If you rename the file later, rename the class too.</div>
+
+    <h2>Step 2: Write some code</h2>
+    <p>Double-click the script to open it in your code editor, and replace its contents with:</p>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class Spinner : MonoBehaviour
+{
+    // Shows up in the Inspector so you can tweak it without editing code.
+    public float degreesPerSecond = 90f;
+
+    // Unity calls Update once every frame.
+    void Update()
+    {
+        // Rotate around the Y (up) axis.
+        // Multiplying by Time.deltaTime makes the speed "per second" instead of "per frame".
+        transform.Rotate(0f, degreesPerSecond * Time.deltaTime, 0f);
+    }
+}
+</code></pre>
+    <p>Save the file. Unity recompiles automatically when you switch back to the Editor. Check the Console for red errors.</p>
+
+    <h2>Step 3: Attach it</h2>
+    <ol>
+      <li>Create a cube: <strong>GameObject &gt; 3D Object &gt; Cube</strong>.</li>
+      <li>Drag <code>Spinner</code> from the Project window onto the cube in the Hierarchy, <em>or</em> select the cube and click <strong>Add Component</strong> in the Inspector and search for "Spinner".</li>
+      <li>Press <strong>Play</strong>. The cube spins.</li>
+    </ol>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>When you press Play, Unity loads the scene and creates an instance of your <code>Spinner</code> class for the cube.</li>
+        <li>It fills in <code>degreesPerSecond</code> with the value shown in the Inspector.</li>
+        <li>Every frame (often 60 or more times per second), Unity calls <code>Update()</code> on every active script.</li>
+        <li>Your code rotates the cube by a small amount. Because the amount is multiplied by <code>Time.deltaTime</code> (the seconds since the last frame), the cube turns 90 degrees per second whether the game runs at 30 or 144 FPS.</li>
+      </ol>
+    </div>
+
+    <h2>Showing variables in the Inspector</h2>
+    <p>Unity shows a field in the Inspector (this is called <em>serialization</em>) when it is either:</p>
+    <ul>
+      <li><code>public</code>, or</li>
+      <li><code>private</code> with the <code>[SerializeField]</code> attribute. This is usually better, because other scripts can't change it by accident.</li>
+    </ul>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class Health : MonoBehaviour
+{
+    [SerializeField] private int maxHealth = 100;   // shown in Inspector, private to code
+    [SerializeField, Range(0f, 1f)] private float armor = 0.2f; // shown as a slider
+    [Header("Effects")]
+    [SerializeField] private GameObject deathEffect; // drag a prefab here in the Inspector
+
+    private int currentHealth; // NOT shown: private without [SerializeField]
+
+    void Start()
+    {
+        currentHealth = maxHealth;
+    }
+}
+</code></pre>
+    <div class="warning"><strong>The Inspector value wins</strong>The value in your code (<code>= 100</code>) is only the <em>default</em> used when the component is first added. After that, the value saved in the Inspector is used. If you change <code>100</code> to <code>200</code> in code and nothing changes, check the Inspector (or right-click the component &gt; Reset).</div>
+
+    <h2>Talking to other components</h2>
+    <p>Use <code>GetComponent&lt;T&gt;()</code> to get another component on the same GameObject. Do it once in <code>Awake</code> or <code>Start</code> and keep the result in a variable, rather than calling it every frame.</p>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class ColorOnStart : MonoBehaviour
+{
+    private Renderer rend;
+
+    void Awake()
+    {
+        rend = GetComponent&lt;Renderer&gt;(); // the Mesh Renderer on this cube
+    }
+
+    void Start()
+    {
+        rend.material.color = Color.red;
+    }
+}
+</code></pre>
+    <p>To reference a component on a <em>different</em> GameObject, the easiest way is a serialized field that you fill by dragging in the Inspector:</p>
+    <pre><code class="language-csharp">[SerializeField] private Transform target; // drag any GameObject here
+</code></pre>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Using a constructor.</strong> Don't write <code>public Spinner() { ... } </code> or <code>new Spinner()</code>. Unity creates MonoBehaviours itself. Use <code>Awake</code> or <code>Start</code> for setup, and <code>AddComponent&lt;Spinner&gt;()</code> to add one from code.</li>
+      <li><strong>Misspelling Update.</strong> <code>void update()</code> (lowercase) is never called. Unity looks for the exact names <code>Update</code>, <code>Start</code> and so on.</li>
+      <li><strong>Forgetting Time.deltaTime.</strong> Movement without it runs faster on faster computers.</li>
+      <li><strong>NullReferenceException.</strong> Usually means a field was never assigned in the Inspector, or <code>GetComponent</code> found nothing. Double-click the error in the Console to see the line.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="script-lifecycle.html">Script Lifecycle</a></li>
+      <li><a href="../api/monobehaviour.html">MonoBehaviour</a></li>
+      <li><a href="../api/gameobject.html">GameObject.GetComponent</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/MonoBehaviour.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

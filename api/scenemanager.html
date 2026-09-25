@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SceneManager | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="api/scenemanager.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; API Reference &rsaquo; SceneManager</div>
+    <div class="infobox">
+      <div class="infobox-title">SceneManager</div>
+      <table>
+        <tr><th>Type</th><td>Class (static members)</td></tr>
+        <tr><th>Namespace</th><td><code>UnityEngine.SceneManagement</code></td></tr>
+        <tr><th>Related</th><td><code>Scene</code>, <code>LoadSceneMode</code>, <code>AsyncOperation</code></td></tr>
+      </table>
+    </div>
+    <h1>SceneManager</h1>
+    <p class="summary">SceneManager loads and unloads scenes: going from the main menu to level 1, restarting a level, or showing a loading screen. Add <code>using UnityEngine.SceneManagement;</code> at the top of your script.</p>
+    <div class="warning"><strong>Add scenes to the build first</strong>A scene can only be loaded if it's in the build's scene list: <strong>File &gt; Build Profiles &gt; Scene List</strong> in Unity 6 (<strong>File &gt; Build Settings</strong> in older versions). Otherwise you get "Scene 'X' couldn't be loaded because it has not been added to the build settings".</div>
+    <div class="analogy"><p><code>LoadScene(Single)</code> is changing the set in a theater: everything on stage is cleared away and the new set is built. <code>Additive</code> is wheeling an extra set piece onto the stage while the current one stays. <code>LoadSceneAsync</code> is building the next set backstage while the audience watches an intermission (your loading screen), instead of closing the curtain and making everyone wait in silence.</p></div>
+
+    <h2>Static Properties</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+      <tr><td><code>sceneCount</code></td><td><code>int</code></td><td>How many scenes are currently loaded.</td></tr>
+    </table>
+    </div>
+
+    <h2>Static Methods</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+      <tr><td><code>LoadScene(string name)</code> / <code>LoadScene(int buildIndex)</code></td><td><code>void</code></td><td>Replace the current scene. Happens at the start of the next frame.</td></tr>
+      <tr><td><code>LoadScene(name, LoadSceneMode.Additive)</code></td><td><code>void</code></td><td>Load on top of the current scene(s).</td></tr>
+      <tr><td><code>LoadSceneAsync(name)</code></td><td><code>AsyncOperation</code></td><td>Load in the background. Use for loading screens.</td></tr>
+      <tr><td><code>UnloadSceneAsync(name)</code></td><td><code>AsyncOperation</code></td><td>Unload an additive scene.</td></tr>
+      <tr><td><code>GetActiveScene()</code></td><td><code>Scene</code></td><td>The active scene. <code>.name</code> and <code>.buildIndex</code> are useful.</td></tr>
+      <tr><td><code>SetActiveScene(Scene scene)</code></td><td><code>bool</code></td><td>Choose which loaded scene new objects get created in.</td></tr>
+    </table>
+    </div>
+
+    <h2>Events</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Event</th><th>Parameters</th><th>Fires when</th></tr>
+      <tr><td><code>sceneLoaded</code></td><td><code>(Scene scene, LoadSceneMode mode)</code></td><td>A scene finished loading (after its objects' <code>Awake</code>/<code>OnEnable</code>, before <code>Start</code>).</td></tr>
+      <tr><td><code>sceneUnloaded</code></td><td><code>(Scene scene)</code></td><td>A scene was unloaded.</td></tr>
+      <tr><td><code>activeSceneChanged</code></td><td><code>(Scene old, Scene new)</code></td><td>The active scene changed.</td></tr>
+    </table>
+    </div>
+
+    <h2>Code Samples</h2>
+    <h3>Menu buttons</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+using UnityEngine.SceneManagement;
+
+public class MainMenu : MonoBehaviour
+{
+    // Hook these up to UI Button OnClick events in the Inspector.
+    public void PlayGame()   { SceneManager.LoadScene("Level1"); }
+    public void QuitGame()   { Application.Quit(); } // does nothing in the Editor
+
+    public void RestartLevel()
+    {
+        Time.timeScale = 1f; // in case we came from a pause menu
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+    public void NextLevel()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex + 1);
+    }
+}
+</code></pre>
+
+    <h3>Loading screen with a progress bar</h3>
+    <pre><code class="language-csharp">using System.Collections;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+
+public class LoadingScreen : MonoBehaviour
+{
+    [SerializeField] private Slider progressBar;
+
+    public void Load(string sceneName)
+    {
+        StartCoroutine(LoadRoutine(sceneName));
+    }
+
+    IEnumerator LoadRoutine(string sceneName)
+    {
+        AsyncOperation op = SceneManager.LoadSceneAsync(sceneName);
+        op.allowSceneActivation = false; // don't switch until we say so
+
+        // With allowSceneActivation off, progress stops at 0.9 when loading is done.
+        while (op.progress &lt; 0.9f)
+        {
+            progressBar.value = op.progress / 0.9f;
+            yield return null;
+        }
+
+        progressBar.value = 1f;
+        yield return new WaitForSeconds(0.5f); // let the player see 100%
+        op.allowSceneActivation = true;        // switch now
+    }
+}
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <p><strong>LoadScene("Level1") (Single mode):</strong></p>
+      <ol>
+        <li>The call returns immediately. The rest of your current frame still runs.</li>
+        <li>At the start of the next frame, every object in the old scene is destroyed (<code>OnDisable</code>, <code>OnDestroy</code>), except those marked <code>DontDestroyOnLoad</code>.</li>
+        <li>The new scene's objects are created: <code>Awake</code> and <code>OnEnable</code> run, then <code>sceneLoaded</code> fires, then <code>Start</code> runs before their first <code>Update</code>.</li>
+        <li>Unused assets from the old scene are unloaded from memory.</li>
+      </ol>
+      <p>Synchronous loading freezes the game until finished. For big scenes, use <code>LoadSceneAsync</code> so you can show something while it loads.</p>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Scene not in the build list.</strong> See the warning at the top.</li>
+      <li><strong>Frozen after restart.</strong> <code>Time.timeScale</code> was 0 from the pause menu; it doesn't reset on scene load.</li>
+      <li><strong>Losing data between scenes.</strong> Everything is destroyed. Use a <code>DontDestroyOnLoad</code> manager, <code>static</code> fields, a ScriptableObject, or PlayerPrefs to carry data over.</li>
+      <li><strong>Forgetting the using.</strong> "The name 'SceneManager' does not exist" means you're missing <code>using UnityEngine.SceneManagement;</code>.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="object.html">Object.DontDestroyOnLoad</a></li>
+      <li><a href="playerprefs.html">PlayerPrefs</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/SceneManagement.SceneManager.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

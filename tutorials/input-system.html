@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Using the Input System | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="tutorials/input-system.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Tutorials &rsaquo; Using the Input System</div>
+    <h1>Using the Input System</h1>
+    <p class="summary">In this tutorial you'll build a top-down character that walks, sprints and dashes with keyboard <em>or</em> gamepad, opens a pause menu that switches controls to UI mode, shows the correct button prompt, and lets the player rebind keys and keep their choices.</p>
+    <p><strong>You'll need:</strong> Unity 6 (or 2022.3 with Input System 1.8+), a scene with a floor and a capsule for the player. If you haven't yet, read <a href="../manual/input.html">Handling Input</a> first for the basic ideas.</p>
+
+    <div class="analogy"><p>Think of the Input System as a <strong>translator</strong> between the player's hands and your game. Your game speaks one language: "Move", "Jump", "Pause". Players speak many: keyboard, Xbox controller, PlayStation controller, touchscreen. The Input Actions asset is the translator's dictionary. You write the dictionary once, and your game code only ever hears the translated words.</p></div>
+
+    <h2>Step 1: Install and enable</h2>
+    <ol>
+      <li><strong>Window &gt; Package Manager</strong> &gt; Unity Registry &gt; <strong>Input System</strong> &gt; Install. (Unity 6 templates usually have it already.)</li>
+      <li>If Unity asks to enable the new backends and restart, click <strong>Yes</strong>.</li>
+      <li>Check <strong>Project Settings &gt; Player &gt; Active Input Handling</strong>. "Input System Package (New)" or "Both" both work for this tutorial.</li>
+    </ol>
+
+    <h2>Step 2: Set up the actions</h2>
+    <p>Open <strong>Project Settings &gt; Input System Package</strong>. Unity 6 projects have a <em>project-wide actions asset</em> assigned here (usually <code>InputSystem_Actions</code>). If it's empty, click <strong>Create and assign a default project-wide Action Asset</strong>.</p>
+    <p>Double-click the asset to open the editor. You'll see three columns:</p>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Column</th><th>Contains</th><th>In this tutorial</th></tr>
+      <tr><td>Action Maps</td><td>Groups of actions for a mode</td><td><code>Player</code> and <code>UI</code></td></tr>
+      <tr><td>Actions</td><td>What the player can do</td><td>Move, Sprint, Dash, Pause</td></tr>
+      <tr><td>Bindings / Properties</td><td>Which controls trigger it, and settings</td><td>WASD + left stick, Shift + left stick press...</td></tr>
+    </table>
+    </div>
+    <p>In the <strong>Player</strong> map, make sure these actions exist (add them with <strong>+</strong> if not):</p>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Action</th><th>Action Type</th><th>Control Type</th><th>Bindings</th></tr>
+      <tr><td>Move</td><td>Value</td><td>Vector 2</td><td>"Up/Down/Left/Right Composite" with W/S/A/D; Left Stick [Gamepad]</td></tr>
+      <tr><td>Sprint</td><td>Button</td><td></td><td>Left Shift [Keyboard]; Left Stick Press [Gamepad]</td></tr>
+      <tr><td>Dash</td><td>Button</td><td></td><td>Space [Keyboard]; Button East [Gamepad]</td></tr>
+      <tr><td>Pause</td><td>Button</td><td></td><td>Escape [Keyboard]; Start [Gamepad]</td></tr>
+    </table>
+    </div>
+    <p>In the <strong>UI</strong> map, add a <strong>Resume</strong> button action bound to Escape and Start as well. If you changed anything, click <strong>Save Asset</strong> (unless Auto-Save is ticked).</p>
+    <div class="tip"><strong>Composite bindings</strong>To bind WASD to a Vector2, click <strong>+</strong> next to the Move action and choose <em>Add Up/Down/Left/Right Composite</em>. Then set each of the four parts to a key. The Input System combines them into one Vector2 for you, already normalized so diagonals aren't faster (the composite's Mode setting controls this).</div>
+
+    <h2>Step 3: Choose how scripts get the actions</h2>
+    <p>There are several ways to reach actions from code. This tutorial uses <strong><code>InputActionReference</code></strong> fields: you pick the action from a dropdown in the Inspector, the code has no action name strings, and it works with the project-wide asset.</p>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Approach</th><th>How</th><th>Good for</th></tr>
+      <tr><td><code>InputSystem.actions.FindAction("Move")</code></td><td>Look up by name</td><td>Quick prototypes</td></tr>
+      <tr><td><strong><code>InputActionReference</code> field</strong></td><td>Pick in Inspector</td><td>Most single-player games (used here)</td></tr>
+      <tr><td><code>PlayerInput</code> component</td><td>Component calls <code>OnMove</code>, <code>OnJump</code>... on your scripts</td><td>Local multiplayer (one per player)</td></tr>
+      <tr><td>Generated C# class</td><td>Tick "Generate C# Class" on the asset; use <code>controls.Player.Move</code></td><td>Larger projects that want compile-time checked names</td></tr>
+    </table>
+    </div>
+
+    <h2>Step 4: The movement script</h2>
+    <p>Add a <strong>CharacterController</strong> to your capsule, then this script:</p>
+    <pre><code class="language-csharp">using System.Collections;
+using UnityEngine;
+using UnityEngine.InputSystem;
+
+[RequireComponent(typeof(CharacterController))]
+public class TopDownPlayer : MonoBehaviour
+{
+    [Header("Input")]
+    [SerializeField] private InputActionReference moveAction;
+    [SerializeField] private InputActionReference sprintAction;
+    [SerializeField] private InputActionReference dashAction;
+
+    [Header("Movement")]
+    [SerializeField] private float walkSpeed = 4f;
+    [SerializeField] private float sprintSpeed = 7f;
+    [SerializeField] private float dashDistance = 4f;
+    [SerializeField] private float dashTime = 0.15f;
+    [SerializeField] private float dashCooldown = 0.6f;
+
+    private CharacterController controller;
+    private Vector3 lastMoveDir = Vector3.forward;
+    private bool isDashing;
+    private float nextDashTime;
+
+    void Awake()
+    {
+        controller = GetComponent&lt;CharacterController&gt;();
+    }
+
+    void OnEnable()
+    {
+        // "performed" fires once when a Button action is pressed.
+        dashAction.action.performed += OnDash;
+    }
+
+    void OnDisable()
+    {
+        dashAction.action.performed -= OnDash;
+    }
+
+    void Update()
+    {
+        if (isDashing) return;
+
+        // Polling: read the current value every frame.
+        Vector2 input = moveAction.action.ReadValue&lt;Vector2&gt;();
+        Vector3 dir = new Vector3(input.x, 0f, input.y);
+
+        if (dir.sqrMagnitude &gt; 0.01f)
+        {
+            lastMoveDir = dir.normalized;
+            transform.rotation = Quaternion.LookRotation(lastMoveDir);
+        }
+
+        float speed = sprintAction.action.IsPressed() ? sprintSpeed : walkSpeed;
+        // CharacterController.Move doesn't apply gravity; add it yourself for slopes/stairs.
+        controller.Move(dir * speed * Time.deltaTime);
+    }
+
+    // Callback: runs when Dash is pressed.
+    private void OnDash(InputAction.CallbackContext ctx)
+    {
+        if (isDashing || Time.time &lt; nextDashTime) return;
+        StartCoroutine(DashRoutine());
+    }
+
+    private IEnumerator DashRoutine()
+    {
+        isDashing = true;
+        nextDashTime = Time.time + dashCooldown;
+        float speed = dashDistance / dashTime;
+
+        for (float t = 0f; t &lt; dashTime; t += Time.deltaTime)
+        {
+            controller.Move(lastMoveDir * speed * Time.deltaTime);
+            yield return null;
+        }
+        isDashing = false;
+    }
+}
+</code></pre>
+    <p>In the Inspector, click the circle next to each Input field and pick <strong>Player/Move</strong>, <strong>Player/Sprint</strong> and <strong>Player/Dash</strong>. Press Play, then try it with the keyboard and with a gamepad plugged in. It works with both, and you didn't write any device-specific code.</p>
+
+    <div class="runtime">
+      <p><strong>What happens at runtime</strong></p>
+      <ol>
+        <li>Project-wide actions are enabled automatically when the game starts.</li>
+        <li>You press Space. Before <code>Update</code> runs, the Input System matches the key to the Dash binding and moves the action to <em>performed</em>.</li>
+        <li>That fires the <code>performed</code> event, which calls <code>OnDash</code>.</li>
+        <li>Then <code>Update</code> runs and polls Move with <code>ReadValue</code>. If you hold W and D, the composite gives roughly (0.71, 0.71).</li>
+      </ol>
+    </div>
+    <p><strong>Polling vs. callbacks:</strong> polling (<code>ReadValue</code>, <code>IsPressed</code>) fits things that are continuous, like movement. Callbacks (<code>performed</code>) fit one-off moments, like a dash. Both are fine; mixing them is normal.</p>
+
+    <h2>Step 5: Pause menu and switching action maps</h2>
+    <p>While paused, the player map should be off (so Escape doesn't dash or move), and the UI map should be on.</p>
+    <div class="analogy"><p>Action maps are like the modes on a TV remote. In "TV" mode the arrow keys change channels; in "Menu" mode the same arrow keys move the cursor. Switching maps changes what the same buttons mean.</p></div>
+    <pre><code class="language-csharp">using UnityEngine;
+using UnityEngine.InputSystem;
+
+public class PauseController : MonoBehaviour
+{
+    [SerializeField] private GameObject pausePanel;
+
+    private InputActionMap playerMap;
+    private InputActionMap uiMap;
+    private InputAction pauseAction;
+    private InputAction resumeAction;
+
+    void Awake()
+    {
+        playerMap    = InputSystem.actions.FindActionMap("Player");
+        uiMap        = InputSystem.actions.FindActionMap("UI");
+        pauseAction  = playerMap.FindAction("Pause");
+        resumeAction = uiMap.FindAction("Resume");
+        pausePanel.SetActive(false);
+    }
+
+    void Update()
+    {
+        if (pauseAction.WasPressedThisFrame())       SetPaused(true);
+        else if (resumeAction.WasPressedThisFrame()) SetPaused(false);
+    }
+
+    public void SetPaused(bool paused)
+    {
+        pausePanel.SetActive(paused);
+        Time.timeScale = paused ? 0f : 1f;
+
+        if (paused) { playerMap.Disable(); uiMap.Enable(); }
+        else        { uiMap.Disable(); playerMap.Enable(); }
+    }
+}
+</code></pre>
+    <p>Hook the pause menu's "Resume" Button OnClick to <code>PauseController.SetPaused</code> with the box unticked.</p>
+    <div class="note"><strong>UI navigation</strong>For buttons to respond to the gamepad and mouse, the scene's EventSystem needs an <strong>Input System UI Input Module</strong> (not the old Standalone Input Module). Unity offers to replace it for you when you select the EventSystem.</div>
+
+    <h2>Step 6: Show the right button prompt</h2>
+    <p>"Press Space to dash" is wrong for a gamepad player. Ask the action for its binding's display name:</p>
+    <pre><code class="language-csharp">using TMPro;
+using UnityEngine;
+using UnityEngine.InputSystem;
+
+public class DashPrompt : MonoBehaviour
+{
+    [SerializeField] private InputActionReference dashAction;
+    [SerializeField] private TMP_Text label;
+
+    private bool? usingGamepad; // null = not decided yet
+
+    void Update()
+    {
+        // Remember whichever device the player touched most recently.
+        bool gamepadUsed  = Gamepad.current != null &amp;&amp; Gamepad.current.wasUpdatedThisFrame;
+        bool keyboardUsed = Keyboard.current != null &amp;&amp; Keyboard.current.wasUpdatedThisFrame;
+
+        bool nowGamepad = usingGamepad ?? false;
+        if (gamepadUsed) nowGamepad = true;
+        else if (keyboardUsed) nowGamepad = false;
+
+        if (nowGamepad == usingGamepad) return; // no change, don't rebuild the text
+        usingGamepad = nowGamepad;
+
+        string group = nowGamepad ? "Gamepad" : "Keyboard&amp;Mouse";
+        string key = dashAction.action.GetBindingDisplayString(InputBinding.MaskByGroup(group));
+        label.text = $"Press {key} to dash";
+    }
+}
+</code></pre>
+    <p>This relies on the bindings being assigned to <em>control schemes</em> named "Keyboard&amp;Mouse" and "Gamepad", which the default Unity 6 asset already has. The text only changes when the player switches device, not every frame.</p>
+
+    <h2>Step 7: Let players rebind keys</h2>
+    <p>Rebinding waits for the player to press any control, then assigns it to the action. The change is stored as an <em>override</em> on top of your original binding, so you can always reset it.</p>
+    <pre><code class="language-csharp">using TMPro;
+using UnityEngine;
+using UnityEngine.InputSystem;
+
+public class RebindButton : MonoBehaviour
+{
+    [SerializeField] private InputActionReference action;
+    [SerializeField] private int bindingIndex = 0; // which binding of the action to change
+    [SerializeField] private TMP_Text label;
+
+    private InputActionRebindingExtensions.RebindingOperation operation;
+
+    void Start() { UpdateLabel(); }
+
+    // Hook this to the UI Button's OnClick.
+    public void StartRebind()
+    {
+        label.text = "Press a key...";
+        action.action.Disable(); // an action must be disabled while rebinding
+
+        operation = action.action.PerformInteractiveRebinding(bindingIndex)
+            .WithCancelingThrough("&lt;Keyboard&gt;/escape")
+            .OnComplete(op =&gt; Finish())
+            .OnCancel(op =&gt; Finish())
+            .Start();
+    }
+
+    private void Finish()
+    {
+        operation.Dispose();
+        action.action.Enable();
+        UpdateLabel();
+        RebindSaver.Save();
+    }
+
+    private void UpdateLabel()
+    {
+        label.text = action.action.GetBindingDisplayString(bindingIndex);
+    }
+}
+</code></pre>
+    <p>Save and load all overrides with one line each, using <a href="../api/playerprefs.html">PlayerPrefs</a>:</p>
+    <pre><code class="language-csharp">using UnityEngine;
+using UnityEngine.InputSystem;
+
+public static class RebindSaver
+{
+    private const string Key = "InputRebinds";
+
+    public static void Save()
+    {
+        string json = InputSystem.actions.SaveBindingOverridesAsJson();
+        PlayerPrefs.SetString(Key, json);
+        PlayerPrefs.Save();
+    }
+
+    // Call once at startup, e.g. from a bootstrap script's Awake.
+    public static void Load()
+    {
+        string json = PlayerPrefs.GetString(Key, "");
+        if (!string.IsNullOrEmpty(json))
+            InputSystem.actions.LoadBindingOverridesFromJson(json);
+    }
+
+    public static void ResetAll()
+    {
+        InputSystem.actions.RemoveAllBindingOverrides();
+        PlayerPrefs.DeleteKey(Key);
+    }
+}
+</code></pre>
+    <div class="tip"><strong>Which bindingIndex?</strong>Bindings are numbered in the order they appear under the action in the editor. For composites like WASD, the composite itself is one index and each part (Up, Down, Left, Right) is the next ones. The Input System package includes a "Rebinding UI" sample (Package Manager &gt; Input System &gt; Samples) with a ready-made rebind UI you can copy.</div>
+
+    <h2>Alternative: the PlayerInput component</h2>
+    <p>If you'd rather not handle actions in code, add a <strong>Player Input</strong> component, assign the actions asset and set <strong>Behavior</strong> to <em>Send Messages</em>. It then calls methods named <code>On</code> + the action name on your scripts:</p>
+    <pre><code class="language-csharp">using UnityEngine;
+using UnityEngine.InputSystem;
+
+public class PlayerInputReceiver : MonoBehaviour
+{
+    private Vector2 move;
+
+    void OnMove(InputValue value) { move = value.Get&lt;Vector2&gt;(); }
+    void OnDash()                 { Debug.Log("Dash"); }
+
+    void Update()
+    {
+        transform.position += new Vector3(move.x, 0f, move.y) * 4f * Time.deltaTime;
+    }
+}
+</code></pre>
+    <p>For local multiplayer, add a <strong>Player Input Manager</strong> and a player prefab with PlayerInput. Each player who presses a button on a new device gets their own copy with their own controls.</p>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Nothing happens.</strong> The action isn't enabled (only project-wide actions enable themselves), or the Inspector reference is empty.</li>
+      <li><strong>Movement keeps going after releasing keys.</strong> You used <code>performed</code> for a Value action and never handled <code>canceled</code>. Poll with <code>ReadValue</code> instead.</li>
+      <li><strong>Double input after scene reload.</strong> You subscribed in <code>Awake</code>/<code>Start</code> and never unsubscribed. Use <code>OnEnable</code>/<code>OnDisable</code>.</li>
+      <li><strong>Buttons in the menu don't work with a gamepad.</strong> Replace the EventSystem's input module, and set a "First Selected" button on the EventSystem.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../api/inputaction.html">InputAction reference</a></li>
+      <li><a href="../manual/input.html">Handling Input</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/Packages/com.unity.inputsystem@latest">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Handling Input | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="manual/input.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Getting Started &rsaquo; Handling Input</div>
+    <h1>Handling Input</h1>
+    <p class="summary">Unity has two ways to read the keyboard, mouse and gamepad: the older <strong>Input Manager</strong> (the <code>Input</code> class) and the newer <strong>Input System</strong> package. This page helps you pick one and get started.</p>
+
+    <h2>Which one am I using?</h2>
+    <div class="analogy"><p>The <strong>old Input Manager</strong> is a light switch wired into the wall: simple, but if you want another switch for the same light you have to rewire it yourself. The <strong>new Input System</strong> is a universal remote. You define buttons like "Jump" once, then decide which keys or gamepad buttons send that signal. Your code only listens for "Jump" and doesn't care where it came from.</p></div>
+    <p>Open <strong>Edit &gt; Project Settings &gt; Player &gt; Other Settings &gt; Active Input Handling</strong>.</p>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Setting</th><th>What works</th></tr>
+      <tr><td>Input Manager (Old)</td><td>Only <code>Input.GetKey</code> etc.</td></tr>
+      <tr><td>Input System Package (New)</td><td>Only <code>UnityEngine.InputSystem</code>. Calling <code>Input.GetKey</code> throws an <code>InvalidOperationException</code>.</td></tr>
+      <tr><td>Both</td><td>Both work. Handy while learning.</td></tr>
+    </table>
+    </div>
+    <div class="note"><strong>Unity 6 projects</strong>New projects made from the Unity 6 templates usually have the Input System package installed and active. Most older tutorials use the old <code>Input</code> class. If you get the <code>InvalidOperationException</code> from a tutorial's code, set this option to <strong>Both</strong>.</div>
+
+    <h2>Quick comparison</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Task</th><th>Old Input Manager</th><th>New Input System</th></tr>
+      <tr><td>Space pressed this frame</td><td><code>Input.GetKeyDown(KeyCode.Space)</code></td><td><code>Keyboard.current.spaceKey.wasPressedThisFrame</code></td></tr>
+      <tr><td>W held down</td><td><code>Input.GetKey(KeyCode.W)</code></td><td><code>Keyboard.current.wKey.isPressed</code></td></tr>
+      <tr><td>Left click this frame</td><td><code>Input.GetMouseButtonDown(0)</code></td><td><code>Mouse.current.leftButton.wasPressedThisFrame</code></td></tr>
+      <tr><td>Mouse position (pixels)</td><td><code>Input.mousePosition</code></td><td><code>Mouse.current.position.ReadValue()</code></td></tr>
+      <tr><td>Move stick / WASD</td><td><code>Input.GetAxis("Horizontal")</code>, <code>"Vertical"</code></td><td>An Input Action, <code>moveAction.ReadValue&lt;Vector2&gt;()</code></td></tr>
+    </table>
+    </div>
+
+    <h2>Option A: Old Input Manager</h2>
+    <p>Simple and used in most tutorials. See the <a href="../api/input.html">Input</a> page for all methods.</p>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class OldInputMover : MonoBehaviour
+{
+    [SerializeField] private float speed = 5f;
+
+    void Update()
+    {
+        // "Horizontal" = A/D, Left/Right arrows, gamepad left stick X.
+        // Defined in Project Settings &gt; Input Manager.
+        float x = Input.GetAxis("Horizontal");
+        float z = Input.GetAxis("Vertical");
+        transform.Translate(new Vector3(x, 0f, z) * speed * Time.deltaTime);
+
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            Debug.Log("Jump!");
+        }
+    }
+}
+</code></pre>
+
+    <h2>Option B: New Input System, reading devices directly</h2>
+    <p>Quickest way to try the new system. Good for prototypes and debug keys.</p>
+    <pre><code class="language-csharp">using UnityEngine;
+using UnityEngine.InputSystem;
+
+public class DirectInputExample : MonoBehaviour
+{
+    void Update()
+    {
+        // .current is null when no such device is connected, so check it.
+        if (Keyboard.current != null &amp;&amp; Keyboard.current.spaceKey.wasPressedThisFrame)
+        {
+            Debug.Log("Jump!");
+        }
+
+        if (Mouse.current != null &amp;&amp; Mouse.current.leftButton.wasPressedThisFrame)
+        {
+            Debug.Log("Clicked at " + Mouse.current.position.ReadValue());
+        }
+    }
+}
+</code></pre>
+
+    <h2>Option C: New Input System with Actions (recommended for real games)</h2>
+    <p>Instead of hard-coding keys, you define <em>actions</em> like "Move" and "Jump" and bind keys and gamepad buttons to them. Players can then use any device, and you can support rebinding.</p>
+    <p>Unity 6 projects include a default actions asset (<strong>InputSystem_Actions</strong>) with actions such as "Move", "Look", "Jump" and "Attack" already set up, registered in <strong>Project Settings &gt; Input System Package</strong>.</p>
+    <pre><code class="language-csharp">using UnityEngine;
+using UnityEngine.InputSystem;
+
+public class ActionMover : MonoBehaviour
+{
+    [SerializeField] private float speed = 5f;
+
+    private InputAction moveAction;
+    private InputAction jumpAction;
+
+    void Start()
+    {
+        // Look up actions from the project-wide actions asset by name.
+        moveAction = InputSystem.actions.FindAction("Move");
+        jumpAction = InputSystem.actions.FindAction("Jump");
+    }
+
+    void Update()
+    {
+        Vector2 move = moveAction.ReadValue&lt;Vector2&gt;(); // WASD, arrows or left stick
+        transform.Translate(new Vector3(move.x, 0f, move.y) * speed * Time.deltaTime);
+
+        if (jumpAction.WasPressedThisFrame())
+        {
+            Debug.Log("Jump!");
+        }
+    }
+}
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>At the start of each frame, before <code>Update</code>, Unity collects all input events from the operating system.</li>
+        <li>It updates the state of every key, button and axis.</li>
+        <li>"Pressed this frame" / <code>GetKeyDown</code> values are true for exactly <strong>one frame</strong>: the frame the press happened. "Is pressed" / <code>GetKey</code> stays true every frame while held.</li>
+        <li>Your <code>Update</code> code reads that state.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Reading "down this frame" in FixedUpdate.</strong> <code>FixedUpdate</code> might not run on the frame of the press, so the press is missed. Read in <code>Update</code>, act in <code>FixedUpdate</code>.</li>
+      <li><strong>Using the old API with only the new system enabled.</strong> Causes <code>InvalidOperationException: You are trying to read Input using the UnityEngine.Input class...</code>. Switch to "Both" or port the code.</li>
+      <li><strong>Forgetting <code>using UnityEngine.InputSystem;</code></strong> for <code>Keyboard</code>, <code>Mouse</code> and <code>InputAction</code>.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../api/input.html">Input</a> (old Input Manager reference)</li>
+      <li><a href="https://docs.unity3d.com/Packages/com.unity.inputsystem@latest">Official Input System package documentation</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/Packages/com.unity.inputsystem@latest">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

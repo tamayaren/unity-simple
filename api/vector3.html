@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vector3 | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="api/vector3.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; API Reference &rsaquo; Vector3</div>
+    <div class="infobox">
+      <div class="infobox-title">Vector3</div>
+      <table>
+        <tr><th>Type</th><td>Struct (value type)</td></tr>
+        <tr><th>Namespace</th><td><code>UnityEngine</code></td></tr>
+        <tr><th>Related</th><td><code>Vector2</code> (2D), <code>Vector3Int</code></td></tr>
+      </table>
+    </div>
+    <h1>Vector3</h1>
+    <p class="summary">A Vector3 is three numbers: <code>x</code>, <code>y</code> and <code>z</code>. Unity uses it for two different things: a <strong>position</strong> (a point in the world) and a <strong>direction</strong> with a length (like velocity: "this way, this fast").</p>
+    <div class="analogy"><p>A position is a pin on a map. A direction is an arrow drawn on the map: it points somewhere and has a length, but you can draw it anywhere. Subtracting two pins (<code>b - a</code>) gives you the arrow from pin a to pin b.</p></div>
+
+    <h2>Constructors</h2>
+    <pre><code class="language-csharp">Vector3 v = new Vector3(1f, 2f, 3f);
+</code></pre>
+
+    <h2>Static Properties (shortcuts)</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Name</th><th>Value</th></tr>
+      <tr><td><code>Vector3.zero</code></td><td>(0, 0, 0)</td></tr>
+      <tr><td><code>Vector3.one</code></td><td>(1, 1, 1)</td></tr>
+      <tr><td><code>Vector3.up</code> / <code>down</code></td><td>(0, 1, 0) / (0, -1, 0)</td></tr>
+      <tr><td><code>Vector3.right</code> / <code>left</code></td><td>(1, 0, 0) / (-1, 0, 0)</td></tr>
+      <tr><td><code>Vector3.forward</code> / <code>back</code></td><td>(0, 0, 1) / (0, 0, -1)</td></tr>
+    </table>
+    </div>
+    <p>These are <em>world</em> directions. For the direction an object is facing, use <code>transform.forward</code>.</p>
+
+    <h2>Properties</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+      <tr><td><code>x</code>, <code>y</code>, <code>z</code></td><td><code>float</code></td><td>The three components.</td></tr>
+      <tr><td><code>magnitude</code></td><td><code>float</code></td><td>The length of the arrow. For velocity, this is the speed.</td></tr>
+      <tr><td><code>sqrMagnitude</code></td><td><code>float</code></td><td>Length squared. Faster (skips a square root). Good for comparing distances.</td></tr>
+      <tr><td><code>normalized</code></td><td><code>Vector3</code></td><td>Same direction, length 1. Use when you only care about direction.</td></tr>
+    </table>
+    </div>
+
+    <h2>Static Methods</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+      <tr><td><code>Distance(a, b)</code></td><td><code>float</code></td><td>Distance between two points.</td></tr>
+      <tr><td><code>Lerp(a, b, t)</code></td><td><code>Vector3</code></td><td>A point part-way from <code>a</code> to <code>b</code>. <code>t = 0</code> is <code>a</code>, <code>0.5</code> is halfway, <code>1</code> is <code>b</code>.</td></tr>
+      <tr><td><code>MoveTowards(current, target, maxDistanceDelta)</code></td><td><code>Vector3</code></td><td>Steps from current toward target by at most that distance. Never overshoots.</td></tr>
+      <tr><td><code>SmoothDamp(current, target, ref velocity, smoothTime)</code></td><td><code>Vector3</code></td><td>Moves smoothly, like a spring that slows down as it arrives. Great for cameras.</td></tr>
+      <tr><td><code>Dot(a, b)</code></td><td><code>float</code></td><td>How much two directions agree. With normalized vectors: 1 = same way, 0 = at right angles, -1 = opposite.</td></tr>
+      <tr><td><code>Cross(a, b)</code></td><td><code>Vector3</code></td><td>A direction perpendicular to both.</td></tr>
+      <tr><td><code>Angle(from, to)</code></td><td><code>float</code></td><td>Angle between two directions in degrees (0 to 180).</td></tr>
+      <tr><td><code>ClampMagnitude(v, maxLength)</code></td><td><code>Vector3</code></td><td>Shortens <code>v</code> if it's longer than <code>maxLength</code>.</td></tr>
+      <tr><td><code>ProjectOnPlane(v, planeNormal)</code></td><td><code>Vector3</code></td><td>Flattens a vector onto a surface. E.g. make a camera direction horizontal.</td></tr>
+      <tr><td><code>Reflect(dir, normal)</code></td><td><code>Vector3</code></td><td>Bounces a direction off a surface.</td></tr>
+    </table>
+    </div>
+
+    <h2>Operators</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Code</th><th>Meaning</th></tr>
+      <tr><td><code>a + b</code></td><td>Move point <code>a</code> by arrow <code>b</code>.</td></tr>
+      <tr><td><code>b - a</code></td><td>The arrow from <code>a</code> to <code>b</code>.</td></tr>
+      <tr><td><code>v * 2f</code></td><td>Twice as long, same direction.</td></tr>
+      <tr><td><code>-v</code></td><td>Opposite direction.</td></tr>
+      <tr><td><code>a == b</code></td><td>True if <em>approximately</em> equal (tiny floating point differences are ignored).</td></tr>
+    </table>
+    </div>
+
+    <h2>Code Samples</h2>
+    <h3>Chase the player</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class Chaser : MonoBehaviour
+{
+    [SerializeField] private Transform player;
+    [SerializeField] private float speed = 3f;
+
+    void Update()
+    {
+        // Step toward the player. MoveTowards stops exactly on target, no jitter.
+        transform.position = Vector3.MoveTowards(
+            transform.position, player.position, speed * Time.deltaTime);
+    }
+}
+</code></pre>
+
+    <h3>Direction and distance</h3>
+    <pre><code class="language-csharp">Vector3 toPlayer = player.position - transform.position; // arrow from me to player
+float distance = toPlayer.magnitude;                     // how far
+Vector3 direction = toPlayer.normalized;                 // which way (length 1)
+</code></pre>
+
+    <h3>Fast range check</h3>
+    <pre><code class="language-csharp">float range = 10f;
+// Compare squared values: avoids a square root every frame.
+if ((player.position - transform.position).sqrMagnitude &lt; range * range)
+{
+    Debug.Log("In range");
+}
+</code></pre>
+
+    <h3>Is the player in my field of view?</h3>
+    <pre><code class="language-csharp">Vector3 toPlayer = (player.position - transform.position).normalized;
+float dot = Vector3.Dot(transform.forward, toPlayer);
+if (dot &gt; 0.5f) // roughly within 60 degrees either side of forward
+{
+    Debug.Log("I can see you");
+}
+</code></pre>
+
+    <h3>Diagonal movement that isn't faster</h3>
+    <pre><code class="language-csharp">Vector3 input = new Vector3(Input.GetAxisRaw("Horizontal"), 0f, Input.GetAxisRaw("Vertical"));
+// Pressing W+D gives (1, 0, 1), which has length 1.41. That's 41% faster diagonally.
+input = Vector3.ClampMagnitude(input, 1f);
+transform.position += input * speed * Time.deltaTime;
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <p>Vector3 is a <strong>struct</strong>, which means it's copied whenever you assign it or pass it to a method, like an <code>int</code>. Changing a copy doesn't change the original:</p>
+      <pre><code class="language-csharp">Vector3 p = transform.position; // p is a copy
+p.y = 10f;                      // changes only the copy
+transform.position = p;         // now the object moves
+</code></pre>
+      <p>Vector3 math is very cheap and creates no garbage, so it's fine to use freely in <code>Update</code>.</p>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong><code>Lerp</code> with a constant <code>t</code> in Update</strong> (<code>Lerp(a, b, 0.1f)</code>) moves fast at first and slows down forever without quite arriving, and speed depends on frame rate. For constant speed, use <code>MoveTowards</code>; for smooth easing, use <code>SmoothDamp</code>.</li>
+      <li><strong>Normalizing a zero vector.</strong> <code>Vector3.zero.normalized</code> is <code>(0,0,0)</code>, not an error, but it may not be what you expected.</li>
+      <li><strong>Mixing up world and local directions.</strong> <code>Vector3.forward</code> is always world +Z. Use <code>transform.forward</code> for "where I'm facing".</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="transform.html">Transform</a></li>
+      <li><a href="quaternion.html">Quaternion</a></li>
+      <li><a href="mathf.html">Mathf</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/Vector3.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

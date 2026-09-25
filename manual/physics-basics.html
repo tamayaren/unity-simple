@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Physics Basics | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="manual/physics-basics.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Getting Started &rsaquo; Physics Basics</div>
+    <h1>Physics Basics</h1>
+    <p class="summary">Unity's physics engine makes objects fall, bump into each other and bounce. Two components do the work: a <strong>Collider</strong> gives an object a shape, and a <strong>Rigidbody</strong> lets physics move it.</p>
+
+    <h2>Collider vs. Rigidbody</h2>
+    <div class="analogy"><p>A <strong>Collider</strong> is an object's <em>skin</em>: the shape other things can bump into. A <strong>Rigidbody</strong> is its <em>weight</em>: it hands control to gravity and momentum. A wall has skin but no weight, so it's solid but never moves. A ball has both, so it falls and bounces. A <strong>trigger</strong> is a laser tripwire: nothing is blocked, but you get an alarm when something crosses it.</p></div>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Component</th><th>What it does</th><th>Without it</th></tr>
+      <tr><td><strong>Collider</strong> (Box, Sphere, Capsule, Mesh...)</td><td>Defines the physical <em>shape</em>. Things can hit it.</td><td>Objects pass right through it.</td></tr>
+      <tr><td><strong>Rigidbody</strong></td><td>Gives the object mass, velocity and gravity. Physics <em>moves</em> it.</td><td>The object stays still unless your code moves it.</td></tr>
+    </table>
+    </div>
+
+    <h2>Three kinds of physics objects</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Type</th><th>Setup</th><th>Use for</th><th>Move it with</th></tr>
+      <tr><td><strong>Static</strong></td><td>Collider, no Rigidbody</td><td>Floors, walls, level geometry</td><td>Don't move it</td></tr>
+      <tr><td><strong>Dynamic</strong></td><td>Collider + Rigidbody</td><td>Crates, balls, physics-driven players</td><td>Forces and velocity (<code>AddForce</code>, <code>linearVelocity</code>)</td></tr>
+      <tr><td><strong>Kinematic</strong></td><td>Collider + Rigidbody with <em>Is Kinematic</em> checked</td><td>Moving platforms, doors, animated objects that push others</td><td><code>Rigidbody.MovePosition</code> / <code>MoveRotation</code></td></tr>
+    </table>
+    </div>
+
+    <h2>Example: a ball you can push</h2>
+    <ol>
+      <li>Create a Plane (the floor). It already has a Mesh Collider, so it's static.</li>
+      <li>Create a Sphere above it. It has a Sphere Collider. Add a <strong>Rigidbody</strong>.</li>
+      <li>Add this script to the sphere:</li>
+    </ol>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class BallRoller : MonoBehaviour
+{
+    [SerializeField] private float force = 10f;
+    private Rigidbody rb;
+    private Vector3 input;
+
+    void Awake()
+    {
+        rb = GetComponent&lt;Rigidbody&gt;();
+    }
+
+    void Update()
+    {
+        // Read input every frame.
+        input = new Vector3(Input.GetAxis("Horizontal"), 0f, Input.GetAxis("Vertical"));
+    }
+
+    void FixedUpdate()
+    {
+        // Apply physics at the physics rate.
+        rb.AddForce(input * force);
+    }
+}
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>Physics runs on its own clock: by default 50 steps per second (<code>Time.fixedDeltaTime</code> = 0.02). Your frame rate doesn't change it.</li>
+        <li>Before each step, Unity calls <code>FixedUpdate</code> on every script. Your forces are queued.</li>
+        <li>The physics engine moves every dynamic Rigidbody based on gravity, forces and velocity, and pushes apart anything that overlaps.</li>
+        <li>For every pair that touched, Unity calls <code>OnCollisionEnter</code> / <code>OnCollisionStay</code> / <code>OnCollisionExit</code> (or the <code>OnTrigger...</code> versions) on scripts of both objects.</li>
+        <li>Unity copies the new Rigidbody positions into their Transforms.</li>
+      </ol>
+    </div>
+
+    <h2>Collisions vs. triggers</h2>
+    <p>Tick <strong>Is Trigger</strong> on a collider to make it a <em>trigger</em>: things pass through it, but you still get told when they enter. Use triggers for pickups, checkpoints and damage zones.</p>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class Coin : MonoBehaviour
+{
+    // Coin: Sphere Collider with Is Trigger ticked.
+    // Player: has a Collider and a Rigidbody (or a CharacterController).
+    void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            Debug.Log("Picked up a coin!");
+            Destroy(gameObject);
+        }
+    }
+}
+</code></pre>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class Crate : MonoBehaviour
+{
+    // A solid collision (neither collider is a trigger).
+    void OnCollisionEnter(Collision collision)
+    {
+        float hitSpeed = collision.relativeVelocity.magnitude;
+        if (hitSpeed &gt; 5f)
+        {
+            Debug.Log("Hit " + collision.gameObject.name + " hard!");
+        }
+    }
+}
+</code></pre>
+
+    <h3>When do I get a callback?</h3>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Object A</th><th>Object B</th><th>OnCollision...</th><th>OnTrigger...</th></tr>
+      <tr><td>Static collider</td><td>Dynamic Rigidbody</td><td>Yes</td><td>Yes, if either is a trigger</td></tr>
+      <tr><td>Dynamic Rigidbody</td><td>Dynamic Rigidbody</td><td>Yes</td><td>Yes, if either is a trigger</td></tr>
+      <tr><td>Kinematic Rigidbody</td><td>Dynamic Rigidbody</td><td>Yes</td><td>Yes, if either is a trigger</td></tr>
+      <tr><td>Kinematic Rigidbody</td><td>Static collider</td><td>No</td><td>Yes, if either is a trigger</td></tr>
+      <tr><td>Kinematic Rigidbody</td><td>Kinematic Rigidbody</td><td>No (by default)</td><td>Yes, if either is a trigger</td></tr>
+      <tr><td>Static collider</td><td>Static collider</td><td>No</td><td>No</td></tr>
+    </table>
+    </div>
+    <p><strong>Short rule:</strong> at least one of the two objects needs a Rigidbody. For solid collisions, it must be a non-kinematic one.</p>
+
+    <h2>Layers: choosing what collides</h2>
+    <p>Put objects on layers (top of the Inspector, <strong>Layer</strong> dropdown), then open <strong>Project Settings &gt; Physics &gt; Layer Collision Matrix</strong> and untick pairs that should ignore each other. For example, player bullets shouldn't hit the player.</p>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Moving a dynamic Rigidbody with <code>transform.position</code>.</strong> This teleports it, skipping physics. It can tunnel through walls and cause jitter. Use forces, velocity or <code>MovePosition</code>.</li>
+      <li><strong>Mixing 2D and 3D.</strong> <code>BoxCollider2D</code> + <code>Rigidbody</code> (3D) never collide. 2D objects need <code>Rigidbody2D</code>, 2D colliders and <code>OnCollisionEnter2D(Collision2D)</code> / <code>OnTriggerEnter2D(Collider2D)</code>.</li>
+      <li><strong>Wrong method signature.</strong> <code>OnCollisionEnter(Collider c)</code> is never called. It must be <code>Collision</code>. <code>OnTriggerEnter</code> takes a <code>Collider</code>.</li>
+      <li><strong>Fast objects passing through walls.</strong> Set the Rigidbody's <em>Collision Detection</em> to <em>Continuous</em> for small, fast things like bullets.</li>
+      <li><strong>Non-convex Mesh Collider on a Rigidbody.</strong> Dynamic Rigidbodies need <em>Convex</em> ticked on Mesh Colliders. Primitive colliders (box, sphere, capsule) are faster anyway.</li>
+      <li><strong>Huge or tiny scale.</strong> A 100-unit-tall character falls in slow motion. Keep objects near real-world size (1 unit = 1 meter).</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../api/rigidbody.html">Rigidbody</a></li>
+      <li><a href="../api/collider.html">Collider</a></li>
+      <li><a href="../api/physics.html">Physics</a> (raycasts)</li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/Rigidbody.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Script Lifecycle | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="manual/script-lifecycle.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Getting Started &rsaquo; Script Lifecycle</div>
+    <h1>Script Lifecycle</h1>
+    <p class="summary">You never call <code>Start</code> or <code>Update</code> yourself. Unity calls them for you, at specific moments and in a fixed order. Knowing that order tells you where each piece of code belongs.</p>
+
+    <h2>The order, simplified</h2>
+    <div class="analogy"><p>A theater show. Unity is the stage manager with a script of cues, and your methods are actors waiting for their cue. <code>Awake</code> is the actor arriving backstage and getting into costume. <code>Start</code> is walking on stage right before the curtain rises, when everyone else is already in costume. <code>Update</code> is saying your line every time the stage manager points at you, once per frame, for the whole show. <code>OnDestroy</code> is leaving the building after the show. You never shout your own cue; you wait to be called.</p></div>
+    <div class="runtime">
+      <p><strong>When the object is created (once):</strong></p>
+      <ol>
+        <li><code>Awake()</code>: the object exists. Set up references to your own components here.</li>
+        <li><code>OnEnable()</code>: the script was turned on. Subscribe to events here.</li>
+        <li><code>Start()</code>: runs just before this script's first <code>Update</code>. Every object's <code>Awake</code> has already run, so it is safe to talk to other objects.</li>
+      </ol>
+      <p><strong>Every frame (repeats):</strong></p>
+      <ol start="4">
+        <li><code>FixedUpdate()</code>: runs at a fixed rate (50 times per second by default). May run 0, 1 or several times in a single frame. Put physics code here.</li>
+        <li>Unity simulates physics, then calls <code>OnTriggerEnter</code>, <code>OnCollisionEnter</code> and similar callbacks.</li>
+        <li><code>Update()</code>: runs once per frame. Put input and most game logic here.</li>
+        <li>Coroutines that did <code>yield return null</code> continue.</li>
+        <li>Animations are updated.</li>
+        <li><code>LateUpdate()</code>: runs after every <code>Update</code> has finished. Good for cameras that follow something.</li>
+        <li>The frame is drawn to the screen.</li>
+      </ol>
+      <p><strong>When the object goes away:</strong></p>
+      <ol start="11">
+        <li><code>OnDisable()</code>: the script was turned off or the object is being destroyed. Unsubscribe from events here.</li>
+        <li><code>OnDestroy()</code>: the object is being destroyed (or the scene is closing).</li>
+      </ol>
+    </div>
+
+    <h2>Which method should I use?</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Called</th><th>Use it for</th></tr>
+      <tr><td><code>Awake</code></td><td>Once, when the object loads. Runs even if the script component is disabled (as long as the GameObject is active).</td><td><code>GetComponent</code> calls, initializing your own variables</td></tr>
+      <tr><td><code>OnEnable</code></td><td>Every time the script becomes enabled / the GameObject becomes active</td><td>Subscribing to events, resetting state for reused (pooled) objects</td></tr>
+      <tr><td><code>Start</code></td><td>Once, before the first <code>Update</code>, only if the script is enabled</td><td>Code that needs other objects to be set up already</td></tr>
+      <tr><td><code>FixedUpdate</code></td><td>Fixed time step (default every 0.02 s)</td><td>Rigidbody forces and velocity</td></tr>
+      <tr><td><code>Update</code></td><td>Every frame</td><td>Input, timers, non-physics movement, game logic</td></tr>
+      <tr><td><code>LateUpdate</code></td><td>Every frame, after all Updates</td><td>Camera follow, anything that must react to where things ended up this frame</td></tr>
+      <tr><td><code>OnDisable</code></td><td>When disabled or destroyed</td><td>Unsubscribing from events, stopping sounds</td></tr>
+      <tr><td><code>OnDestroy</code></td><td>When destroyed</td><td>Final cleanup</td></tr>
+    </table>
+    </div>
+
+    <h2>Example: seeing the order yourself</h2>
+    <p>Attach this to a GameObject, press Play, then disable the GameObject and stop the game. Watch the Console.</p>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class LifecycleLogger : MonoBehaviour
+{
+    void Awake()       { Debug.Log("1. Awake"); }
+    void OnEnable()    { Debug.Log("2. OnEnable"); }
+    void Start()       { Debug.Log("3. Start"); }
+
+    void FixedUpdate() { if (Time.frameCount &lt; 3) Debug.Log("FixedUpdate, frame " + Time.frameCount); }
+    void Update()      { if (Time.frameCount &lt; 3) Debug.Log("Update, frame " + Time.frameCount); }
+    void LateUpdate()  { if (Time.frameCount &lt; 3) Debug.Log("LateUpdate, frame " + Time.frameCount); }
+
+    void OnDisable()   { Debug.Log("OnDisable"); }
+    void OnDestroy()   { Debug.Log("OnDestroy"); }
+}
+</code></pre>
+
+    <h2>Example: a camera that follows the player</h2>
+    <p>The player moves in <code>Update</code>. If the camera also moved in <code>Update</code>, it might run <em>before</em> the player and lag one frame behind, which looks jittery. <code>LateUpdate</code> guarantees the player has already moved.</p>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class FollowCamera : MonoBehaviour
+{
+    [SerializeField] private Transform target;
+    [SerializeField] private Vector3 offset = new Vector3(0f, 5f, -8f);
+
+    void LateUpdate()
+    {
+        if (target == null) return;
+        transform.position = target.position + offset;
+        transform.LookAt(target);
+    }
+}
+</code></pre>
+
+    <h2>Example: subscribing to events safely</h2>
+    <pre><code class="language-csharp">using UnityEngine;
+using UnityEngine.SceneManagement;
+
+public class SceneListener : MonoBehaviour
+{
+    void OnEnable()
+    {
+        SceneManager.sceneLoaded += HandleSceneLoaded;
+    }
+
+    void OnDisable()
+    {
+        // Always unsubscribe. Otherwise the event keeps a reference to a destroyed object.
+        SceneManager.sceneLoaded -= HandleSceneLoaded;
+    }
+
+    void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        Debug.Log("Loaded " + scene.name);
+    }
+}
+</code></pre>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Relying on the order between different objects.</strong> Unity does not promise that object A's <code>Awake</code> runs before object B's <code>Awake</code>. The rule to rely on: <em>all</em> <code>Awake</code> calls for objects in a loaded scene happen before <em>any</em> <code>Start</code>. So set up yourself in <code>Awake</code> and talk to others in <code>Start</code>. (If you really need a fixed order, use <strong>Project Settings &gt; Script Execution Order</strong>.)</li>
+      <li><strong>Reading input in FixedUpdate.</strong> <code>Input.GetKeyDown</code> is only true for one frame, and <code>FixedUpdate</code> might not run that frame, so presses get missed. Read input in <code>Update</code>, store it in a variable, and use it in <code>FixedUpdate</code>.</li>
+      <li><strong>Heavy work in Update.</strong> <code>GameObject.Find</code> or <code>GetComponent</code> every frame is slow. Cache the result in <code>Awake</code>/<code>Start</code>.</li>
+      <li><strong>Empty Update methods.</strong> An empty <code>Update()</code> still has a small cost. Delete it if you don't use it.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../api/monobehaviour.html">MonoBehaviour</a></li>
+      <li><a href="../api/time.html">Time</a> (deltaTime and fixedDeltaTime)</li>
+      <li><a href="coroutines.html">Coroutines</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/Manual/index.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

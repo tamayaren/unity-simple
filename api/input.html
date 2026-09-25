@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Input | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="api/input.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; API Reference &rsaquo; Input</div>
+    <div class="infobox">
+      <div class="infobox-title">Input</div>
+      <table>
+        <tr><th>Type</th><td>Class (static members)</td></tr>
+        <tr><th>Namespace</th><td><code>UnityEngine</code></td></tr>
+        <tr><th>System</th><td>Old Input Manager</td></tr>
+        <tr><th>Newer alternative</th><td><a href="inputaction.html">Input System</a></td></tr>
+      </table>
+    </div>
+    <h1>Input</h1>
+    <p class="summary">The <code>Input</code> class reads the keyboard, mouse and simple gamepad input using the <strong>old Input Manager</strong>. It's simple and used in most tutorials. For new projects, also look at the <a href="../tutorials/input-system.html">Input System</a>.</p>
+    <div class="warning"><strong>Requires the old system to be enabled</strong>If <strong>Project Settings &gt; Player &gt; Active Input Handling</strong> is set to "Input System Package (New)", every call on this page throws an <code>InvalidOperationException</code>. Set it to "Both" to use this class. See <a href="../manual/input.html">Handling Input</a>.</div>
+
+    <h2>Down, held, up</h2>
+    <p>Most methods come in three flavors:</p>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Suffix</th><th>True when</th><th>Use for</th></tr>
+      <tr><td><code>...Down</code></td><td>Only on the <em>one frame</em> the key was pressed</td><td>Jump, shoot once, open menu</td></tr>
+      <tr><td>(none)</td><td>Every frame while held</td><td>Sprint, automatic fire, charging</td></tr>
+      <tr><td><code>...Up</code></td><td>Only on the frame it was released</td><td>Release a charged attack</td></tr>
+    </table>
+    </div>
+
+    <h2>Static Methods</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+      <tr><td><code>GetKey(KeyCode key)</code></td><td><code>bool</code></td><td>Is the key held? e.g. <code>KeyCode.W</code>, <code>KeyCode.LeftShift</code>.</td></tr>
+      <tr><td><code>GetKeyDown(KeyCode key)</code></td><td><code>bool</code></td><td>Pressed this frame.</td></tr>
+      <tr><td><code>GetKeyUp(KeyCode key)</code></td><td><code>bool</code></td><td>Released this frame.</td></tr>
+      <tr><td><code>GetAxis(string axisName)</code></td><td><code>float</code></td><td>-1 to 1, smoothed. "Horizontal", "Vertical", "Mouse X", "Mouse Y".</td></tr>
+      <tr><td><code>GetAxisRaw(string axisName)</code></td><td><code>float</code></td><td>Same but not smoothed: -1, 0 or 1 for keys. Snappier.</td></tr>
+      <tr><td><code>GetButton(string buttonName)</code></td><td><code>bool</code></td><td>Named buttons like "Jump" and "Fire1" (configurable). Also <code>GetButtonDown</code>/<code>Up</code>.</td></tr>
+      <tr><td><code>GetMouseButton(int button)</code></td><td><code>bool</code></td><td>0 = left, 1 = right, 2 = middle. Also <code>Down</code>/<code>Up</code> versions.</td></tr>
+    </table>
+    </div>
+
+    <h2>Static Properties</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+      <tr><td><code>mousePosition</code></td><td><code>Vector3</code></td><td>Mouse position in pixels. (0,0) is the bottom-left of the screen.</td></tr>
+      <tr><td><code>mouseScrollDelta</code></td><td><code>Vector2</code></td><td>Scroll wheel movement this frame (use <code>.y</code>).</td></tr>
+      <tr><td><code>anyKeyDown</code></td><td><code>bool</code></td><td>Any key or mouse button pressed this frame. "Press any key to start".</td></tr>
+      <tr><td><code>touchCount</code></td><td><code>int</code></td><td>Number of fingers on a touchscreen. Use <code>GetTouch(i)</code> for details.</td></tr>
+    </table>
+    </div>
+
+    <h2>Code Samples</h2>
+    <h3>Top-down movement</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class TopDownMove : MonoBehaviour
+{
+    [SerializeField] private float speed = 5f;
+
+    void Update()
+    {
+        float x = Input.GetAxisRaw("Horizontal");
+        float z = Input.GetAxisRaw("Vertical");
+        Vector3 dir = new Vector3(x, 0f, z).normalized; // normalized: diagonals aren't faster
+        transform.position += dir * speed * Time.deltaTime;
+    }
+}
+</code></pre>
+
+    <h3>Charge-and-release attack</h3>
+    <pre><code class="language-csharp">private float chargeStart;
+
+void Update()
+{
+    if (Input.GetMouseButtonDown(0)) chargeStart = Time.time;
+
+    if (Input.GetMouseButtonUp(0))
+    {
+        float charge = Mathf.Clamp01((Time.time - chargeStart) / 2f); // full after 2 s
+        Debug.Log("Released with " + (charge * 100f) + "% power");
+    }
+}
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>At the start of each frame, Unity reads the OS input events and updates key states.</li>
+        <li><code>GetKeyDown</code> is true for that single frame only. If you check it in <code>FixedUpdate</code> and no physics step runs that frame, you never see it.</li>
+        <li><code>GetAxis</code> doesn't jump straight to 1. It moves toward it at the "Sensitivity" speed set in <strong>Project Settings &gt; Input Manager</strong>, and back toward 0 at the "Gravity" speed.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Checking <code>...Down</code> in FixedUpdate.</strong> Presses get missed. Check in <code>Update</code>.</li>
+      <li><strong>Typos in axis names.</strong> <code>GetAxis("horizontal")</code> (lowercase) throws "Input Axis horizontal is not setup". Names are case-sensitive.</li>
+      <li><strong>Hard-coding keys everywhere.</strong> Fine for learning; for real games, the Input System makes rebinding and gamepad support much easier.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../manual/input.html">Handling Input</a></li>
+      <li><a href="inputaction.html">InputAction</a> (new Input System)</li>
+      <li><a href="../tutorials/input-system.html">Tutorial: Using the Input System</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/Input.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

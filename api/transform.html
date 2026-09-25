@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transform | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="api/transform.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; API Reference &rsaquo; Transform</div>
+    <div class="infobox">
+      <div class="infobox-title">Transform</div>
+      <table>
+        <tr><th>Type</th><td>Class (Component)</td></tr>
+        <tr><th>Namespace</th><td><code>UnityEngine</code></td></tr>
+        <tr><th>Inherits</th><td>Component &gt; <a href="object.html">Object</a></td></tr>
+        <tr><th>In scripts</th><td><code>transform</code></td></tr>
+      </table>
+    </div>
+    <h1>Transform</h1>
+    <p class="summary">Every GameObject has a Transform. It stores where the object is (position), which way it faces (rotation) and how big it is (scale). It also stores the parent/child relationships you see in the Hierarchy.</p>
+
+    <h2>World space vs. local space</h2>
+    <div class="analogy"><p>Giving directions. <strong>World</strong> space is GPS coordinates: exact and the same for everyone. <strong>Local</strong> space is "two steps to the left of my desk": it only makes sense if you know where the desk is, and if someone moves the desk, "two steps left of it" moves too. A child object always describes its position relative to its parent's desk.</p></div>
+    <p>This is the most important idea on this page.</p>
+    <ul>
+      <li><strong>World</strong> values (<code>position</code>, <code>rotation</code>) are relative to the scene origin (0, 0, 0).</li>
+      <li><strong>Local</strong> values (<code>localPosition</code>, <code>localRotation</code>, <code>localScale</code>) are relative to the <em>parent</em>. The Inspector shows local values.</li>
+    </ul>
+    <p>Example: a sword is a child of a hand. <code>sword.localPosition</code> stays at (0, 0, 0.5) while the character runs around, because relative to the hand it doesn't move. <code>sword.position</code> changes every frame. If an object has no parent, local and world are the same.</p>
+
+    <h2>Properties</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+      <tr><td><code>position</code></td><td><code>Vector3</code></td><td>World position.</td></tr>
+      <tr><td><code>localPosition</code></td><td><code>Vector3</code></td><td>Position relative to the parent.</td></tr>
+      <tr><td><code>rotation</code></td><td><code>Quaternion</code></td><td>World rotation. See <a href="quaternion.html">Quaternion</a>.</td></tr>
+      <tr><td><code>localRotation</code></td><td><code>Quaternion</code></td><td>Rotation relative to the parent.</td></tr>
+      <tr><td><code>eulerAngles</code></td><td><code>Vector3</code></td><td>World rotation as X/Y/Z degrees. Easier to read, but see Common Mistakes.</td></tr>
+      <tr><td><code>localEulerAngles</code></td><td><code>Vector3</code></td><td>The rotation numbers shown in the Inspector.</td></tr>
+      <tr><td><code>localScale</code></td><td><code>Vector3</code></td><td>Scale relative to the parent. (1, 1, 1) is normal size.</td></tr>
+      <tr><td><code>lossyScale</code></td><td><code>Vector3</code></td><td>Approximate world scale (read only).</td></tr>
+      <tr><td><code>forward</code></td><td><code>Vector3</code></td><td>The object's blue (Z) axis in world space: the direction it's facing. Length 1.</td></tr>
+      <tr><td><code>right</code></td><td><code>Vector3</code></td><td>The object's red (X) axis in world space.</td></tr>
+      <tr><td><code>up</code></td><td><code>Vector3</code></td><td>The object's green (Y) axis in world space.</td></tr>
+      <tr><td><code>parent</code></td><td><code>Transform</code></td><td>The parent, or <code>null</code>. Prefer <code>SetParent</code> to change it.</td></tr>
+      <tr><td><code>root</code></td><td><code>Transform</code></td><td>The top-most parent.</td></tr>
+      <tr><td><code>childCount</code></td><td><code>int</code></td><td>Number of direct children.</td></tr>
+    </table>
+    </div>
+
+    <h2>Methods</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+      <tr><td><code>Translate(Vector3 translation, Space relativeTo = Space.Self)</code></td><td><code>void</code></td><td>Moves by an amount. By default in the object's <em>own</em> directions (so <code>Vector3.forward</code> means "its forward").</td></tr>
+      <tr><td><code>Rotate(Vector3 eulers, Space relativeTo = Space.Self)</code></td><td><code>void</code></td><td>Rotates by an amount of degrees.</td></tr>
+      <tr><td><code>Rotate(Vector3 axis, float angle)</code></td><td><code>void</code></td><td>Rotates around a given axis.</td></tr>
+      <tr><td><code>LookAt(Transform target)</code></td><td><code>void</code></td><td>Turns so <code>forward</code> points at the target. Also accepts a <code>Vector3</code> position.</td></tr>
+      <tr><td><code>SetParent(Transform parent, bool worldPositionStays = true)</code></td><td><code>void</code></td><td>Changes the parent. With <code>true</code>, the object stays where it is in the world. With <code>false</code>, it keeps its local values (useful for UI and snapping items to a hand).</td></tr>
+      <tr><td><code>SetPositionAndRotation(Vector3 pos, Quaternion rot)</code></td><td><code>void</code></td><td>Sets both at once. Slightly faster than setting each.</td></tr>
+      <tr><td><code>GetChild(int index)</code></td><td><code>Transform</code></td><td>The child at that index (0 is the first).</td></tr>
+      <tr><td><code>Find(string name)</code></td><td><code>Transform</code></td><td>Finds a direct child by name. Use "Arm/Hand" for deeper paths. Finds inactive children too.</td></tr>
+      <tr><td><code>TransformPoint(Vector3 localPoint)</code></td><td><code>Vector3</code></td><td>Converts a point from this object's local space to world space.</td></tr>
+      <tr><td><code>InverseTransformPoint(Vector3 worldPoint)</code></td><td><code>Vector3</code></td><td>Converts a world point to this object's local space. Handy for "is it in front of me or behind me?"</td></tr>
+      <tr><td><code>TransformDirection(Vector3 localDir)</code></td><td><code>Vector3</code></td><td>Converts a direction (ignores position and scale) from local to world.</td></tr>
+    </table>
+    </div>
+
+    <h2>Code Samples</h2>
+    <h3>Moving and turning (no physics)</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class TankControls : MonoBehaviour
+{
+    [SerializeField] private float moveSpeed = 5f;
+    [SerializeField] private float turnSpeed = 120f; // degrees per second
+
+    void Update()
+    {
+        float move = Input.GetAxis("Vertical");
+        float turn = Input.GetAxis("Horizontal");
+
+        // Moves along the tank's own forward, because Translate defaults to Space.Self.
+        transform.Translate(Vector3.forward * move * moveSpeed * Time.deltaTime);
+        transform.Rotate(0f, turn * turnSpeed * Time.deltaTime, 0f);
+    }
+}
+</code></pre>
+
+    <h3>Looping through children</h3>
+    <pre><code class="language-csharp">// Hide all children of this object.
+foreach (Transform child in transform)
+{
+    child.gameObject.SetActive(false);
+}
+</code></pre>
+
+    <h3>Picking up an item into the player's hand</h3>
+    <pre><code class="language-csharp">public void Equip(Transform item, Transform hand)
+{
+    item.SetParent(hand, false);      // keep local values, don't keep world position
+    item.localPosition = Vector3.zero; // snap to the hand
+    item.localRotation = Quaternion.identity;
+}
+</code></pre>
+
+    <h3>Is the enemy in front of me?</h3>
+    <pre><code class="language-csharp">Vector3 local = transform.InverseTransformPoint(enemy.position);
+if (local.z &gt; 0f) Debug.Log("Enemy is in front");
+if (local.x &lt; 0f) Debug.Log("Enemy is to the left");
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>Unity stores only the <em>local</em> values. World values are calculated from the parent chain when you ask for them.</li>
+        <li>When you set <code>position</code>, Unity works backwards to figure out the right <code>localPosition</code>.</li>
+        <li>Moving a parent moves all its children with it, because their local values stay the same.</li>
+        <li>Changes show up immediately. If you set <code>position</code> twice in one frame, only the last value is drawn.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong><code>transform.position.x = 5;</code> doesn't compile.</strong> <code>position</code> returns a copy (Vector3 is a struct). Copy it, change it, assign it back:
+        <pre><code class="language-csharp">Vector3 p = transform.position;
+p.x = 5f;
+transform.position = p;
+</code></pre>
+      </li>
+      <li><strong>Doing math on <code>eulerAngles</code>.</strong> Unity may return 350 instead of -10, or flip values like (180, 0, 180). Keep your own angle variable and set <code>rotation = Quaternion.Euler(...)</code> from it.</li>
+      <li><strong>Moving a Rigidbody with the Transform.</strong> Use Rigidbody methods instead; see <a href="rigidbody.html">Rigidbody</a>.</li>
+      <li><strong>Non-uniform scale on parents</strong> (like 1, 3, 1) makes rotated children look skewed. Scale the child mesh instead of the parent.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="vector3.html">Vector3</a></li>
+      <li><a href="quaternion.html">Quaternion</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/Transform.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

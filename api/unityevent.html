@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UnityEvent | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="api/unityevent.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; API Reference &rsaquo; UnityEvent</div>
+    <div class="infobox">
+      <div class="infobox-title">UnityEvent</div>
+      <table>
+        <tr><th>Type</th><td>Class</td></tr>
+        <tr><th>Namespace</th><td><code>UnityEngine.Events</code></td></tr>
+        <tr><th>Variants</th><td><code>UnityEvent&lt;T0&gt;</code> up to <code>UnityEvent&lt;T0, T1, T2, T3&gt;</code></td></tr>
+        <tr><th>Seen in</th><td>Button "On Click ()", Slider "On Value Changed"</td></tr>
+      </table>
+    </div>
+    <h1>UnityEvent</h1>
+    <p class="summary">A UnityEvent is a list of methods to call when something happens. The special part is that you can fill that list <strong>in the Inspector</strong> by dragging objects and picking methods from a dropdown, the same way a UI Button's "On Click" works. You don't need code to connect them.</p>
+    <div class="analogy"><p>A doorbell. The button (your script) doesn't know or care what the bell is wired to. It could be a chime, a light, or a message to your phone. It just rings (<code>Invoke()</code>). Whoever installs it (you, in the Inspector) decides what's connected. This means you can reuse the same button in many places and connect it to different things each time.</p></div>
+
+    <h2>Methods</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+      <tr><td><code>Invoke()</code></td><td><code>void</code></td><td>Calls every connected method (Inspector ones first, then code ones). For <code>UnityEvent&lt;T&gt;</code>: <code>Invoke(value)</code>.</td></tr>
+      <tr><td><code>AddListener(UnityAction call)</code></td><td><code>void</code></td><td>Connect a method from code.</td></tr>
+      <tr><td><code>RemoveListener(UnityAction call)</code></td><td><code>void</code></td><td>Disconnect a method added with <code>AddListener</code>.</td></tr>
+      <tr><td><code>RemoveAllListeners()</code></td><td><code>void</code></td><td>Removes all code-added listeners. Does <em>not</em> remove the ones set in the Inspector.</td></tr>
+      <tr><td><code>GetPersistentEventCount()</code></td><td><code>int</code></td><td>How many listeners were set up in the Inspector.</td></tr>
+    </table>
+    </div>
+
+    <h2>What the Inspector can call</h2>
+    <p>In the dropdown, Unity lists public methods and property setters of every component on the object you dragged in, as long as they take <strong>zero or one</strong> parameter of a simple type (<code>int</code>, <code>float</code>, <code>string</code>, <code>bool</code>, or a Unity <code>Object</code> type).</p>
+    <ul>
+      <li><strong>Static parameters:</strong> you type a fixed value in the Inspector, e.g. always call <code>SetActive(true)</code>.</li>
+      <li><strong>Dynamic parameters</strong> (only for <code>UnityEvent&lt;T&gt;</code>): the value passed to <code>Invoke(value)</code> is forwarded. They appear at the top of the dropdown under "Dynamic float" (etc.).</li>
+    </ul>
+
+    <h2>Code Samples</h2>
+    <h3>A reusable pressure plate</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+using UnityEngine.Events;
+
+public class PressurePlate : MonoBehaviour
+{
+    [SerializeField] private UnityEvent onPressed;
+    [SerializeField] private UnityEvent onReleased;
+
+    void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Player")) onPressed.Invoke();
+    }
+
+    void OnTriggerExit(Collider other)
+    {
+        if (other.CompareTag("Player")) onReleased.Invoke();
+    }
+}
+</code></pre>
+    <p>In the Inspector, click <strong>+</strong> under "On Pressed", drag in a door, and choose <code>Door &amp;gt; Open()</code>. Add another entry for a light: <code>GameObject &amp;gt; SetActive (bool)</code> with the box ticked.</p>
+
+    <h3>An event that passes a value</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+using UnityEngine.Events;
+
+public class Health : MonoBehaviour
+{
+    [SerializeField] private float maxHealth = 100f;
+    public UnityEvent&lt;float&gt; onHealthChanged; // passes health as a 0-1 fraction
+    public UnityEvent onDied;
+
+    private float health;
+
+    void Start()
+    {
+        health = maxHealth;
+        onHealthChanged.Invoke(1f);
+    }
+
+    public void TakeDamage(float amount)
+    {
+        if (health &lt;= 0f) return;
+        health = Mathf.Max(health - amount, 0f);
+        onHealthChanged.Invoke(health / maxHealth);
+        if (health == 0f) onDied.Invoke();
+    }
+}
+</code></pre>
+    <p>Now drag a UI Slider into "On Health Changed" and choose <strong>Dynamic float &gt; value</strong>. The bar updates by itself.</p>
+
+    <h3>Listening from code</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class DeathCounter : MonoBehaviour
+{
+    [SerializeField] private Health health;
+    private int deaths;
+
+    void OnEnable()  { health.onDied.AddListener(HandleDied); }
+    void OnDisable() { health.onDied.RemoveListener(HandleDied); }
+
+    private void HandleDied()
+    {
+        deaths++;
+        Debug.Log("Deaths: " + deaths);
+    }
+}
+</code></pre>
+
+    <h2>UnityEvent vs. C# event</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th></th><th>UnityEvent</th><th>C# <code>event Action</code></th></tr>
+      <tr><td>Connect in Inspector</td><td>Yes</td><td>No</td></tr>
+      <tr><td>Speed</td><td>Slower (fine for gameplay moments)</td><td>Faster</td></tr>
+      <tr><td>Best for</td><td>Designer-facing hooks: doors, buttons, triggers, "on death"</td><td>Code-to-code events, things fired very often</td></tr>
+      <tr><td>Safety</td><td>Anyone with access can call <code>Invoke()</code></td><td>Only the owning class can invoke</td></tr>
+    </table>
+    </div>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>The Inspector connections are saved with the scene/prefab as data (object reference + method name).</li>
+        <li>The first time you call <code>Invoke</code>, Unity looks up those methods by name and caches them.</li>
+        <li><code>Invoke</code> then calls each listener in order, one after another, on the same frame.</li>
+        <li>If a listener's object was destroyed, Unity skips it for Inspector connections. Code listeners on destroyed objects can throw errors, which is why you remove them in <code>OnDisable</code>.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>My method isn't in the dropdown.</strong> It must be <code>public</code>, return <code>void</code> (or be a property setter), and have 0 or 1 simple parameter.</li>
+      <li><strong>Renaming a method breaks the connection.</strong> The Inspector shows "Missing". Reconnect it. This is the main downside of Inspector wiring.</li>
+      <li><strong><code>RemoveListener</code> with a lambda does nothing.</strong> <code>AddListener(() =&gt; X())</code> and <code>RemoveListener(() =&gt; X())</code> are two different lambdas. Store the delegate in a variable, or use a named method.</li>
+      <li><strong>Invoking every frame.</strong> Fine occasionally, but for per-frame values, a C# event or direct reference is lighter.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../tutorials/unityevents.html">Tutorial: Using UnityEvents in a Game</a></li>
+      <li><a href="../tutorials/scriptableobjects.html">Tutorial: ScriptableObjects</a> (event channels)</li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/Events.UnityEvent.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Using UnityEvents in a Game | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="tutorials/unityevents.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Tutorials &rsaquo; Using UnityEvents in a Game</div>
+    <h1>Using UnityEvents in a Game</h1>
+    <p class="summary">In this tutorial you'll build a small dungeon room: a pressure plate that opens a door, a health system that drives a health bar and a game-over screen, and a key pickup. The scripts won't reference each other directly. They'll be connected with UnityEvents in the Inspector.</p>
+    <p><strong>You'll need:</strong> a scene with a floor, a player object tagged "Player" with a Collider and Rigidbody (or CharacterController), and a UI Canvas. Basic C# knowledge (classes, methods, fields).</p>
+
+    <h2>Why events?</h2>
+    <p>The obvious way to make a plate open a door is to give the plate a <code>Door</code> field and call <code>door.Open()</code>. That works, until you want the plate to also turn on a light, play a sound, or spawn enemies. Then you're editing the plate script for every new idea, and it has to know about every other script.</p>
+    <div class="analogy"><p>A radio station. The station (the plate) broadcasts "I was pressed!" and doesn't know who's listening. Anyone who tuned in (door, light, speaker) reacts in their own way. Add a new listener and the station never changes. Remove one and nothing breaks.</p></div>
+    <p>Scripts that don't know about each other are called <em>decoupled</em>. They're easier to reuse, test and change.</p>
+
+    <h2>Step 1: The pressure plate (event with no parameters)</h2>
+    <p>Create a flat cube, tick <strong>Is Trigger</strong> on its Box Collider, and add this script:</p>
+    <pre><code class="language-csharp">using UnityEngine;
+using UnityEngine.Events;
+
+public class PressurePlate : MonoBehaviour
+{
+    [Tooltip("Called when the player steps on.")]
+    [SerializeField] private UnityEvent onPressed;
+
+    [Tooltip("Called when the player steps off.")]
+    [SerializeField] private UnityEvent onReleased;
+
+    [SerializeField] private bool oneTimeOnly = false;
+    private bool used;
+
+    void OnTriggerEnter(Collider other)
+    {
+        if (!other.CompareTag("Player") || used) return;
+        onPressed.Invoke();
+        if (oneTimeOnly) used = true;
+    }
+
+    void OnTriggerExit(Collider other)
+    {
+        if (!other.CompareTag("Player") || oneTimeOnly) return;
+        onReleased.Invoke();
+    }
+}
+</code></pre>
+    <p>The plate knows nothing about doors. It just announces what happened.</p>
+
+    <h2>Step 2: The door (the listener)</h2>
+    <p>This uses a coroutine to slide the door. (With DOTween you could do it in one line; see the <a href="dotween.html">DOTween tutorial</a>.)</p>
+    <pre><code class="language-csharp">using System.Collections;
+using UnityEngine;
+
+public class Door : MonoBehaviour
+{
+    [SerializeField] private Vector3 openOffset = new Vector3(0f, 3f, 0f);
+    [SerializeField] private float duration = 0.5f;
+
+    private Vector3 closedPos;
+    private Coroutine moving;
+
+    void Awake() { closedPos = transform.position; }
+
+    // Public + void + no parameters = shows up in the UnityEvent dropdown.
+    public void Open()  { MoveTo(closedPos + openOffset); }
+    public void Close() { MoveTo(closedPos); }
+
+    private void MoveTo(Vector3 target)
+    {
+        if (moving != null) StopCoroutine(moving);
+        moving = StartCoroutine(Slide(target));
+    }
+
+    private IEnumerator Slide(Vector3 target)
+    {
+        Vector3 start = transform.position;
+        for (float t = 0f; t &lt; 1f; t += Time.deltaTime / duration)
+        {
+            transform.position = Vector3.Lerp(start, target, t);
+            yield return null;
+        }
+        transform.position = target;
+    }
+}
+</code></pre>
+
+    <h2>Step 3: Connect them in the Inspector</h2>
+    <ol>
+      <li>Select the pressure plate. You'll see "On Pressed ()" and "On Released ()" boxes, like a Button's "On Click ()".</li>
+      <li>Under <strong>On Pressed</strong>, click <strong>+</strong>. Drag the door GameObject into the empty object slot.</li>
+      <li>In the function dropdown, choose <strong>Door &gt; Open ()</strong>.</li>
+      <li>Under <strong>On Released</strong>, do the same with <strong>Door &gt; Close ()</strong>.</li>
+      <li>Press Play and walk onto the plate.</li>
+    </ol>
+    <p>Now add more reactions <em>without writing code</em>: click <strong>+</strong> again under On Pressed, drag in a Light object and pick <strong>GameObject &gt; SetActive (bool)</strong> with the box ticked. Drag in an AudioSource and pick <strong>AudioSource &gt; Play ()</strong>.</p>
+
+    <div class="runtime">
+      <p><strong>What happens at runtime</strong></p>
+      <ol>
+        <li>The player enters the trigger. Unity calls <code>OnTriggerEnter</code> on the plate.</li>
+        <li><code>onPressed.Invoke()</code> goes through its list: <code>door.Open()</code>, then <code>light.SetActive(true)</code>, then <code>audio.Play()</code>, in the order shown in the Inspector.</li>
+        <li>All of this happens during the same physics step, before the next <code>Update</code>.</li>
+      </ol>
+    </div>
+
+    <h2>Step 4: Health with a value (UnityEvent&lt;T&gt;)</h2>
+    <p>Events can carry data. Here, health sends out its current fraction (0-1) whenever it changes, so a health bar can listen.</p>
+    <pre><code class="language-csharp">using UnityEngine;
+using UnityEngine.Events;
+
+public class Health : MonoBehaviour
+{
+    [SerializeField] private float maxHealth = 100f;
+
+    [Header("Events")]
+    public UnityEvent&lt;float&gt; onHealthChanged; // sends health / maxHealth
+    public UnityEvent&lt;float&gt; onDamaged;       // sends the damage amount
+    public UnityEvent onDied;
+
+    private float current;
+    public bool IsDead =&gt; current &lt;= 0f;
+
+    void Start()
+    {
+        current = maxHealth;
+        onHealthChanged.Invoke(1f);
+    }
+
+    public void TakeDamage(float amount)
+    {
+        if (IsDead || amount &lt;= 0f) return;
+
+        current = Mathf.Max(current - amount, 0f);
+        onDamaged.Invoke(amount);
+        onHealthChanged.Invoke(current / maxHealth);
+
+        if (IsDead) onDied.Invoke();
+    }
+
+    public void Heal(float amount)
+    {
+        if (IsDead) return;
+        current = Mathf.Min(current + amount, maxHealth);
+        onHealthChanged.Invoke(current / maxHealth);
+    }
+}
+</code></pre>
+    <p>Add this to the player. Then create a UI Slider (<strong>GameObject &gt; UI &gt; Slider</strong>), set its Min to 0 and Max to 1, and untick <strong>Interactable</strong>.</p>
+    <p>On the player's Health component, under <strong>On Health Changed (Single)</strong>, click <strong>+</strong>, drag in the Slider, and pick <strong>Slider &gt; Dynamic float &gt; value</strong>.</p>
+    <div class="note"><strong>Dynamic vs. Static</strong>"Dynamic float" means "use the value passed to <code>Invoke()</code>". The entries further down the list ("Static Parameters") ignore it and use a value you type in the Inspector. Pick Dynamic here so the bar follows the real health. ("Single" is the .NET name for <code>float</code>.)</div>
+
+    <h2>Step 5: A game-over screen</h2>
+    <pre><code class="language-csharp">using UnityEngine;
+using UnityEngine.SceneManagement;
+
+public class GameOverScreen : MonoBehaviour
+{
+    [SerializeField] private GameObject panel;
+
+    void Awake() { panel.SetActive(false); }
+
+    public void Show()
+    {
+        panel.SetActive(true);
+        Time.timeScale = 0f;
+    }
+
+    public void Restart() // hook this to the panel's "Retry" Button OnClick
+    {
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+}
+</code></pre>
+    <p>Connect <strong>Health &gt; On Died</strong> to <strong>GameOverScreen &gt; Show ()</strong>. Also add <strong>PlayerMovement &gt; enabled</strong> (a bool property, untick the box) so the player can't move after dying.</p>
+
+    <h2>Step 6: Something that deals damage</h2>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class Spikes : MonoBehaviour
+{
+    [SerializeField] private float damage = 25f;
+
+    void OnTriggerEnter(Collider other)
+    {
+        if (other.TryGetComponent(out Health health))
+        {
+            health.TakeDamage(damage);
+        }
+    }
+}
+</code></pre>
+    <p>Notice <code>Spikes</code> only knows about <code>Health</code>. It has no idea there's a health bar, a game-over screen or a hurt sound. You can add all of those later by adding listeners in the Inspector.</p>
+
+    <h2>Step 7: Listening from code</h2>
+    <p>Sometimes a script should always react, and you don't want to rely on someone wiring it in the Inspector. Use <code>AddListener</code>, and <strong>always</strong> pair it with <code>RemoveListener</code>.</p>
+    <pre><code class="language-csharp">using UnityEngine;
+
+[RequireComponent(typeof(Health))]
+public class HurtFlash : MonoBehaviour
+{
+    [SerializeField] private Renderer rend;
+    private Health health;
+
+    void Awake() { health = GetComponent&lt;Health&gt;(); }
+
+    void OnEnable()  { health.onDamaged.AddListener(Flash); }
+    void OnDisable() { health.onDamaged.RemoveListener(Flash); }
+
+    private void Flash(float amount)
+    {
+        rend.material.color = Color.red;
+        CancelInvoke(nameof(ResetColor));
+        Invoke(nameof(ResetColor), 0.1f);
+    }
+
+    private void ResetColor() { rend.material.color = Color.white; }
+}
+</code></pre>
+
+    <h2>Bonus: a key and a locked door</h2>
+    <p>The same <code>PressurePlate</code> idea works for pickups. This one makes a reusable "interactable" that fires an event when the player presses E nearby:</p>
+    <pre><code class="language-csharp">using UnityEngine;
+using UnityEngine.Events;
+
+public class Interactable : MonoBehaviour
+{
+    [SerializeField] private UnityEvent onInteract;
+    private bool playerInRange;
+
+    void OnTriggerEnter(Collider other) { if (other.CompareTag("Player")) playerInRange = true; }
+    void OnTriggerExit(Collider other)  { if (other.CompareTag("Player")) playerInRange = false; }
+
+    void Update()
+    {
+        if (playerInRange &amp;&amp; Input.GetKeyDown(KeyCode.E))
+        {
+            onInteract.Invoke();
+        }
+    }
+}
+</code></pre>
+    <p>Put it on a key and connect <strong>On Interact</strong> to: <code>Door.Open()</code> on the locked door, and <code>GameObject.SetActive(false)</code> on the key itself. On a lever: <code>Door.Open()</code> plus <code>Animator.SetTrigger("Pull")</code>. On a chest: spawn loot. One script, many uses.</p>
+
+    <h2>When <em>not</em> to use UnityEvents</h2>
+    <ul>
+      <li><strong>Things that fire every frame</strong> (e.g. "position changed"). UnityEvents are slower than C# events or a direct call.</li>
+      <li><strong>Core systems that must always be connected.</strong> An Inspector wire can be forgotten or broken by renaming a method. Connect those in code, or use a C# <code>event</code>.</li>
+      <li><strong>Long chains</strong> where event A triggers B triggers C. It becomes hard to follow what causes what. Keep chains short.</li>
+    </ul>
+
+    <h2>Summary</h2>
+    <ul>
+      <li>Declare <code>[SerializeField] private UnityEvent onSomething;</code> and call <code>onSomething.Invoke()</code>.</li>
+      <li>Use <code>UnityEvent&lt;T&gt;</code> to send a value; pick the "Dynamic" option in the Inspector to receive it.</li>
+      <li>Listener methods must be <code>public</code> with 0 or 1 simple parameter.</li>
+      <li>From code: <code>AddListener</code> in <code>OnEnable</code>, <code>RemoveListener</code> in <code>OnDisable</code>.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../api/unityevent.html">UnityEvent reference</a></li>
+      <li><a href="scriptableobjects.html">ScriptableObjects in a Game</a> (event channels across scenes)</li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/Events.UnityEvent.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

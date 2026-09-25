@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Animator | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="api/animator.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; API Reference &rsaquo; Animator</div>
+    <div class="infobox">
+      <div class="infobox-title">Animator</div>
+      <table>
+        <tr><th>Type</th><td>Class (Component)</td></tr>
+        <tr><th>Namespace</th><td><code>UnityEngine</code></td></tr>
+        <tr><th>Inherits</th><td>Behaviour &gt; Component &gt; <a href="object.html">Object</a></td></tr>
+        <tr><th>Needs</th><td>An Animator Controller asset</td></tr>
+      </table>
+    </div>
+    <h1>Animator</h1>
+    <p class="summary">The Animator component plays animations using an <strong>Animator Controller</strong>: a flowchart of animation states (Idle, Run, Jump) and the arrows between them. Your code doesn't usually play animations directly. It sets <strong>parameters</strong>, and the flowchart decides which animation to play.</p>
+    <div class="analogy"><p>The Animator Controller is a train track map. Each state is a station (Idle, Walk, Run) and each transition is a track switch with a rule, like "switch to Run when Speed is over 3". Your script doesn't drive the train. It just updates the signal values (<code>SetFloat("Speed", 5)</code>), and the train follows the track on its own.</p></div>
+
+    <h2>Parameter types</h2>
+    <p>Create parameters in the Animator window's <strong>Parameters</strong> tab, then use them as conditions on transitions.</p>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Type</th><th>Set with</th><th>Use for</th></tr>
+      <tr><td>Float</td><td><code>SetFloat</code></td><td>Speed, blend trees (walk → run)</td></tr>
+      <tr><td>Int</td><td><code>SetInteger</code></td><td>Weapon type, combo step</td></tr>
+      <tr><td>Bool</td><td><code>SetBool</code></td><td>States that last: IsGrounded, IsCrouching</td></tr>
+      <tr><td>Trigger</td><td><code>SetTrigger</code></td><td>One-off events: Jump, Attack, Hit. Resets itself after being used.</td></tr>
+    </table>
+    </div>
+
+    <h2>Properties</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+      <tr><td><code>speed</code></td><td><code>float</code></td><td>Playback speed multiplier. 1 = normal.</td></tr>
+      <tr><td><code>runtimeAnimatorController</code></td><td><code>RuntimeAnimatorController</code></td><td>The controller in use. Can be swapped at runtime.</td></tr>
+      <tr><td><code>applyRootMotion</code></td><td><code>bool</code></td><td>If true, the animation itself moves the character (e.g. walking clips that move forward).</td></tr>
+      <tr><td><code>updateMode</code></td><td><code>AnimatorUpdateMode</code></td><td>Normal, Fixed (in sync with physics), or Unscaled Time (plays when paused).</td></tr>
+    </table>
+    </div>
+
+    <h2>Methods</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+      <tr><td><code>SetFloat(string name, float value)</code></td><td><code>void</code></td><td>Set a float parameter.</td></tr>
+      <tr><td><code>SetBool(string name, bool value)</code></td><td><code>void</code></td><td>Set a bool parameter.</td></tr>
+      <tr><td><code>SetInteger(string name, int value)</code></td><td><code>void</code></td><td>Set an int parameter.</td></tr>
+      <tr><td><code>SetTrigger(string name)</code></td><td><code>void</code></td><td>Fire a trigger.</td></tr>
+      <tr><td><code>ResetTrigger(string name)</code></td><td><code>void</code></td><td>Cancel a trigger that hasn't been used yet.</td></tr>
+      <tr><td><code>GetFloat</code>, <code>GetBool</code>, <code>GetInteger</code></td><td>varies</td><td>Read parameters.</td></tr>
+      <tr><td><code>Play(string stateName)</code></td><td><code>void</code></td><td>Jump straight to a state, skipping transitions.</td></tr>
+      <tr><td><code>CrossFade(string stateName, float duration)</code></td><td><code>void</code></td><td>Blend smoothly into a state over <code>duration</code> (normalized time).</td></tr>
+      <tr><td><code>GetCurrentAnimatorStateInfo(int layer)</code></td><td><code>AnimatorStateInfo</code></td><td>Info about the playing state: <code>IsName("Attack")</code>, <code>normalizedTime</code> (0 = start, 1 = end of first loop).</td></tr>
+      <tr><td><code>Animator.StringToHash(string name)</code></td><td><code>int</code></td><td>Static. Turns a name into an ID. Faster than passing strings every frame.</td></tr>
+    </table>
+    </div>
+
+    <h2>Code Samples</h2>
+    <h3>Driving a character's animations</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class PlayerAnimation : MonoBehaviour
+{
+    // Hash once, reuse forever (faster than strings, and typos show up in one place).
+    private static readonly int SpeedHash    = Animator.StringToHash("Speed");
+    private static readonly int GroundedHash = Animator.StringToHash("IsGrounded");
+    private static readonly int JumpHash     = Animator.StringToHash("Jump");
+
+    [SerializeField] private Animator animator;
+    [SerializeField] private Rigidbody rb;
+
+    void Update()
+    {
+        Vector3 flatVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
+        animator.SetFloat(SpeedHash, flatVelocity.magnitude);
+        animator.SetBool(GroundedHash, IsGrounded());
+
+        if (Input.GetButtonDown("Jump"))
+        {
+            animator.SetTrigger(JumpHash);
+        }
+    }
+
+    bool IsGrounded() =&gt; Physics.Raycast(transform.position + Vector3.up * 0.1f, Vector3.down, 0.2f);
+}
+</code></pre>
+    <p>In the Animator window, you'd then add transitions such as: Idle → Run when <code>Speed &gt; 0.1</code>, Run → Idle when <code>Speed &lt; 0.1</code>, Any State → Jump when <code>Jump</code> is triggered.</p>
+
+    <h3>Animation Events: calling code from an animation</h3>
+    <p>In the Animation window, you can add an <em>event</em> at a specific frame (e.g. the frame the sword connects). Unity then calls a public method with that name on a script on the same GameObject as the Animator:</p>
+    <pre><code class="language-csharp">// Called by an Animation Event on the "Attack" clip.
+public void OnSwordHit()
+{
+    Debug.Log("Deal damage now");
+}
+</code></pre>
+
+    <h3>Wait until an animation finishes</h3>
+    <pre><code class="language-csharp">IEnumerator PlayDeath()
+{
+    animator.Play("Death");
+    yield return null; // let the Animator switch state first
+    while (animator.GetCurrentAnimatorStateInfo(0).normalizedTime &lt; 1f)
+        yield return null;
+    Destroy(gameObject);
+}
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>Your <code>Update</code> sets parameters. Nothing visible happens yet.</li>
+        <li>After all <code>Update</code> calls, the Animator evaluates the current state's transitions. If a condition is met, it starts blending to the next state.</li>
+        <li>It samples the animation clips and writes the resulting positions/rotations into the bone Transforms.</li>
+        <li><code>LateUpdate</code> runs after this, so it's where you'd override a bone (e.g. make the head look at something).</li>
+        <li>A trigger stays "set" until a transition uses it. If nothing uses it, it stays on and fires later when you don't expect it. Use <code>ResetTrigger</code> if needed.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>"Parameter 'speed' does not exist".</strong> Names are case-sensitive and must match the Parameters tab exactly.</li>
+      <li><strong>Animations feel delayed.</strong> Select the transition and untick <em>Has Exit Time</em> (otherwise it waits for the clip to finish) and lower <em>Transition Duration</em>.</li>
+      <li><strong>Calling <code>Play</code> every frame.</strong> Restarts the animation constantly. Use parameters and transitions instead.</li>
+      <li><strong>The character slides or doesn't move.</strong> Check <code>applyRootMotion</code>: on means the animation moves the object, off means your script does.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../tutorials/dotween.html">Tutorial: Animating with DOTween</a> (for simple code-driven motion: UI, pickups, doors)</li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/Animator.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

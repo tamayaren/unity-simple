@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ScriptableObject | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="api/scriptableobject.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; API Reference &rsaquo; ScriptableObject</div>
+    <div class="infobox">
+      <div class="infobox-title">ScriptableObject</div>
+      <table>
+        <tr><th>Type</th><td>Class</td></tr>
+        <tr><th>Namespace</th><td><code>UnityEngine</code></td></tr>
+        <tr><th>Inherits</th><td><a href="object.html">Object</a></td></tr>
+        <tr><th>Lives in</th><td>The Project window, as an <code>.asset</code> file</td></tr>
+      </table>
+    </div>
+    <h1>ScriptableObject</h1>
+    <p class="summary">A ScriptableObject is a script that stores data as an <em>asset file</em> instead of living on a GameObject. Use it for things like weapon stats, item definitions, enemy types and game settings that many objects share.</p>
+    <div class="analogy"><p>A MonoBehaviour is a worker standing in the scene doing a job. A ScriptableObject is a <strong>recipe card</strong> in a filing cabinet. It doesn't do anything by itself, but any number of workers can read the same card. Change "Sword damage: 10" to 15 on the card, and every sword in the game uses 15. You don't have to visit each sword one by one.</p></div>
+
+    <h2>Attributes</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Attribute</th><th>Description</th></tr>
+      <tr><td><code>[CreateAssetMenu(fileName = "...", menuName = "...")]</code></td><td>Put above the class. Adds an entry to the Project window's <strong>Create</strong> menu so you can make new asset files of this type.</td></tr>
+    </table>
+    </div>
+
+    <h2>Static Methods</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+      <tr><td><code>ScriptableObject.CreateInstance&lt;T&gt;()</code></td><td><code>T</code></td><td>Creates one in memory from code (not saved as a file). Use instead of <code>new</code>.</td></tr>
+    </table>
+    </div>
+
+    <h2>Messages</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Message</th><th>When it's called</th></tr>
+      <tr><td><code>Awake()</code></td><td>When the instance is created (for assets: when first loaded).</td></tr>
+      <tr><td><code>OnEnable()</code></td><td>When the object is loaded. In the Editor, this also happens after every script recompile and when entering Play Mode.</td></tr>
+      <tr><td><code>OnDisable()</code></td><td>When it goes out of scope or before a recompile.</td></tr>
+      <tr><td><code>OnValidate()</code></td><td>Editor only: a value was changed in the Inspector.</td></tr>
+    </table>
+    </div>
+    <p>ScriptableObjects do <strong>not</strong> get <code>Update</code>, <code>Start</code>, collisions or coroutines. They aren't in a scene.</p>
+
+    <h2>Code Samples</h2>
+    <h3>1. Define the data</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+[CreateAssetMenu(fileName = "NewWeapon", menuName = "Game/Weapon Data")]
+public class WeaponData : ScriptableObject
+{
+    public string weaponName = "Sword";
+    public int damage = 10;
+    public float attackCooldown = 0.5f;
+    public Sprite icon;
+}
+</code></pre>
+    <h3>2. Create assets</h3>
+    <p>In the Project window: <strong>right-click &gt; Create &gt; Game &gt; Weapon Data</strong>. Make a few ("Sword", "Axe", "Dagger") and fill in their values in the Inspector.</p>
+    <h3>3. Use it from a MonoBehaviour</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class Weapon : MonoBehaviour
+{
+    [SerializeField] private WeaponData data; // drag an asset in here
+    private float nextAttackTime;
+
+    public void TryAttack(Health target)
+    {
+        if (Time.time &lt; nextAttackTime) return;
+        target.TakeDamage(data.damage);
+        nextAttackTime = Time.time + data.attackCooldown;
+    }
+}
+</code></pre>
+    <p>For more patterns (event channels, shared variables, runtime lists), see the <a href="../tutorials/scriptableobjects.html">ScriptableObjects in a Game</a> tutorial.</p>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>When a scene loads and a component references a ScriptableObject asset, Unity loads that asset <em>once</em> into memory.</li>
+        <li>Every component that references the same asset gets the <em>same</em> object. 100 enemies with the same <code>EnemyData</code> share one copy, which saves memory compared to 100 copies of the same numbers.</li>
+        <li><strong>In the Editor:</strong> if your code changes a field during Play Mode, the change is saved to the asset file and stays after you stop playing.</li>
+        <li><strong>In a build:</strong> changes last only until the game closes. They are never saved to disk.</li>
+      </ol>
+    </div>
+    <div class="warning"><strong>Not a save system</strong>Because of the two points above, don't use ScriptableObjects to save player progress. Use <a href="playerprefs.html">PlayerPrefs</a> or write a file (e.g. JSON with <code>JsonUtility</code>).</div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Changing shared data at runtime by accident.</strong> <code>data.damage += 5</code> for a power-up changes it for <em>every</em> weapon using that asset (and permanently in the Editor). Copy the value into a normal field first, or <code>Instantiate(data)</code> to get a private copy.</li>
+      <li><strong>Using <code>new WeaponData()</code>.</strong> Use <code>ScriptableObject.CreateInstance&lt;WeaponData&gt;()</code>.</li>
+      <li><strong>File/class name mismatch.</strong> Just like MonoBehaviours, <code>WeaponData</code> must be in <code>WeaponData.cs</code>.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../tutorials/scriptableobjects.html">Tutorial: ScriptableObjects in a Game</a></li>
+      <li><a href="monobehaviour.html">MonoBehaviour</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/ScriptableObject.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

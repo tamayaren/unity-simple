@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Game Feel with DOTween | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="tutorials/dotween.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Tutorials &rsaquo; Game Feel with DOTween</div>
+    <h1>Game Feel with DOTween</h1>
+    <p class="summary">"Game feel" (or "juice") is the small motion that makes a game feel alive: coins that pop, buttons that squish, screens that shake. In this tutorial you'll add six of these to a game using DOTween, each in a few lines of code.</p>
+    <p><strong>You'll need:</strong> DOTween installed and set up (see <a href="../api/dotween.html#setup">DOTween setup</a>), and <code>using DG.Tweening;</code> at the top of each script.</p>
+
+    <div class="analogy"><p>A tween is like a moving walkway at an airport. You tell it where to start, where to end and how long the trip takes, and it carries the value along smoothly. <strong>Easing</strong> is how the walkway speeds up and slows down. <code>Linear</code> is a constant speed; <code>OutBack</code> goes a little past the end and settles back, like a spring.</p></div>
+
+    <h2>1. A floating, spinning pickup</h2>
+    <p>Two tweens that loop forever. No <code>Update</code> method needed.</p>
+    <pre><code class="language-csharp">using DG.Tweening;
+using UnityEngine;
+
+public class PickupIdle : MonoBehaviour
+{
+    void Start()
+    {
+        // Bob up 0.3 units and back down, forever.
+        transform.DOMoveY(0.3f, 1f)
+            .SetRelative()                // "up by 0.3", not "to y = 0.3"
+            .SetEase(Ease.InOutSine)
+            .SetLoops(-1, LoopType.Yoyo)  // -1 = infinite, Yoyo = back and forth
+            .SetLink(gameObject);         // auto-kill when this object is destroyed
+
+        // Spin 360 degrees every 2 seconds, forever.
+        transform.DORotate(new Vector3(0f, 360f, 0f), 2f, RotateMode.FastBeyond360)
+            .SetRelative()
+            .SetEase(Ease.Linear)
+            .SetLoops(-1, LoopType.Restart)
+            .SetLink(gameObject);
+    }
+}
+</code></pre>
+    <div class="runtime">
+      <p><strong>What happens at runtime</strong></p>
+      <ol>
+        <li><code>DOMoveY</code> creates a tween and registers it with DOTween's manager. The settings chained after it are applied before it starts on the next frame.</li>
+        <li>Each frame, the manager works out how far through the 1-second trip we are, runs it through the ease curve, and sets <code>transform.position.y</code>.</li>
+        <li>At the end, Yoyo reverses the direction and it starts again. It never completes, so it never gets killed, until the object is destroyed and <code>SetLink</code> kills it.</li>
+      </ol>
+    </div>
+
+    <h2>2. Coin collect: pop, then fly to the UI counter</h2>
+    <p>A <code>Sequence</code> runs tweens one after another, like a short timeline.</p>
+    <pre><code class="language-csharp">using DG.Tweening;
+using UnityEngine;
+
+public class Coin : MonoBehaviour
+{
+    [SerializeField] private int value = 1;
+    private bool collected;
+
+    void OnTriggerEnter(Collider other)
+    {
+        if (collected || !other.CompareTag("Player")) return;
+        collected = true;
+        GetComponent&lt;Collider&gt;().enabled = false;
+        transform.DOKill(); // stop the idle bobbing from part 1
+
+        Sequence s = DOTween.Sequence();
+        s.Append(transform.DOScale(1.5f, 0.1f))                    // quick grow
+         .Append(transform.DOMoveY(1.5f, 0.3f).SetRelative().SetEase(Ease.OutQuad)) // jump up
+         .Join(transform.DOScale(0f, 0.3f).SetEase(Ease.InBack))  // shrink at the same time
+         .OnComplete(() =&gt;
+         {
+             CoinCounter.Instance.Add(value);
+             Destroy(gameObject);
+         })
+         .SetLink(gameObject);
+    }
+}
+</code></pre>
+    <p><code>Append</code> = "after the previous one". <code>Join</code> = "at the same time as the previous one". So the timeline is: grow (0.1 s), then jump up <em>and</em> shrink together (0.3 s), then add the coin and destroy.</p>
+
+    <h2>3. A counter that punches when it changes</h2>
+    <pre><code class="language-csharp">using DG.Tweening;
+using TMPro;
+using UnityEngine;
+
+public class CoinCounter : MonoBehaviour
+{
+    public static CoinCounter Instance { get; private set; }
+
+    [SerializeField] private TMP_Text label;
+    private int coins;
+    private float shown; // the number currently displayed (animates toward coins)
+
+    void Awake() { Instance = this; }
+
+    public void Add(int amount)
+    {
+        coins += amount;
+
+        // Count the displayed number up smoothly.
+        DOTween.To(() =&gt; shown, x =&gt; shown = x, coins, 0.4f)
+               .OnUpdate(() =&gt; label.text = Mathf.RoundToInt(shown).ToString());
+
+        // Punch the scale. Complete() any previous punch first so they don't stack.
+        label.transform.DOComplete();
+        label.transform.DOPunchScale(Vector3.one * 0.3f, 0.25f, 8, 0.5f);
+    }
+}
+</code></pre>
+    <div class="tip"><strong>Why DOComplete first?</strong>Collect five coins quickly and you'd start five punch tweens on the same scale. They fight, and the label can end up permanently too big. <code>DOComplete()</code> jumps any running tween on that target to its end (the original scale for a punch) before starting the new one.</div>
+
+    <h2>4. UI buttons that squish</h2>
+    <pre><code class="language-csharp">using DG.Tweening;
+using UnityEngine;
+using UnityEngine.EventSystems;
+
+// Add to any UI Button.
+public class ButtonJuice : MonoBehaviour,
+    IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler
+{
+    [SerializeField] private float hoverScale = 1.08f;
+    [SerializeField] private float pressScale = 0.92f;
+
+    public void OnPointerEnter(PointerEventData e) =&gt; ScaleTo(hoverScale);
+    public void OnPointerExit(PointerEventData e)  =&gt; ScaleTo(1f);
+    public void OnPointerDown(PointerEventData e)  =&gt; ScaleTo(pressScale);
+    public void OnPointerUp(PointerEventData e)    =&gt; ScaleTo(hoverScale);
+
+    private void ScaleTo(float s)
+    {
+        transform.DOKill();
+        transform.DOScale(s, 0.12f)
+                 .SetEase(Ease.OutBack)
+                 .SetUpdate(true); // keep working in the pause menu (timeScale = 0)
+    }
+
+    void OnDisable() { transform.DOKill(); transform.localScale = Vector3.one; }
+}
+</code></pre>
+    <p>The <code>IPointer...Handler</code> interfaces are part of Unity's EventSystem: implement them on a UI object and Unity calls those methods on hover and click.</p>
+
+    <h2>5. A menu panel that slides and fades in</h2>
+    <p>Give the panel a <strong>CanvasGroup</strong> component (fades the panel and all its children together).</p>
+    <pre><code class="language-csharp">using DG.Tweening;
+using UnityEngine;
+
+[RequireComponent(typeof(CanvasGroup))]
+public class SlidePanel : MonoBehaviour
+{
+    [SerializeField] private float offsetY = -60f;
+    [SerializeField] private float duration = 0.3f;
+
+    private RectTransform rect;
+    private CanvasGroup group;
+    private Vector2 shownPos;
+    private Sequence anim;
+
+    void Awake()
+    {
+        rect = (RectTransform)transform;
+        group = GetComponent&lt;CanvasGroup&gt;();
+        shownPos = rect.anchoredPosition;
+
+        // Build the animation once and reuse it: forward = show, backwards = hide.
+        anim = DOTween.Sequence()
+            .Append(rect.DOAnchorPos(shownPos + new Vector2(0f, offsetY), duration).From().SetEase(Ease.OutCubic))
+            .Join(group.DOFade(0f, duration).From())
+            .SetAutoKill(false) // keep it so we can replay it
+            .SetUpdate(true)
+            .SetLink(gameObject)
+            .Pause();
+
+        group.alpha = 0f;
+        group.interactable = group.blocksRaycasts = false;
+    }
+
+    public void Show()
+    {
+        group.interactable = group.blocksRaycasts = true;
+        anim.PlayForward();
+    }
+
+    public void Hide()
+    {
+        group.interactable = group.blocksRaycasts = false;
+        anim.PlayBackwards();
+    }
+}
+</code></pre>
+    <p><code>From()</code> flips a tween around: instead of going <em>to</em> the value, it starts <em>at</em> the value and returns to where the object currently is. So "From 60 below and from alpha 0" means "slide up into place while fading in".</p>
+
+    <h2>6. Hit feedback: flash, knockback, camera shake</h2>
+    <pre><code class="language-csharp">using DG.Tweening;
+using UnityEngine;
+
+public class HitFeedback : MonoBehaviour
+{
+    [SerializeField] private Renderer rend;
+    [SerializeField] private Color flashColor = Color.white;
+    private Color baseColor;
+
+    void Awake() { baseColor = rend.material.color; }
+
+    // Call this when the object takes damage, e.g. from Health.onDamaged.
+    public void Play(Vector3 hitDirection)
+    {
+        // 1. Flash white, then back.
+        rend.material.DOKill();
+        rend.material.color = flashColor;
+        rend.material.DOColor(baseColor, 0.15f);
+
+        // 2. Small knockback, then return.
+        transform.DOComplete();
+        transform.DOPunchPosition(hitDirection.normalized * 0.3f, 0.2f, 5, 0.5f);
+
+        // 3. Shake the camera.
+        Camera.main.transform.DOComplete();
+        Camera.main.transform.DOShakePosition(0.2f, 0.15f, 20);
+    }
+}
+</code></pre>
+    <div class="warning"><strong>Shaking a camera that follows the player</strong>If a script sets the camera's position every <code>LateUpdate</code>, it will overwrite the shake. Put the camera inside an empty parent object: the follow script moves the parent, and the shake moves the camera's <em>local</em> position (<code>DOShakePosition</code> on a child works in local space relative to the parent).</div>
+
+    <h2>Bonus: waiting for a tween in a coroutine</h2>
+    <pre><code class="language-csharp">IEnumerator OpenChest()
+{
+    yield return lid.DOLocalRotate(new Vector3(-110f, 0f, 0f), 0.6f)
+                    .SetEase(Ease.OutBack)
+                    .WaitForCompletion();
+    SpawnLoot(); // runs after the lid is fully open
+}
+</code></pre>
+
+    <h2>Good habits with DOTween</h2>
+    <ul>
+      <li><strong>Always <code>SetLink(gameObject)</code></strong> (or <code>DOKill()</code> in <code>OnDestroy</code>) for tweens on objects that can be destroyed.</li>
+      <li><strong>Kill or complete before restarting</strong> a tween on the same property.</li>
+      <li><strong><code>SetUpdate(true)</code></strong> for anything in menus that must animate while the game is paused.</li>
+      <li><strong>Don't create tweens in <code>Update</code>.</strong> Create them when something happens.</li>
+      <li><strong>Reuse tweens you play often</strong> with <code>SetAutoKill(false)</code> + <code>PlayForward/PlayBackwards/Restart</code>, like the panel above.</li>
+      <li><strong>Keep durations short.</strong> Most UI and feedback tweens feel best between 0.1 and 0.4 seconds.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../api/dotween.html">DOTween reference</a></li>
+      <li><a href="../api/animator.html">Animator</a> (for character animation, use the Animator; DOTween is for code-driven motion)</li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://dotween.demigiant.com/documentation.php">official DOTween documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

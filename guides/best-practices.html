@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Better Ways to Do Things | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="guides/best-practices.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Guides &rsaquo; Better Ways to Do Things</div>
+    <h1>Better Ways to Do Things</h1>
+    <p class="summary">Common beginner patterns that work at first but cause problems as your project grows, and the better alternatives. None of these are strict rules; they're habits that save you time later.</p>
+
+    <h2>1. Use [SerializeField] private instead of public</h2>
+    <pre><code class="language-csharp">// WORKS, BUT: any script anywhere can change speed, and you can't tell who did.
+public float speed = 5f;
+
+// BETTER: editable in the Inspector, protected from other scripts.
+[SerializeField] private float speed = 5f;
+
+// If others need to READ it, expose a read-only property.
+public float Speed =&gt; speed;
+</code></pre>
+    <div class="analogy"><p>A <code>public</code> field is a house with no front door: convenient, but anyone can walk in and move your furniture. <code>[SerializeField] private</code> plus a property is a house with a doorbell: people can ask for things, and you decide what they get.</p></div>
+
+    <h2>2. Stop using GameObject.Find</h2>
+    <p><code>GameObject.Find("Player")</code> breaks when someone renames the object, can't find inactive objects, and is slow.</p>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Situation</th><th>Better option</th></tr>
+      <tr><td>The object is in the same scene/prefab</td><td>A serialized field; drag it in the Inspector</td></tr>
+      <tr><td>The object is spawned at runtime</td><td>Whoever spawns it passes the reference: <code>enemy.Init(player)</code></td></tr>
+      <tr><td>Exactly one exists and many things need it</td><td>A simple singleton (see below) or a ScriptableObject reference</td></tr>
+      <tr><td>You need all objects of a type</td><td>Have them register themselves in a list (runtime set)</td></tr>
+    </table>
+    </div>
+
+    <h2>3. Singletons: useful, but keep them few</h2>
+    <p>A singleton is a class with exactly one instance that everyone can reach through a static property. Good for true "managers" like audio or saving.</p>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class AudioManager : MonoBehaviour
+{
+    public static AudioManager Instance { get; private set; }
+
+    void Awake()
+    {
+        if (Instance != null &amp;&amp; Instance != this)
+        {
+            Destroy(gameObject); // a copy already exists
+            return;
+        }
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+    }
+
+    public void PlaySfx(AudioClip clip) { /* ... */ }
+}
+
+// Anywhere:
+AudioManager.Instance.PlaySfx(jumpSound);
+</code></pre>
+    <p><strong>The catch:</strong> if twenty scripts call <code>GameManager.Instance</code>, all twenty depend on it. You can't test any of them without it, and changing it can break everything. Use singletons for a handful of global services, not as a way to avoid thinking about references.</p>
+
+    <h2>4. Use interfaces for "anything that can..."</h2>
+    <p>Your sword should damage enemies, crates and destructible walls. Checking for each class is fragile:</p>
+    <pre><code class="language-csharp">// FRAGILE: every new damageable thing means editing this code
+if (other.TryGetComponent(out Enemy e)) e.TakeDamage(10);
+else if (other.TryGetComponent(out Crate c)) c.Break();
+else if (other.TryGetComponent(out Wall w)) w.Crumble();
+</code></pre>
+    <pre><code class="language-csharp">// BETTER: define what "damageable" means once
+public interface IDamageable
+{
+    void TakeDamage(float amount);
+}
+
+public class Crate : MonoBehaviour, IDamageable
+{
+    public void TakeDamage(float amount) { /* break apart */ }
+}
+
+// The sword only knows about the interface
+if (other.TryGetComponent(out IDamageable target))
+{
+    target.TakeDamage(10);
+}
+</code></pre>
+    <div class="analogy"><p>An interface is a job title. The sword says "I need someone who can take damage" without caring whether it's a goblin, a barrel or a wall. Anything that signs the contract (<code>: IDamageable</code>) can do the job.</p></div>
+
+    <h2>5. Composition over giant scripts</h2>
+    <p>A 2000-line <code>Player.cs</code> that handles movement, health, inventory, sound and UI is hard to change. Split it into focused components: <code>PlayerMovement</code>, <code>Health</code>, <code>Inventory</code>, <code>PlayerAudio</code>. Now enemies can reuse <code>Health</code>, and a bug in the inventory can't break movement.</p>
+    <p>A good test: if you can't describe what a script does in one sentence without using "and", it's probably doing too much.</p>
+
+    <h2>6. Use an enum for states, not a pile of bools</h2>
+    <pre><code class="language-csharp">// CONFUSING: what does isAttacking &amp;&amp; isStunned &amp;&amp; !isGrounded mean?
+bool isIdle, isRunning, isAttacking, isStunned, isDead;
+
+// BETTER: exactly one state at a time
+public enum EnemyState { Idle, Chase, Attack, Stunned, Dead }
+private EnemyState state = EnemyState.Idle;
+
+void Update()
+{
+    switch (state)
+    {
+        case EnemyState.Idle:    UpdateIdle();   break;
+        case EnemyState.Chase:   UpdateChase();  break;
+        case EnemyState.Attack:  UpdateAttack(); break;
+        case EnemyState.Stunned: /* wait */      break;
+        case EnemyState.Dead:    return;
+    }
+}
+</code></pre>
+    <p>This is a simple <em>state machine</em>. It makes impossible combinations (dead <em>and</em> attacking) impossible to write.</p>
+
+    <h2>7. Put data in ScriptableObjects</h2>
+    <p>Weapon stats, enemy types, level settings and item definitions are data, not behavior. Putting them in <a href="../api/scriptableobject.html">ScriptableObject</a> assets means designers can balance the game without touching code or opening prefabs. See the <a href="../tutorials/scriptableobjects.html">ScriptableObjects tutorial</a>.</p>
+
+    <h2>8. No magic strings</h2>
+    <pre><code class="language-csharp">// RISKY: a typo compiles fine and silently does nothing
+Invoke("Respawnn", 2f);
+animator.SetTrigger("jump");
+PlayerPrefs.GetInt("Highscore");
+
+// SAFER
+Invoke(nameof(Respawn), 2f);                                  // compiler checks the name
+private static readonly int JumpId = Animator.StringToHash("Jump"); // one place to fix
+private const string HighScoreKey = "HighScore";
+</code></pre>
+
+    <h2>9. Make components hard to set up wrong</h2>
+    <pre><code class="language-csharp">using UnityEngine;
+
+[RequireComponent(typeof(Rigidbody))]      // Unity adds a Rigidbody automatically
+[DisallowMultipleComponent]                // can't add this script twice by accident
+public class Hoverboard : MonoBehaviour
+{
+    [Tooltip("Height above the ground, in meters.")]
+    [SerializeField, Range(0.1f, 3f)] private float hoverHeight = 1f;
+
+    [SerializeField] private Rigidbody rb;
+
+    // Editor only: runs when the component is added or Reset is clicked.
+    void Reset()
+    {
+        rb = GetComponent&lt;Rigidbody&gt;();
+    }
+
+    // Editor only: runs when a value changes in the Inspector.
+    void OnValidate()
+    {
+        if (rb == null) rb = GetComponent&lt;Rigidbody&gt;();
+    }
+}
+</code></pre>
+    <p><code>[Tooltip]</code>, <code>[Range]</code>, <code>[Header]</code> and <code>[Min]</code> turn the Inspector into documentation. Future-you (and teammates) will thank you.</p>
+
+    <h2>10. Don't use ?. or ?? on Unity objects</h2>
+    <pre><code class="language-csharp">// DANGEROUS: skips Unity's destroyed-object check
+target?.TakeDamage(5);
+var cam = myCamera ?? Camera.main;
+
+// SAFE
+if (target != null) target.TakeDamage(5);
+var cam = myCamera != null ? myCamera : Camera.main;
+</code></pre>
+    <p>Why: see "fake null" on the <a href="../api/object.html">Object</a> page. These operators are fine on normal C# objects, events and delegates.</p>
+
+    <h2>11. Subscribe in OnEnable, unsubscribe in OnDisable</h2>
+    <p>Any time you use <code>+=</code> on an event or <code>AddListener</code>, write the matching <code>-=</code> / <code>RemoveListener</code> in <code>OnDisable</code> straight away. Forgetting it causes errors on destroyed objects and "double" reactions after reloading a scene.</p>
+
+    <h2>12. Prefabs for everything that appears more than once</h2>
+    <p>If you've copy-pasted an object in the scene more than twice, make it a prefab. Fixing a bug in one place beats fixing it in 30 copies. Use <strong>Prefab Variants</strong> for "same but slightly different".</p>
+
+    <h2>13. Use version control</h2>
+    <p>Put your project in Git (or Unity Version Control). You'll be able to undo mistakes, try ideas safely and collaborate.</p>
+    <ul>
+      <li>Only commit <code>Assets/</code>, <code>Packages/</code> and <code>ProjectSettings/</code>. <strong>Never</strong> commit <code>Library/</code>, <code>Temp/</code>, <code>Obj/</code>, <code>Logs/</code> or <code>UserSettings/</code>. They're regenerated and huge. GitHub has a ready-made Unity <code>.gitignore</code> template.</li>
+      <li>Always commit the <code>.meta</code> files. They hold the IDs that keep references between assets working.</li>
+      <li>Use Git LFS for large binary files (textures, audio, models).</li>
+    </ul>
+
+    <h2>14. Organize your project</h2>
+    <ul>
+      <li>Use a simple folder structure: <code>Assets/_Project/Scripts</code>, <code>/Prefabs</code>, <code>/Art</code>, <code>/Audio</code>, <code>/Scenes</code>, <code>/Data</code>. The underscore keeps your folder at the top, above imported packages.</li>
+      <li>Put scripts in a <strong>namespace</strong> (<code>namespace MyGame.Combat { ... } </code>) to avoid name clashes with packages.</li>
+      <li>In bigger projects, <strong>Assembly Definition</strong> files split your code into separate parts, so Unity recompiles only what changed.</li>
+    </ul>
+
+    <h2>15. Use TextMeshPro for text</h2>
+    <p>The legacy <code>UnityEngine.UI.Text</code> component is blurry at many sizes and has fewer features. Use <strong>TextMeshPro</strong> (<code>TMP_Text</code> in code, namespace <code>TMPro</code>), which is the default for new UI text in current Unity versions.</p>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="optimization.html">Optimizing Your Code</a></li>
+      <li><a href="../tutorials/unityevents.html">Using UnityEvents in a Game</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/Manual/index.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

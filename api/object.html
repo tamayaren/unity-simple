@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Object | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="api/object.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; API Reference &rsaquo; Object</div>
+    <div class="infobox">
+      <div class="infobox-title">Object</div>
+      <table>
+        <tr><th>Type</th><td>Class</td></tr>
+        <tr><th>Namespace</th><td><code>UnityEngine</code></td></tr>
+        <tr><th>Inherits</th><td>(none)</td></tr>
+        <tr><th>Inherited by</th><td>GameObject, Component, ScriptableObject, Material, Texture, and every other Unity asset type</td></tr>
+      </table>
+    </div>
+    <h1>Object</h1>
+    <p class="summary"><code>UnityEngine.Object</code> is the base class of everything Unity manages: GameObjects, components, materials, prefabs and so on. It is where the most important "create and destroy" functions live: <code>Instantiate</code> and <code>Destroy</code>.</p>
+    <div class="note"><strong>Not the same as C#'s object</strong><code>UnityEngine.Object</code> and C#'s <code>System.Object</code> (lowercase <code>object</code>) are different. If you have <code>using System;</code> and <code>using UnityEngine;</code> together and write <code>Object</code>, the compiler may complain that it's ambiguous. Write <code>UnityEngine.Object</code> to be explicit.</div>
+
+    <h2>Properties</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+      <tr><td><code>name</code></td><td><code>string</code></td><td>The object's name. For a GameObject, this is what the Hierarchy shows.</td></tr>
+      <tr><td><code>hideFlags</code></td><td><code>HideFlags</code></td><td>Advanced: hide the object from the Hierarchy or stop it being saved.</td></tr>
+    </table>
+    </div>
+
+    <h2>Static Methods</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+      <tr><td><code>Instantiate(original)</code></td><td>Same type as <code>original</code></td><td>Makes a copy. For a GameObject or prefab, copies all components and children.</td></tr>
+      <tr><td><code>Instantiate(original, position, rotation)</code></td><td>Same type</td><td>Copy placed at a world position and rotation.</td></tr>
+      <tr><td><code>Instantiate(original, parent)</code></td><td>Same type</td><td>Copy created as a child of <code>parent</code>.</td></tr>
+      <tr><td><code>Instantiate(original, position, rotation, parent)</code></td><td>Same type</td><td>All of the above.</td></tr>
+      <tr><td><code>Destroy(obj)</code></td><td><code>void</code></td><td>Removes a GameObject, component or asset at the end of the current frame.</td></tr>
+      <tr><td><code>Destroy(obj, t)</code></td><td><code>void</code></td><td>Removes it after <code>t</code> seconds.</td></tr>
+      <tr><td><code>DontDestroyOnLoad(obj)</code></td><td><code>void</code></td><td>Keeps a root GameObject alive when a new scene loads (music players, game managers).</td></tr>
+      <tr><td><code>FindFirstObjectByType&lt;T&gt;()</code></td><td><code>T</code></td><td>Finds the first active object of type <code>T</code> in loaded scenes. Slow; don't call every frame.</td></tr>
+      <tr><td><code>FindAnyObjectByType&lt;T&gt;()</code></td><td><code>T</code></td><td>Like above but faster, when you don't care which one you get.</td></tr>
+      <tr><td><code>FindObjectsByType&lt;T&gt;(FindObjectsSortMode.None)</code></td><td><code>T[]</code></td><td>All active objects of type <code>T</code>. Slow.</td></tr>
+    </table>
+    </div>
+    <div class="note"><strong>Unity 6 name change</strong><code>FindObjectOfType&lt;T&gt;()</code> and <code>FindObjectsOfType&lt;T&gt;()</code> from older tutorials are deprecated. Use <code>FindFirstObjectByType</code>, <code>FindAnyObjectByType</code> or <code>FindObjectsByType</code>.</div>
+
+    <h2>Code Samples</h2>
+    <h3>Spawning and cleaning up</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class Explosion : MonoBehaviour
+{
+    [SerializeField] private GameObject explosionPrefab;
+
+    public void Explode()
+    {
+        // Create the effect where this object is.
+        GameObject fx = Instantiate(explosionPrefab, transform.position, Quaternion.identity);
+
+        // Remove the effect after 2 seconds.
+        Destroy(fx, 2f);
+
+        // Remove this object right away (at the end of this frame).
+        Destroy(gameObject);
+    }
+}
+</code></pre>
+
+    <h3>A music player that survives scene changes</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class MusicPlayer : MonoBehaviour
+{
+    private static MusicPlayer instance;
+
+    void Awake()
+    {
+        // If one already exists (we came back to the menu), remove the duplicate.
+        if (instance != null)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        instance = this;
+        DontDestroyOnLoad(gameObject); // must be a root object (no parent)
+    }
+}
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <p><strong>Destroy(obj)</strong></p>
+      <ol>
+        <li>The object is marked for destruction. <em>It still exists for the rest of this frame</em>: code after <code>Destroy</code> keeps running, and other scripts can still see it.</li>
+        <li>After the current <code>Update</code> loop finishes (but before rendering), Unity calls <code>OnDisable</code> and <code>OnDestroy</code> on its scripts, then removes it and all its children.</li>
+        <li>After that, any variable pointing to it compares equal to <code>null</code> (see below).</li>
+      </ol>
+    </div>
+
+    <h3>The "fake null"</h3>
+    <div class="analogy"><p>A TV remote. Your variable is the remote; the engine object is the TV. <code>Destroy</code> throws the TV away, but you're still holding the remote. Unity's <code>==</code> checks whether the TV is still there. C#'s <code>?.</code> only checks whether you're holding a remote, so it says "yes" and you press buttons on a TV that isn't there.</p></div>
+    <p>Unity objects are two parts: a C# object you hold, and a native engine object behind it. <code>Destroy</code> deletes the native part. Unity overrides <code>==</code> so that a destroyed object is equal to <code>null</code>, even though the C# variable isn't technically empty.</p>
+    <pre><code class="language-csharp">Destroy(enemy);
+// ...next frame:
+if (enemy == null) { }   // true: Unity's == knows it was destroyed
+if (enemy) { }           // false: same check, shorter
+enemy?.TakeDamage(1);    // DANGER: ?. skips Unity's check, throws MissingReferenceException
+</code></pre>
+    <div class="warning"><strong>Avoid ?. and ?? on Unity objects</strong>The C# operators <code>?.</code>, <code>??</code> and <code>is null</code> don't use Unity's overridden check, so they treat destroyed objects as still alive. Use <code>if (x != null)</code> instead.</div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong><code>Destroy(this)</code></strong> removes only the script component. Use <code>Destroy(gameObject)</code>.</li>
+      <li><strong><code>DestroyImmediate</code> in game code.</strong> It's meant for editor tools. It can permanently delete assets. Use <code>Destroy</code>.</li>
+      <li><strong>Expecting the object to be gone on the next line.</strong> It isn't removed until the end of the frame.</li>
+      <li><strong><code>DontDestroyOnLoad</code> on a child object.</strong> Only works on root objects. Unparent it first.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../manual/prefabs.html">Prefabs &amp; Spawning</a></li>
+      <li><a href="gameobject.html">GameObject</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/Object.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

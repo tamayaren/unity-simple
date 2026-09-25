@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PlayerPrefs | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="api/playerprefs.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; API Reference &rsaquo; PlayerPrefs</div>
+    <div class="infobox">
+      <div class="infobox-title">PlayerPrefs</div>
+      <table>
+        <tr><th>Type</th><td>Class (static members)</td></tr>
+        <tr><th>Namespace</th><td><code>UnityEngine</code></td></tr>
+        <tr><th>Stores</th><td><code>int</code>, <code>float</code>, <code>string</code></td></tr>
+      </table>
+    </div>
+    <h1>PlayerPrefs</h1>
+    <p class="summary">PlayerPrefs saves small pieces of data that survive after the game is closed: volume settings, the high score, the last level reached. Each value is stored under a text <em>key</em>.</p>
+    <div class="analogy"><p>A row of labeled lockers. <code>SetInt("HighScore", 500)</code> puts 500 in the locker labeled "HighScore". <code>GetInt("HighScore", 0)</code> opens that locker, and if it's empty, gives you 0 instead. The lockers are good for small notes, not for storing a whole bookshelf.</p></div>
+
+    <h2>Static Methods</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+      <tr><td><code>SetInt(string key, int value)</code></td><td><code>void</code></td><td>Store an int.</td></tr>
+      <tr><td><code>GetInt(string key, int defaultValue = 0)</code></td><td><code>int</code></td><td>Read an int, or the default if the key doesn't exist.</td></tr>
+      <tr><td><code>SetFloat</code> / <code>GetFloat</code></td><td></td><td>Same for floats.</td></tr>
+      <tr><td><code>SetString</code> / <code>GetString</code></td><td></td><td>Same for strings. Can hold JSON for simple structured data.</td></tr>
+      <tr><td><code>HasKey(string key)</code></td><td><code>bool</code></td><td>Does this key exist?</td></tr>
+      <tr><td><code>DeleteKey(string key)</code></td><td><code>void</code></td><td>Remove one key.</td></tr>
+      <tr><td><code>DeleteAll()</code></td><td><code>void</code></td><td>Remove everything. Careful!</td></tr>
+      <tr><td><code>Save()</code></td><td><code>void</code></td><td>Write to disk now. (Unity also saves on normal quit.)</td></tr>
+    </table>
+    </div>
+    <p>There's no bool type. Store <code>1</code> or <code>0</code> as an int.</p>
+
+    <h2>Code Samples</h2>
+    <h3>High score</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class ScoreKeeper : MonoBehaviour
+{
+    private const string HighScoreKey = "HighScore"; // one constant = no typos
+
+    public int HighScore =&gt; PlayerPrefs.GetInt(HighScoreKey, 0);
+
+    public void SubmitScore(int score)
+    {
+        if (score &gt; HighScore)
+        {
+            PlayerPrefs.SetInt(HighScoreKey, score);
+            PlayerPrefs.Save();
+        }
+    }
+}
+</code></pre>
+
+    <h3>Settings: volume and a toggle</h3>
+    <pre><code class="language-csharp">public void SetMusicVolume(float v)
+{
+    PlayerPrefs.SetFloat("MusicVolume", v);
+}
+
+public void SetShowFps(bool on)
+{
+    PlayerPrefs.SetInt("ShowFps", on ? 1 : 0);
+}
+
+void Start()
+{
+    float volume = PlayerPrefs.GetFloat("MusicVolume", 0.8f);
+    bool showFps = PlayerPrefs.GetInt("ShowFps", 0) == 1;
+}
+</code></pre>
+
+    <h3>Saving a small object as JSON</h3>
+    <pre><code class="language-csharp">[System.Serializable]
+public class SaveData
+{
+    public int level;
+    public int coins;
+}
+
+void SaveGame(SaveData data)
+{
+    PlayerPrefs.SetString("Save", JsonUtility.ToJson(data));
+    PlayerPrefs.Save();
+}
+
+SaveData LoadGame()
+{
+    string json = PlayerPrefs.GetString("Save", "");
+    return string.IsNullOrEmpty(json) ? new SaveData() : JsonUtility.FromJson&lt;SaveData&gt;(json);
+}
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li><code>Set...</code> changes a value in memory. It's fast.</li>
+        <li>The data is written to disk when you call <code>Save()</code> or the app quits normally. If the game crashes or is force-closed before that, unsaved changes are lost.</li>
+        <li>Where it's stored depends on the platform: the registry on Windows, a <code>.plist</code> file on macOS, browser storage for WebGL, and so on.</li>
+        <li>Data is stored per <em>Company Name</em> + <em>Product Name</em> (Player Settings). Changing those makes old data seem to disappear.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Storing important or secret data.</strong> PlayerPrefs is plain text that players can edit easily. Don't store purchases or anything cheat-sensitive there.</li>
+      <li><strong>Storing large save files.</strong> It's meant for small values. For bigger saves, write a JSON file to <code>Application.persistentDataPath</code> with <code>System.IO.File.WriteAllText</code>.</li>
+      <li><strong>Key typos.</strong> <code>"Highscore"</code> vs <code>"HighScore"</code> are different lockers. Use constants.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="scriptableobject.html">ScriptableObject</a> (why it's not a save system)</li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/PlayerPrefs.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

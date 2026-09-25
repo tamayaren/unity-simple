@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What is Unity? | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="manual/what-is-unity.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Getting Started &rsaquo; What is Unity?</div>
+    <h1>What is Unity?</h1>
+    <p class="summary">Unity is a game engine: a program that handles graphics, physics, sound and input so you can focus on making your game. You build scenes in the Unity Editor and add behavior with C# scripts.</p>
+
+    <h2>The four building blocks</h2>
+    <div class="analogy"><p>A LEGO set. A <strong>GameObject</strong> is a blank baseplate. <strong>Components</strong> are the bricks you snap onto it: wheels make it roll, a motor makes it move, a light makes it glow. A <strong>Scene</strong> is the table where you set up your creations, and your <strong>Assets</strong> are the box of spare parts.</p></div>
+    <p>Almost everything in Unity comes down to four ideas.</p>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Concept</th><th>What it is</th><th>Real-world comparison</th></tr>
+      <tr><td><strong>Scene</strong></td><td>A level, menu or screen. It holds a list of GameObjects.</td><td>A stage in a theater</td></tr>
+      <tr><td><strong>GameObject</strong></td><td>Any "thing" in a scene: a player, a light, a camera, an empty folder object. By itself it does nothing.</td><td>An empty box</td></tr>
+      <tr><td><strong>Component</strong></td><td>A piece of functionality attached to a GameObject: a mesh to draw, a collider, a script.</td><td>The things you put in the box</td></tr>
+      <tr><td><strong>Asset</strong></td><td>A file in your project: models, textures, sounds, scripts, prefabs.</td><td>Props in the storage room</td></tr>
+    </table>
+    </div>
+    <p>For example, a "Player" GameObject might have these components:</p>
+    <ul>
+      <li><strong>Transform</strong>: where it is, how it is rotated and how big it is (every GameObject has one)</li>
+      <li><strong>Mesh Renderer</strong>: draws the 3D model</li>
+      <li><strong>Capsule Collider</strong>: gives it a physical shape</li>
+      <li><strong>Rigidbody</strong>: makes it fall with gravity and react to forces</li>
+      <li><strong>PlayerController</strong>: your own C# script that reads input and moves it</li>
+    </ul>
+    <div class="tip"><strong>Key idea</strong>Unity uses <em>composition</em>. Instead of writing one giant "Player" class, you combine small components. Want something to fall? Add a Rigidbody. Want it to make noise? Add an AudioSource.</div>
+
+    <h2>The Editor windows</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Window</th><th>What you use it for</th></tr>
+      <tr><td><strong>Scene view</strong></td><td>Move around the world and place objects.</td></tr>
+      <tr><td><strong>Game view</strong></td><td>See what the player sees through the camera. This is where the game runs when you press Play.</td></tr>
+      <tr><td><strong>Hierarchy</strong></td><td>A list of every GameObject in the open scene. Dragging one onto another makes it a child.</td></tr>
+      <tr><td><strong>Inspector</strong></td><td>Shows the components of the selected GameObject and lets you edit their values.</td></tr>
+      <tr><td><strong>Project</strong></td><td>Your files (assets). Like a file explorer for the <code>Assets</code> folder.</td></tr>
+      <tr><td><strong>Console</strong></td><td>Shows messages from <code>Debug.Log</code>, plus warnings and errors. Double-click an error to jump to the line of code.</td></tr>
+    </table>
+    </div>
+
+    <h2>Play Mode</h2>
+    <p>Pressing the Play button runs your game inside the Editor.</p>
+    <div class="warning"><strong>Changes in Play Mode are lost</strong>Anything you change in the Inspector while the game is running goes back to how it was when you press Stop. This is on purpose, so you can experiment safely. If you find values you like, write them down or copy the component (right-click the component header &gt; Copy Component), stop, then paste the values.</div>
+
+    <h2>Units and directions</h2>
+    <ul>
+      <li><strong>1 unit = 1 meter.</strong> Physics works best when objects are roughly real-world size. A human is about 2 units tall.</li>
+      <li><strong>Y is up.</strong> X is right and Z is forward.</li>
+      <li>Unity uses a <strong>left-handed</strong> coordinate system. If you come from Blender (which uses Z-up), models may appear rotated.</li>
+      <li>Angles in the Inspector are in <strong>degrees</strong>. Some math functions (<code>Mathf.Sin</code>, <code>Mathf.Cos</code>) use radians. See <a href="../api/mathf.html">Mathf</a>.</li>
+    </ul>
+
+    <h2>2D vs 3D</h2>
+    <p>Unity does both. A 2D game is still a 3D world viewed from the front with an orthographic camera. The main difference for scripting is that 2D physics uses separate components: <code>Rigidbody2D</code>, <code>BoxCollider2D</code>, and callbacks like <code>OnCollisionEnter2D</code>. 2D and 3D physics do not interact with each other.</p>
+
+    <h2>Next step</h2>
+    <p>Continue to <a href="first-script.html">Your First Script</a>.</p>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/Manual/index.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

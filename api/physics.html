@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Physics | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="api/physics.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; API Reference &rsaquo; Physics</div>
+    <div class="infobox">
+      <div class="infobox-title">Physics</div>
+      <table>
+        <tr><th>Type</th><td>Static class</td></tr>
+        <tr><th>Namespace</th><td><code>UnityEngine</code></td></tr>
+        <tr><th>2D version</th><td><code>Physics2D</code></td></tr>
+      </table>
+    </div>
+    <h1>Physics</h1>
+    <p class="summary">The <code>Physics</code> class lets you <em>ask questions</em> about the physics world: "If I shoot a line from here, what does it hit?" or "What's inside this sphere?". It also holds global settings such as gravity.</p>
+    <div class="analogy"><p>A <strong>raycast</strong> is a laser pointer. You shine it from a point in a direction, and it tells you the first thing it lands on, how far away it is, and the exact spot. A <strong>SphereCast</strong> is the same but with a thick beam, like rolling a ball down a hallway. An <strong>Overlap</strong> check is dropping an invisible bubble somewhere and asking "who's inside?"</p></div>
+
+    <h2>Static Properties</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+      <tr><td><code>gravity</code></td><td><code>Vector3</code></td><td>Gravity for all Rigidbodies. Default (0, -9.81, 0).</td></tr>
+    </table>
+    </div>
+
+    <h2>Static Methods</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+      <tr><td><code>Raycast(origin, direction, out RaycastHit hit, maxDistance, layerMask)</code></td><td><code>bool</code></td><td>Shoots a thin line. <code>true</code> if it hit something; details go into <code>hit</code>.</td></tr>
+      <tr><td><code>Raycast(Ray ray, out RaycastHit hit, maxDistance)</code></td><td><code>bool</code></td><td>Same, using a <code>Ray</code> (e.g. from <code>Camera.ScreenPointToRay</code>).</td></tr>
+      <tr><td><code>RaycastAll(...)</code></td><td><code>RaycastHit[]</code></td><td>Everything along the line, <em>not sorted</em> by distance.</td></tr>
+      <tr><td><code>SphereCast(origin, radius, direction, out hit, maxDistance)</code></td><td><code>bool</code></td><td>A thick ray. Good for ground checks and "would I fit?".</td></tr>
+      <tr><td><code>Linecast(start, end, out hit)</code></td><td><code>bool</code></td><td>Is anything between two points? (line of sight)</td></tr>
+      <tr><td><code>OverlapSphere(position, radius, layerMask)</code></td><td><code>Collider[]</code></td><td>All colliders inside a sphere. Explosions, auras.</td></tr>
+      <tr><td><code>OverlapBox(center, halfExtents, rotation, layerMask)</code></td><td><code>Collider[]</code></td><td>All colliders inside a box.</td></tr>
+      <tr><td><code>CheckSphere(position, radius, layerMask)</code></td><td><code>bool</code></td><td>Is <em>anything</em> inside? Cheapest check.</td></tr>
+      <tr><td><code>IgnoreCollision(a, b, ignore = true)</code></td><td><code>void</code></td><td>Make two specific colliders pass through each other.</td></tr>
+    </table>
+    </div>
+
+    <h2>RaycastHit (the result)</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Member</th><th>Description</th></tr>
+      <tr><td><code>hit.collider</code></td><td>The collider that was hit.</td></tr>
+      <tr><td><code>hit.transform</code></td><td>Its Transform (the Rigidbody's, if it has one).</td></tr>
+      <tr><td><code>hit.point</code></td><td>Exact world position of the hit.</td></tr>
+      <tr><td><code>hit.normal</code></td><td>Direction the surface faces at that point.</td></tr>
+      <tr><td><code>hit.distance</code></td><td>How far from the origin.</td></tr>
+    </table>
+    </div>
+
+    <h2>Layer masks: only hit certain things</h2>
+    <p>The <code>layerMask</code> parameter is a filter. Create one in code with <code>LayerMask.GetMask</code>, or better, expose a <code>LayerMask</code> field and pick layers from a dropdown in the Inspector.</p>
+    <pre><code class="language-csharp">[SerializeField] private LayerMask groundLayers;             // pick in Inspector
+int enemyMask = LayerMask.GetMask("Enemy", "Destructible");  // or build in code
+</code></pre>
+
+    <h2>Code Samples</h2>
+    <h3>Hitscan gun</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class HitscanGun : MonoBehaviour
+{
+    [SerializeField] private Camera cam;
+    [SerializeField] private float range = 100f;
+    [SerializeField] private LayerMask hitLayers;
+
+    void Update()
+    {
+        if (!Input.GetButtonDown("Fire1")) return;
+
+        // Shoot from the center of the screen.
+        Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+        if (Physics.Raycast(ray, out RaycastHit hit, range, hitLayers))
+        {
+            Debug.Log("Hit " + hit.collider.name + " at " + hit.point);
+            if (hit.collider.TryGetComponent(out Health h)) h.TakeDamage(25);
+        }
+    }
+}
+</code></pre>
+
+    <h3>Ground check</h3>
+    <pre><code class="language-csharp">[SerializeField] private LayerMask groundLayers;
+
+bool IsGrounded()
+{
+    // A short line straight down from slightly above the feet.
+    Vector3 origin = transform.position + Vector3.up * 0.1f;
+    return Physics.Raycast(origin, Vector3.down, 0.2f, groundLayers);
+}
+</code></pre>
+
+    <h3>Explosion that damages everything nearby</h3>
+    <pre><code class="language-csharp">void Explode(Vector3 center, float radius)
+{
+    Collider[] hits = Physics.OverlapSphere(center, radius);
+    foreach (Collider c in hits)
+    {
+        if (c.attachedRigidbody != null)
+            c.attachedRigidbody.AddExplosionForce(700f, center, radius);
+    }
+}
+</code></pre>
+
+    <h3>Click on objects with the mouse</h3>
+    <pre><code class="language-csharp">if (Input.GetMouseButtonDown(0))
+{
+    Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+    if (Physics.Raycast(ray, out RaycastHit hit))
+    {
+        Debug.Log("Clicked " + hit.collider.gameObject.name);
+    }
+}
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>A raycast is answered <em>immediately</em>, on the same line of code. It doesn't wait for the next physics step.</li>
+        <li>It checks against the colliders' positions as of the <em>last physics step</em>. If you moved a Transform this frame, the physics world may not know yet (unless <code>Physics.SyncTransforms()</code> is called or auto-sync is on).</li>
+        <li>Only colliders are checked. Meshes without a collider are invisible to raycasts.</li>
+        <li>By default, raycasts hit trigger colliders too (controlled by <strong>Project Settings &gt; Physics &gt; Queries Hit Triggers</strong>, or the <code>QueryTriggerInteraction</code> parameter).</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Passing a layer <em>number</em> as a mask.</strong> <code>Physics.Raycast(ray, out hit, 100f, 8)</code> means "layer 3" (8 = binary 1000), not layer 8. Use <code>LayerMask.GetMask("Ground")</code> or <code>1 &lt;&lt; 8</code>.</li>
+      <li><strong>Hitting yourself.</strong> A ray starting inside your own collider hits it. Put yourself on a layer excluded from the mask, or start the ray outside.</li>
+      <li><strong>Forgetting maxDistance.</strong> Without it, the ray is infinite. That's fine, but a common reason ground checks always return true.</li>
+      <li><strong>Assuming RaycastAll is sorted.</strong> It isn't. Sort by <code>hit.distance</code> if order matters.</li>
+      <li><strong>Can't see the ray?</strong> Draw it: <code>Debug.DrawRay(origin, dir * range, Color.red, 1f);</code></li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="collider.html">Collider</a></li>
+      <li><a href="camera.html">Camera</a> (ScreenPointToRay)</li>
+      <li><a href="debug.html">Debug</a> (DrawRay)</li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/Physics.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

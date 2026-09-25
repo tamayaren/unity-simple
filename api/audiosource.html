@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AudioSource | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="api/audiosource.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; API Reference &rsaquo; AudioSource</div>
+    <div class="infobox">
+      <div class="infobox-title">AudioSource</div>
+      <table>
+        <tr><th>Type</th><td>Class (Component)</td></tr>
+        <tr><th>Namespace</th><td><code>UnityEngine</code></td></tr>
+        <tr><th>Inherits</th><td>AudioBehaviour &gt; Behaviour &gt; Component &gt; <a href="object.html">Object</a></td></tr>
+        <tr><th>Plays</th><td><code>AudioClip</code> assets</td></tr>
+      </table>
+    </div>
+    <h1>AudioSource</h1>
+    <p class="summary">An AudioSource plays sounds (AudioClips) from a position in the world. An <strong>AudioListener</strong>, usually on the main camera, acts as the player's ears. Both are needed to hear anything.</p>
+    <div class="analogy"><p>The AudioSource is a speaker you place in the world, the AudioClip is the song file, and the AudioListener is a microphone in the player's head. <code>Play()</code> is putting a CD in the speaker and pressing play: if you press play again, it restarts. <code>PlayOneShot()</code> is having the speaker shout a quick word <em>on top of</em> whatever is playing.</p></div>
+
+    <h2>Properties</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+      <tr><td><code>clip</code></td><td><code>AudioClip</code></td><td>The clip <code>Play()</code> will play.</td></tr>
+      <tr><td><code>volume</code></td><td><code>float</code></td><td>0 to 1.</td></tr>
+      <tr><td><code>pitch</code></td><td><code>float</code></td><td>1 = normal. Also changes speed. Random 0.9-1.1 makes repeated sounds less robotic.</td></tr>
+      <tr><td><code>loop</code></td><td><code>bool</code></td><td>Repeat when it reaches the end. For music and engine hums.</td></tr>
+      <tr><td><code>isPlaying</code></td><td><code>bool</code></td><td>Is <code>clip</code> currently playing? (Doesn't count PlayOneShot sounds.)</td></tr>
+      <tr><td><code>playOnAwake</code></td><td><code>bool</code></td><td>Start playing automatically when the object loads. On by default; untick it for sound effects.</td></tr>
+      <tr><td><code>spatialBlend</code></td><td><code>float</code></td><td>0 = 2D (same volume everywhere, for music/UI), 1 = fully 3D (quieter with distance, left/right panning).</td></tr>
+      <tr><td><code>mute</code></td><td><code>bool</code></td><td>Silence without stopping.</td></tr>
+      <tr><td><code>time</code></td><td><code>float</code></td><td>Playback position in seconds.</td></tr>
+    </table>
+    </div>
+
+    <h2>Methods</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+      <tr><td><code>Play()</code></td><td><code>void</code></td><td>Plays <code>clip</code> from the start. Restarts it if already playing.</td></tr>
+      <tr><td><code>Stop()</code></td><td><code>void</code></td><td>Stops <code>clip</code>.</td></tr>
+      <tr><td><code>Pause()</code> / <code>UnPause()</code></td><td><code>void</code></td><td>Pause and resume.</td></tr>
+      <tr><td><code>PlayOneShot(AudioClip clip, float volumeScale = 1)</code></td><td><code>void</code></td><td>Plays a clip once without interrupting anything. Many can overlap. Best for sound effects.</td></tr>
+      <tr><td><code>AudioSource.PlayClipAtPoint(clip, position)</code></td><td><code>void</code></td><td>Static. Creates a temporary object that plays a sound at a position and cleans itself up. Useful when the source object is about to be destroyed.</td></tr>
+    </table>
+    </div>
+
+    <h2>Code Samples</h2>
+    <h3>Footsteps and hit sounds</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+[RequireComponent(typeof(AudioSource))]
+public class PlayerSounds : MonoBehaviour
+{
+    [SerializeField] private AudioClip[] footsteps;
+    [SerializeField] private AudioClip hurtSound;
+    private AudioSource source;
+
+    void Awake()
+    {
+        source = GetComponent&lt;AudioSource&gt;();
+    }
+
+    // Call from an Animation Event on each foot contact.
+    public void Footstep()
+    {
+        AudioClip clip = footsteps[Random.Range(0, footsteps.Length)];
+        source.pitch = Random.Range(0.9f, 1.1f);
+        source.PlayOneShot(clip, 0.6f);
+    }
+
+    public void Hurt()
+    {
+        source.PlayOneShot(hurtSound);
+    }
+}
+</code></pre>
+
+    <h3>Coin pickup that plays a sound after it's destroyed</h3>
+    <pre><code class="language-csharp">void OnTriggerEnter(Collider other)
+{
+    if (!other.CompareTag("Player")) return;
+    // The AudioSource on this coin would be destroyed with it, cutting the sound off.
+    AudioSource.PlayClipAtPoint(pickupSound, transform.position);
+    Destroy(gameObject);
+}
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li><code>Play</code> / <code>PlayOneShot</code> queue the sound; the audio system mixes it on a separate thread, so it keeps playing smoothly even during frame drops.</li>
+        <li>Each frame, Unity compares every 3D AudioSource's position to the AudioListener's to set volume and left/right balance.</li>
+        <li>Destroying or deactivating the GameObject stops all its sounds immediately.</li>
+        <li>With <code>Time.timeScale = 0</code>, audio keeps playing. Pause it yourself if needed (or set <code>AudioListener.pause = true</code>).</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>No sound at all.</strong> Is there an AudioListener in the scene? Is <code>spatialBlend</code> 1 with the source far away? Is the Game view's audio muted?</li>
+      <li><strong>"There are 2 audio listeners in the scene".</strong> A second camera also has one. Remove the extra AudioListener component.</li>
+      <li><strong>Using <code>Play()</code> for rapid effects</strong> (gunshots). Each call cuts off the last. Use <code>PlayOneShot</code>.</li>
+      <li><strong>Sound plays on start unexpectedly.</strong> Untick <em>Play On Awake</em>.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="object.html">Object</a> (DontDestroyOnLoad for background music)</li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/AudioSource.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

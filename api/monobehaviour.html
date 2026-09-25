@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MonoBehaviour | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="api/monobehaviour.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; API Reference &rsaquo; MonoBehaviour</div>
+    <div class="infobox">
+      <div class="infobox-title">MonoBehaviour</div>
+      <table>
+        <tr><th>Type</th><td>Class</td></tr>
+        <tr><th>Namespace</th><td><code>UnityEngine</code></td></tr>
+        <tr><th>Inherits</th><td>Behaviour &gt; Component &gt; <a href="object.html">Object</a></td></tr>
+        <tr><th>Used for</th><td>Every script you attach to a GameObject</td></tr>
+      </table>
+    </div>
+    <h1>MonoBehaviour</h1>
+    <p class="summary">MonoBehaviour is the base class for your scripts. Inheriting from it (<code>: MonoBehaviour</code>) turns your class into a component that you can attach to GameObjects, and lets Unity call methods like <code>Start</code> and <code>Update</code> on it automatically.</p>
+
+    <h2>Properties</h2>
+    <p>Inherited from Behaviour and Component. You can use these directly in any script.</p>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+      <tr><td><code>enabled</code></td><td><code>bool</code></td><td>The checkbox next to the script in the Inspector. When <code>false</code>, <code>Update</code>, <code>FixedUpdate</code> and <code>LateUpdate</code> stop being called.</td></tr>
+      <tr><td><code>gameObject</code></td><td><code>GameObject</code></td><td>The GameObject this script is attached to.</td></tr>
+      <tr><td><code>transform</code></td><td><code>Transform</code></td><td>That GameObject's Transform.</td></tr>
+      <tr><td><code>isActiveAndEnabled</code></td><td><code>bool</code></td><td>True if the script is enabled <em>and</em> its GameObject is active.</td></tr>
+      <tr><td><code>tag</code>, <code>name</code></td><td><code>string</code></td><td>The GameObject's tag and name.</td></tr>
+    </table>
+    </div>
+
+    <h2>Methods</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+      <tr><td><code>StartCoroutine(IEnumerator routine)</code></td><td><code>Coroutine</code></td><td>Starts a coroutine. See <a href="../manual/coroutines.html">Coroutines</a>.</td></tr>
+      <tr><td><code>StopCoroutine(Coroutine routine)</code></td><td><code>void</code></td><td>Stops a coroutine started by this script.</td></tr>
+      <tr><td><code>StopAllCoroutines()</code></td><td><code>void</code></td><td>Stops every coroutine started by this script.</td></tr>
+      <tr><td><code>Invoke(string methodName, float time)</code></td><td><code>void</code></td><td>Calls a method on this script after <code>time</code> seconds.</td></tr>
+      <tr><td><code>InvokeRepeating(string methodName, float time, float repeatRate)</code></td><td><code>void</code></td><td>Calls a method after <code>time</code> seconds, then every <code>repeatRate</code> seconds.</td></tr>
+      <tr><td><code>CancelInvoke()</code></td><td><code>void</code></td><td>Cancels all Invoke calls on this script. Pass a method name to cancel just one.</td></tr>
+      <tr><td><code>GetComponent&lt;T&gt;()</code></td><td><code>T</code></td><td>Same as <code>gameObject.GetComponent&lt;T&gt;()</code>.</td></tr>
+    </table>
+    </div>
+
+    <h2>Messages (called by Unity)</h2>
+    <div class="analogy"><p>A phone directory. Unity looks up your class and writes down which of these method names it has, like phone numbers. When a moment comes (a new frame, a collision), Unity calls those numbers. If you misspell one (<code>update</code> instead of <code>Update</code>), it's a wrong number: nothing breaks, nothing warns you, the phone just never rings.</p></div>
+    <p>These are like events. You don't call them; you write a method with the <em>exact</em> name and parameters and Unity calls it. They can be <code>private</code>.</p>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Message</th><th>When it's called</th></tr>
+      <tr><td><code>Awake()</code></td><td>Once, when the script instance is loaded.</td></tr>
+      <tr><td><code>OnEnable()</code></td><td>Each time the script/object becomes enabled.</td></tr>
+      <tr><td><code>Start()</code></td><td>Once, before the first <code>Update</code>.</td></tr>
+      <tr><td><code>Update()</code></td><td>Every frame.</td></tr>
+      <tr><td><code>FixedUpdate()</code></td><td>Every physics step.</td></tr>
+      <tr><td><code>LateUpdate()</code></td><td>Every frame, after all <code>Update</code> calls.</td></tr>
+      <tr><td><code>OnDisable()</code></td><td>When the script/object becomes disabled.</td></tr>
+      <tr><td><code>OnDestroy()</code></td><td>When the object is destroyed.</td></tr>
+      <tr><td><code>OnCollisionEnter(Collision c)</code></td><td>This object started touching another collider. Also <code>Stay</code> and <code>Exit</code>.</td></tr>
+      <tr><td><code>OnTriggerEnter(Collider other)</code></td><td>Another collider entered this trigger (or vice versa). Also <code>Stay</code> and <code>Exit</code>.</td></tr>
+      <tr><td><code>OnMouseDown()</code></td><td>The player clicked on this object's collider. (Old Input Manager only.)</td></tr>
+      <tr><td><code>OnBecameVisible()</code> / <code>OnBecameInvisible()</code></td><td>Any camera started / stopped seeing this object's renderer. Includes the Scene view camera in the Editor.</td></tr>
+      <tr><td><code>OnApplicationPause(bool paused)</code></td><td>The app lost/regained focus on mobile (good time to save).</td></tr>
+      <tr><td><code>OnApplicationQuit()</code></td><td>Before the application quits.</td></tr>
+      <tr><td><code>OnValidate()</code></td><td>Editor only: a value was changed in the Inspector. Good for clamping values.</td></tr>
+      <tr><td><code>Reset()</code></td><td>Editor only: the component was first added or Reset was clicked. Good for default references.</td></tr>
+      <tr><td><code>OnDrawGizmos()</code></td><td>Editor only: draw helper shapes in the Scene view.</td></tr>
+    </table>
+    </div>
+    <p>For the exact order, see <a href="../manual/script-lifecycle.html">Script Lifecycle</a>.</p>
+
+    <h2>Code Samples</h2>
+    <h3>A complete, typical script</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class Turret : MonoBehaviour
+{
+    [SerializeField] private Transform target;
+    [SerializeField] private float range = 10f;
+    [SerializeField] private float fireInterval = 1f;
+
+    private float nextFireTime;
+
+    void Update()
+    {
+        if (target == null) return;
+
+        float distance = Vector3.Distance(transform.position, target.position);
+        if (distance &gt; range) return;
+
+        transform.LookAt(target);
+
+        if (Time.time &gt;= nextFireTime)
+        {
+            Debug.Log("Fire!");
+            nextFireTime = Time.time + fireInterval;
+        }
+    }
+
+    // Draw the range in the Scene view so designers can see it.
+    void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, range);
+    }
+}
+</code></pre>
+
+    <h3>Invoke: a simple delayed call</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class Trap : MonoBehaviour
+{
+    void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            Invoke(nameof(Snap), 0.5f); // nameof avoids typos in the string
+        }
+    }
+
+    void Snap()
+    {
+        Debug.Log("Snap!");
+    }
+}
+</code></pre>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li>When a scene loads, Unity creates an instance of your class for each GameObject that has it and fills in serialized fields from saved data.</li>
+        <li>Unity looks for the message methods (<code>Update</code>, <code>Start</code>...) by name. If your class has them, it calls them at the right time. This is why the spelling must be exact.</li>
+        <li>If the script has no <code>Update</code> method at all, Unity doesn't call anything each frame for it, which saves time.</li>
+        <li>Setting <code>enabled = false</code> stops the per-frame messages, but collision/trigger messages and coroutines still run.</li>
+      </ol>
+    </div>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Using <code>new</code> on a MonoBehaviour.</strong> <code>new Turret()</code> gives a broken object and a warning. Use <code>AddComponent&lt;Turret&gt;()</code> or <code>Instantiate</code> a prefab.</li>
+      <li><strong>Wrong spelling or parameters.</strong> <code>void OnTriggerEnter(Collision c)</code> or <code>void start()</code> are silently never called.</li>
+      <li><strong>Using Invoke with a method name string that doesn't exist.</strong> Nothing happens. Use <code>nameof(Method)</code> so the compiler checks it.</li>
+      <li><strong>File name ≠ class name.</strong> Unity can't add the script.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../manual/first-script.html">Your First Script</a></li>
+      <li><a href="../manual/script-lifecycle.html">Script Lifecycle</a></li>
+      <li><a href="scriptableobject.html">ScriptableObject</a> (for data that isn't attached to a GameObject)</li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/MonoBehaviour.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

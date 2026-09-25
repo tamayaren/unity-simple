@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coroutines | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="manual/coroutines.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Getting Started &rsaquo; Coroutines</div>
+    <h1>Coroutines</h1>
+    <p class="summary">A coroutine is a method that can pause and continue later. Use one when something should happen <em>over time</em> or <em>after a delay</em>: fading the screen, a countdown, spawning waves of enemies.</p>
+
+    <h2>The problem coroutines solve</h2>
+    <p>A normal method runs from top to bottom in a single frame. This does <strong>not</strong> work:</p>
+    <pre><code class="language-csharp">void Explode()
+{
+    Debug.Log("3...");
+    // There is no "wait 1 second" here. Everything below happens instantly
+    // (and Thread.Sleep would freeze the entire game).
+    Debug.Log("2...");
+    Debug.Log("1...");
+    Debug.Log("Boom!");
+}
+</code></pre>
+    <p>With a coroutine:</p>
+    <pre><code class="language-csharp">using System.Collections;
+using UnityEngine;
+
+public class Bomb : MonoBehaviour
+{
+    void Start()
+    {
+        StartCoroutine(Countdown());
+    }
+
+    IEnumerator Countdown()
+    {
+        for (int i = 3; i &gt; 0; i--)
+        {
+            Debug.Log(i + "...");
+            yield return new WaitForSeconds(1f); // pause here for 1 second
+        }
+        Debug.Log("Boom!");
+        Destroy(gameObject);
+    }
+}
+</code></pre>
+
+    <h2>How to write one</h2>
+    <div class="analogy"><p>Reading a book with a bookmark. A normal method is reading a whole book in one sitting: nobody else gets the room until you finish. A coroutine reads a few pages, puts in a bookmark (<code>yield return</code>), and gives the room back to Unity so the game can keep running. Later, Unity hands you the book again and you continue from the bookmark, remembering exactly where you were. <code>WaitForSeconds(2)</code> is saying "hand it back to me in two seconds".</p></div>
+    <ol>
+      <li>Add <code>using System.Collections;</code> at the top.</li>
+      <li>Make the method return <code>IEnumerator</code>.</li>
+      <li>Put <code>yield return ...</code> wherever you want to pause.</li>
+      <li>Start it with <code>StartCoroutine(MyMethod())</code>. Calling <code>MyMethod()</code> directly does nothing.</li>
+    </ol>
+
+    <h2>What you can yield</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Yield this</th><th>Continues</th></tr>
+      <tr><td><code>yield return null;</code></td><td>Next frame (after <code>Update</code>)</td></tr>
+      <tr><td><code>yield return new WaitForSeconds(2f);</code></td><td>After 2 seconds of <em>game</em> time. Affected by <code>Time.timeScale</code>, so it never finishes while paused with timeScale 0.</td></tr>
+      <tr><td><code>yield return new WaitForSecondsRealtime(2f);</code></td><td>After 2 real seconds, even when the game is paused</td></tr>
+      <tr><td><code>yield return new WaitForFixedUpdate();</code></td><td>After the next physics step</td></tr>
+      <tr><td><code>yield return new WaitForEndOfFrame();</code></td><td>After the frame is rendered (for screenshots)</td></tr>
+      <tr><td><code>yield return new WaitUntil(() =&gt; isReady);</code></td><td>When the condition becomes true (checked every frame)</td></tr>
+      <tr><td><code>yield return new WaitWhile(() =&gt; isBusy);</code></td><td>When the condition becomes false</td></tr>
+      <tr><td><code>yield return StartCoroutine(Other());</code></td><td>When the other coroutine has finished</td></tr>
+      <tr><td><code>yield break;</code></td><td>Never. Ends the coroutine right away (like <code>return</code>).</td></tr>
+    </table>
+    </div>
+
+    <h2>What happens at runtime</h2>
+    <div class="runtime">
+      <ol>
+        <li><code>StartCoroutine</code> runs your method immediately, up to the first <code>yield return</code>.</li>
+        <li>Unity stores where it stopped and what it's waiting for.</li>
+        <li>Every frame, Unity checks whether the wait is over. For <code>yield return null</code> and <code>WaitForSeconds</code> this check happens right after all <code>Update</code> calls.</li>
+        <li>When the wait is over, the method continues from the exact line where it paused, with all local variables intact.</li>
+        <li>This is <strong>not</strong> multithreading. Everything still runs on the main thread, one piece per frame. A slow loop without a <code>yield</code> will still freeze the game.</li>
+      </ol>
+    </div>
+
+    <h2>Example: fade an object out over time</h2>
+    <pre><code class="language-csharp">using System.Collections;
+using UnityEngine;
+
+public class FadeOut : MonoBehaviour
+{
+    [SerializeField] private float duration = 1.5f;
+
+    public void StartFade()
+    {
+        StartCoroutine(Fade());
+    }
+
+    IEnumerator Fade()
+    {
+        // The material's shader must support transparency for alpha to have an effect.
+        Material mat = GetComponent&lt;Renderer&gt;().material;
+        Color c = mat.color;
+        float t = 0f;
+
+        while (t &lt; duration)
+        {
+            t += Time.deltaTime;
+            c.a = Mathf.Lerp(1f, 0f, t / duration);
+            mat.color = c;
+            yield return null; // wait one frame, then loop again
+        }
+
+        gameObject.SetActive(false);
+    }
+}
+</code></pre>
+
+    <h2>Example: spawn waves forever</h2>
+    <pre><code class="language-csharp">using System.Collections;
+using UnityEngine;
+
+public class WaveSpawner : MonoBehaviour
+{
+    [SerializeField] private GameObject enemyPrefab;
+    [SerializeField] private float delayBetweenWaves = 5f;
+
+    private Coroutine spawnRoutine;
+    private readonly WaitForSeconds shortWait = new WaitForSeconds(0.5f); // reuse to avoid garbage
+
+    void OnEnable()  { spawnRoutine = StartCoroutine(SpawnLoop()); }
+    void OnDisable() { if (spawnRoutine != null) StopCoroutine(spawnRoutine); }
+
+    IEnumerator SpawnLoop()
+    {
+        int wave = 1;
+        while (true) // fine inside a coroutine because we yield inside the loop
+        {
+            for (int i = 0; i &lt; wave * 3; i++)
+            {
+                Instantiate(enemyPrefab, transform.position, Quaternion.identity);
+                yield return shortWait;
+            }
+            wave++;
+            yield return new WaitForSeconds(delayBetweenWaves);
+        }
+    }
+}
+</code></pre>
+
+    <h2>Stopping coroutines</h2>
+    <ul>
+      <li><code>StopCoroutine(handle)</code>: stop one. Keep the <code>Coroutine</code> returned by <code>StartCoroutine</code> to use as the handle.</li>
+      <li><code>StopAllCoroutines()</code>: stop every coroutine started by <em>this script</em>.</li>
+      <li>Coroutines stop automatically when the GameObject is <strong>deactivated</strong> or <strong>destroyed</strong>. They do <strong>not</strong> restart when it's reactivated.</li>
+      <li>Disabling only the script (<code>enabled = false</code>) does <strong>not</strong> stop its coroutines.</li>
+    </ul>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Calling the method without StartCoroutine.</strong> <code>Countdown();</code> compiles but does nothing.</li>
+      <li><strong>Starting a coroutine every frame in Update.</strong> You end up with hundreds running at once. Start it once, or use a flag to check if it's already running.</li>
+      <li><strong><code>while(true)</code> without a yield inside.</strong> Freezes Unity. Every loop in a coroutine needs a <code>yield</code> somewhere inside it.</li>
+      <li><strong>Starting a coroutine on an inactive GameObject.</strong> This throws an error. The object must be active.</li>
+      <li><strong>Pausing with timeScale 0 and using WaitForSeconds</strong> in a pause menu. Use <code>WaitForSecondsRealtime</code> instead.</li>
+    </ul>
+    <div class="note"><strong>Unity 6: Awaitable</strong>Unity 2023.1 and newer (including Unity 6) also support <code>async</code>/<code>await</code> using the <code>Awaitable</code> class, for example <code>await Awaitable.WaitForSecondsAsync(1f);</code>. Coroutines are still fully supported and are the most common approach in tutorials.</div>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="../api/monobehaviour.html">MonoBehaviour</a> (StartCoroutine, Invoke)</li>
+      <li><a href="../api/time.html">Time</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/MonoBehaviour.StartCoroutine.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

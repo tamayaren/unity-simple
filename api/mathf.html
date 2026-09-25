@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mathf | Unity Simple Docs</title>
+<meta name="description" content="Beginner-friendly Unity documentation.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="api/mathf.html">
+<header class="site-header">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; API Reference &rsaquo; Mathf</div>
+    <div class="infobox">
+      <div class="infobox-title">Mathf</div>
+      <table>
+        <tr><th>Type</th><td>Struct (only static members)</td></tr>
+        <tr><th>Namespace</th><td><code>UnityEngine</code></td></tr>
+        <tr><th>Works with</th><td><code>float</code></td></tr>
+      </table>
+    </div>
+    <h1>Mathf</h1>
+    <p class="summary">Mathf is a toolbox of math functions for <code>float</code> numbers: clamping, rounding, smooth movement, trigonometry and more. It's Unity's version of C#'s <code>System.Math</code>, but works with <code>float</code> instead of <code>double</code>.</p>
+
+    <h2>Constants</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Name</th><th>Description</th></tr>
+      <tr><td><code>Mathf.PI</code></td><td>3.14159...</td></tr>
+      <tr><td><code>Mathf.Deg2Rad</code> / <code>Mathf.Rad2Deg</code></td><td>Multiply to convert degrees to radians, or back.</td></tr>
+      <tr><td><code>Mathf.Infinity</code></td><td>A number bigger than any other. Handy as a starting "closest distance".</td></tr>
+    </table>
+    </div>
+
+    <h2>Most-used methods</h2>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Method</th><th>Description</th><th>Example</th></tr>
+      <tr><td><code>Clamp(value, min, max)</code></td><td>Keep a value inside a range.</td><td><code>Clamp(150, 0, 100)</code> = 100</td></tr>
+      <tr><td><code>Clamp01(value)</code></td><td>Clamp between 0 and 1.</td><td><code>Clamp01(1.4f)</code> = 1</td></tr>
+      <tr><td><code>Lerp(a, b, t)</code></td><td>Value <code>t</code> of the way from <code>a</code> to <code>b</code> (<code>t</code> is clamped 0-1).</td><td><code>Lerp(0, 10, 0.25f)</code> = 2.5</td></tr>
+      <tr><td><code>InverseLerp(a, b, value)</code></td><td>The opposite: how far along is <code>value</code>? Returns 0-1.</td><td><code>InverseLerp(0, 200, 50)</code> = 0.25</td></tr>
+      <tr><td><code>MoveTowards(current, target, maxDelta)</code></td><td>Step toward a target, never overshooting.</td><td><code>MoveTowards(0, 10, 3)</code> = 3</td></tr>
+      <tr><td><code>SmoothDamp(current, target, ref velocity, smoothTime)</code></td><td>Spring-like smooth approach.</td><td>Camera zoom</td></tr>
+      <tr><td><code>Abs(x)</code></td><td>Remove the minus sign.</td><td><code>Abs(-4)</code> = 4</td></tr>
+      <tr><td><code>Sign(x)</code></td><td>1 if positive <em>or zero</em>, -1 if negative.</td><td><code>Sign(-3)</code> = -1</td></tr>
+      <tr><td><code>Min(a, b)</code> / <code>Max(a, b)</code></td><td>Smaller / larger value.</td><td><code>Max(2, 7)</code> = 7</td></tr>
+      <tr><td><code>RoundToInt(x)</code></td><td>Round to nearest int. Halves go to the nearest <em>even</em> number.</td><td><code>RoundToInt(2.5f)</code> = 2</td></tr>
+      <tr><td><code>FloorToInt(x)</code> / <code>CeilToInt(x)</code></td><td>Round down / up to an int.</td><td><code>FloorToInt(2.9f)</code> = 2</td></tr>
+      <tr><td><code>Sqrt(x)</code>, <code>Pow(x, p)</code></td><td>Square root, power.</td><td><code>Pow(2, 3)</code> = 8</td></tr>
+      <tr><td><code>Sin(rad)</code>, <code>Cos(rad)</code></td><td>Trig. Takes <strong>radians</strong>.</td><td><code>Sin(Time.time)</code> bobs -1 to 1</td></tr>
+      <tr><td><code>Atan2(y, x)</code></td><td>Angle (radians) of a direction. Great for 2D aiming.</td><td>See below</td></tr>
+      <tr><td><code>PingPong(t, length)</code></td><td>Goes 0 → length → 0 → ... as <code>t</code> increases.</td><td>Back-and-forth platforms</td></tr>
+      <tr><td><code>Repeat(t, length)</code></td><td>Like <code>%</code> (modulo) but works with floats and negatives. Wraps around.</td><td><code>Repeat(370, 360)</code> = 10</td></tr>
+      <tr><td><code>DeltaAngle(a, b)</code></td><td>Shortest difference between two angles in degrees.</td><td><code>DeltaAngle(350, 10)</code> = 20</td></tr>
+      <tr><td><code>Approximately(a, b)</code></td><td>Are two floats <em>nearly</em> equal?</td><td>See Common Mistakes</td></tr>
+    </table>
+    </div>
+
+    <h2>Code Samples</h2>
+    <h3>Health that can't go below 0 or above max</h3>
+    <pre><code class="language-csharp">currentHealth = Mathf.Clamp(currentHealth - damage, 0, maxHealth);
+</code></pre>
+
+    <h3>A floating, bobbing pickup</h3>
+    <pre><code class="language-csharp">using UnityEngine;
+
+public class Bob : MonoBehaviour
+{
+    [SerializeField] private float height = 0.25f;
+    [SerializeField] private float speed = 2f;
+    private Vector3 startPos;
+
+    void Start() { startPos = transform.position; }
+
+    void Update()
+    {
+        // Sin goes smoothly between -1 and 1 as time passes.
+        float offset = Mathf.Sin(Time.time * speed) * height;
+        transform.position = startPos + Vector3.up * offset;
+    }
+}
+</code></pre>
+
+    <h3>Health bar fill amount</h3>
+    <pre><code class="language-csharp">// Turn "37 out of 120" into a 0-1 value for a UI Image's fillAmount.
+healthBar.fillAmount = Mathf.InverseLerp(0, maxHealth, currentHealth);
+</code></pre>
+
+    <h3>2D: rotate a sprite to face the mouse</h3>
+    <pre><code class="language-csharp">Vector3 mouse = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+Vector2 dir = mouse - transform.position;
+float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+transform.rotation = Quaternion.Euler(0f, 0f, angle);
+</code></pre>
+
+    <h3>Smooth camera zoom</h3>
+    <pre><code class="language-csharp">private float zoomVelocity; // SmoothDamp needs a field to remember speed between frames
+
+void Update()
+{
+    cam.fieldOfView = Mathf.SmoothDamp(cam.fieldOfView, targetFov, ref zoomVelocity, 0.2f);
+}
+</code></pre>
+
+    <h2>Common Mistakes</h2>
+    <ul>
+      <li><strong>Comparing floats with <code>==</code>.</strong> Float math has tiny rounding errors, so <code>0.1f + 0.2f == 0.3f</code> can be false. Use <code>Mathf.Approximately(a, b)</code> or check <code>Mathf.Abs(a - b) &lt; 0.01f</code>.</li>
+      <li><strong>Passing degrees to Sin/Cos.</strong> <code>Mathf.Sin(90)</code> is not 1. Use <code>Mathf.Sin(90 * Mathf.Deg2Rad)</code>.</li>
+      <li><strong>Integer division.</strong> <code>currentHealth / maxHealth</code> with two <code>int</code>s is 0 until it's 1. Cast one to float: <code>(float)currentHealth / maxHealth</code>.</li>
+      <li><strong>Expecting <code>Sign(0)</code> to be 0.</strong> Mathf.Sign returns 1 for zero.</li>
+    </ul>
+
+    <h2>See also</h2>
+    <ul>
+      <li><a href="vector3.html">Vector3</a> (the same helpers for 3D points)</li>
+      <li><a href="time.html">Time</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/Mathf.html">official Unity documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.</footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>
