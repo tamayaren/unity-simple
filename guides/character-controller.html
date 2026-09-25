@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Working with CharacterController | Unity Simple Docs</title>
-<meta name="description" content="Make a player walk, jump and slide along walls while you control how the movement feels.">
+<meta name="description" content="Make a player walk, jump and bump into walls, with full control over how the movement feels.">
 <link rel="stylesheet" href="../css/style.css">
 </head>
 <body data-root="../" data-page="guides/character-controller.html">
@@ -21,87 +21,128 @@
   <aside class="sidebar" id="sidebar"></aside>
   <main class="content">
     <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Guides &rsaquo; Working with CharacterController</div>
-<h1>Working with CharacterController</h1>
-<p class="summary">Make a player walk, jump and slide along walls while you control how the movement feels.</p>
-<div class="analogy"><p>Imagine moving a person inside a clear, capsule-shaped bumper. You tell the bumper where to go, and it stops the person from passing through walls. You still have to tell it when to fall or jump.</p></div>
-<div class="tip"><strong>Start here</strong><p>Set up the floor and player, then try the complete script. Get walking and jumping working before adding moving platforms or crouching.</p></div>
-<nav aria-label="On this page"><strong>On this page</strong><ul><li><a href="#a-few-words-first">A few words first</a></li><li><a href="#choose-the-movement-owner">Choose the movement owner</a></li><li><a href="#set-up-a-test-scene">Set up a test scene</a></li><li><a href="#complete-movement-example">Complete movement example</a></li><li><a href="#read-the-movement-step">Read the movement step</a></li><li><a href="#move-versus-simplemove">Move versus SimpleMove</a></li><li><a href="#tune-the-capsule">Tune the capsule</a></li><li><a href="#grounding-and-slopes">Going further: Grounding and slopes</a></li><li><a href="#moving-platforms-pushing-and-crouching">Going further: Moving platforms, pushing and crouching</a></li><li><a href="#common-mistakes">Common Mistakes</a></li><li><a href="#try-it">Try it</a></li><li><a href="#see-also">See also</a></li><li><a href="#official-references">Official references</a></li></ul></nav>
-<h2 id="a-few-words-first">A few words first</h2><p>A <strong>CharacterController</strong> is a Unity component for moving a character while checking collisions. A <strong>capsule</strong> is a cylinder with rounded ends. A <strong>collider</strong> is the invisible shape Unity uses to detect contact.</p>
+    <h1>Working with CharacterController</h1>
+    <p class="summary">Make a player walk, jump and bump into walls, with full control over how the movement feels.</p>
+    <nav aria-label="On this page"><strong>On this page</strong><ul><li><a href="#charactercontroller-or-rigidbody">CharacterController or Rigidbody?</a></li><li><a href="#set-up">Set up</a></li><li><a href="#the-movement-script">The movement script</a></li><li><a href="#why-it-works">Why it works</a></li><li><a href="#move-vs-simplemove">Move vs SimpleMove</a></li><li><a href="#inspector-settings">Inspector settings</a></li><li><a href="#going-further">Going further</a></li><li><a href="#common-mistakes">Common Mistakes</a></li><li><a href="#see-also">See also</a></li></ul></nav>
+    <div class="analogy"><p>Imagine your character is inside an invisible <strong>capsule-shaped bumper</strong>. You say "move this way" and the bumper slides along walls instead of going through them. But the bumper has no gravity of its own: if you want it to fall or jump, you have to say so.</p></div>
 
+    <h2 id="charactercontroller-or-rigidbody">CharacterController or Rigidbody?</h2>
+    <div class="table-wrap"><table>
+      <tr><th>CharacterController</th><th>Rigidbody</th></tr>
+      <tr><td>You decide exactly how it moves</td><td>Physics decides (forces, mass, bouncing)</td></tr>
+      <tr><td>Snappy, predictable platformer or FPS movement</td><td>Rolling balls, cars, ragdolls, things that get knocked around</td></tr>
+      <tr><td>No gravity unless you add it</td><td>Gravity built in</td></tr>
+    </table></div>
+    <p>Pick <strong>one</strong>. Don't put a CharacterController, a Rigidbody and a NavMeshAgent on the same object; they'll fight over who moves it.</p>
 
-<h2 id="choose-the-movement-owner">Choose the movement owner</h2><p>Your script tells a CharacterController how far to move. The controller checks walls and floors along the way. It does not fall or respond to forces by itself. It is useful when you want to choose exactly how walking and jumping feel. A Rigidbody is useful when physics should control the movement, such as a ball rolling downhill. Do not let a Rigidbody, NavMeshAgent and CharacterController all move the same character.</p>
+    <h2 id="set-up">Set up</h2>
+    <ol>
+      <li>Make a floor, a few boxes, a small step and a ramp.</li>
+      <li>Create an empty <strong>Player</strong> at (0, 1, 0) and add a <strong>CharacterController</strong> (Height 2, Radius 0.5). Put your model underneath as a child.</li>
+      <li>Make sure the <strong>Input System</strong> package is installed (<a href="../tutorials/input-system.html">see here</a>).</li>
+      <li>Add the script below to Player and drag your camera into <strong>View</strong>.</li>
+    </ol>
 
-<h2 id="set-up-a-test-scene">Set up a test scene</h2><ol><li>Create a floor and a few boxes with colliders, including a low step and a slope.</li><li>Create an empty Player at (0, 1, 0). Add a CharacterController: Height 2, Radius 0.5, Center (0, 0, 0). Put any visual model under it as a child.</li><li>Install the Input System package and enable it in Active Input Handling. This example creates and owns its actions in code, so no PlayerInput component is needed.</li><li>Create a camera looking at the player, attach the following script to Player, and assign that camera's Transform to View.</li><li>Use WASD or the left stick to move; Space or the gamepad south button to jump. Keep the camera outside the player's capsule.</li></ol>
-<p>Save the script as <code>SimpleCharacterMotor.cs</code>. The Inspector fields are its controls: Speed is metres per second, Jump Height is metres, and Gravity is negative because it pulls downward. Each frame the script reads input, adds falling speed, and asks the controller to move.</p>
-<h2 id="complete-movement-example">Complete movement example</h2><pre><code class="language-csharp">using UnityEngine;
+    <h2 id="the-movement-script">The movement script</h2>
+<pre><code class="language-csharp">using UnityEngine;
 using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(CharacterController))]
-public class SimpleCharacterMotor : MonoBehaviour
+public class PlayerMovement : MonoBehaviour
 {
-    [SerializeField] private Transform view;
-    [SerializeField] private float speed = 5f;
-    [SerializeField] private float jumpHeight = 1.5f;
-    [SerializeField] private float gravity = -20f; // must stay negative
+    [SerializeField] private Transform view;          // the camera
+    [SerializeField] private float speed = 5f;         // metres per second
+    [SerializeField] private float jumpHeight = 1.5f;  // metres
+    [SerializeField] private float gravity = -20f;     // negative = pulls down
+
     private CharacterController controller;
-    private InputAction move;
-    private InputAction jump;
-    private float verticalSpeed;
+    private float verticalSpeed;                       // how fast we're rising/falling
 
-    void Awake()
-    {
-        controller = GetComponent&lt;CharacterController&gt;();
-        move = new InputAction("Move", InputActionType.Value);
-        move.AddCompositeBinding("2DVector")
-            .With("Up", "&lt;Keyboard&gt;/w").With("Down", "&lt;Keyboard&gt;/s")
-            .With("Left", "&lt;Keyboard&gt;/a").With("Right", "&lt;Keyboard&gt;/d");
-        move.AddBinding("&lt;Gamepad&gt;/leftStick");
-        jump = new InputAction("Jump", InputActionType.Button);
-        jump.AddBinding("&lt;Keyboard&gt;/space");
-        jump.AddBinding("&lt;Gamepad&gt;/buttonSouth");
-    }
-
-    void OnEnable() { move.Enable(); jump.Enable(); }
-    void OnDisable() { move.Disable(); jump.Disable(); verticalSpeed = 0; }
-    void OnDestroy() { move.Dispose(); jump.Dispose(); }
+    void Awake() =&gt; controller = GetComponent&lt;CharacterController&gt;();
 
     void Update()
     {
-        if (Time.deltaTime &lt;= 0 || !controller.enabled) return;
-        Vector2 input = Vector2.ClampMagnitude(move.ReadValue&lt;Vector2&gt;(), 1f);
-        Vector3 forward = view != null ? view.forward : Vector3.forward;
-        forward.y = 0;
-        if (forward.sqrMagnitude &lt; 0.0001f) forward = Vector3.forward;
-        forward.Normalize();
-        Vector3 right = Vector3.Cross(Vector3.up, forward);
-        Vector3 horizontal = (right * input.x + forward * input.y) * speed;
+        var keyboard = Keyboard.current;
+        if (keyboard == null) return;
 
-        // isGrounded describes the previous Move, not a fresh probe.
-        if (controller.isGrounded &amp;&amp; verticalSpeed &lt; 0) verticalSpeed = -2f;
-        if (controller.isGrounded &amp;&amp; jump.WasPressedThisFrame())
+        // 1. Read WASD as a 2D input
+        Vector2 input = Vector2.zero;
+        if (keyboard.wKey.isPressed) input.y += 1;
+        if (keyboard.sKey.isPressed) input.y -= 1;
+        if (keyboard.dKey.isPressed) input.x += 1;
+        if (keyboard.aKey.isPressed) input.x -= 1;
+        input = Vector2.ClampMagnitude(input, 1f);    // diagonals aren't faster
+
+        // 2. Turn it into a direction relative to the camera, flat on the ground
+        Vector3 forward = view.forward; forward.y = 0; forward.Normalize();
+        Vector3 right   = view.right;   right.y = 0;   right.Normalize();
+        Vector3 move = (forward * input.y + right * input.x) * speed;
+
+        // 3. Gravity and jumping
+        if (controller.isGrounded &amp;&amp; verticalSpeed &lt; 0)
+            verticalSpeed = -2f;                       // keep pressed onto the floor
+        if (controller.isGrounded &amp;&amp; keyboard.spaceKey.wasPressedThisFrame)
             verticalSpeed = Mathf.Sqrt(jumpHeight * -2f * gravity);
         verticalSpeed += gravity * Time.deltaTime;
+        move.y = verticalSpeed;
 
-        CollisionFlags flags = controller.Move(
-            (horizontal + Vector3.up * verticalSpeed) * Time.deltaTime);
-        if ((flags &amp; CollisionFlags.Above) != 0 &amp;&amp; verticalSpeed &gt; 0)
-            verticalSpeed = 0;
-        if ((flags &amp; CollisionFlags.Below) != 0 &amp;&amp; verticalSpeed &lt; 0)
-            verticalSpeed = -2f;
+        // 4. Move once per frame. The controller handles walls and floors.
+        controller.Move(move * Time.deltaTime);
     }
 }
 </code></pre>
-<h2 id="read-the-movement-step">Read the movement step</h2><ol><li><code>ReadValue</code> gets the stick or keyboard direction.</li><li>The camera’s forward and right directions turn that input into movement in the scene.</li><li><code>verticalSpeed</code> remembers how fast the player is rising or falling.</li><li><code>Move</code> tries the combined movement and reports what the capsule hit.</li></ol><p><code>Time.deltaTime</code> is the time since the previous frame. At 5 metres per second, a frame lasting 0.02 seconds should move the player 0.1 metres. That is why the code multiplies speed by deltaTime.</p>
-<h2 id="move-versus-simplemove">Move versus SimpleMove</h2><p><code>Move</code> accepts displacement in metres for this call. A velocity in metres per second must be multiplied by deltaTime exactly once. It does not apply gravity. <code>SimpleMove</code> accepts a velocity, ignores its Y component, and applies gravity itself; it is a convenient walking helper, but not the jump motor used above. Choose one movement path.</p>
-<p>The jump formula comes from <code>v² = 2gh</code>. Gravity is negative in this example, so launch speed is <code>sqrt(-2 * gravity * height)</code>. Integration is discrete, so the measured peak varies slightly with frame rate and collisions. CollisionFlags can report more than one contact at once: standing against a wall can report both Sides and Below. The <code>&amp;</code> checks in the script test whether a particular contact is present.</p>
-<h2 id="tune-the-capsule">Tune the capsule</h2><div class="table-wrap"><table><tr><th>Setting</th><th>Meaning and starting point</th></tr><tr><td>Height, Radius, Center</td><td>Fit the collision capsule to the model, not its decorative accessories. Keep the root at unit scale.</td></tr><tr><td>Slope Limit</td><td>Maximum climbable slope angle. Try 45 degrees and test ramps on both sides of that limit.</td></tr><tr><td>Step Offset</td><td>How high a step it can climb. Try 0.3 for a roughly two-metre character; it must not exceed capsule height.</td></tr><tr><td>Skin Width</td><td>Tolerance that reduces jitter and sticking. Start around 10% of radius and above 0.01, then test.</td></tr><tr><td>Min Move Distance</td><td>Movements smaller than this can be ignored. Usually leave at 0 for character movement.</td></tr></table></div>
-<h2 id="grounding-and-slopes">Going further: Grounding and slopes</h2><p>The small negative grounded speed keeps submitting a downward move, making ground contact more consistent. It is not a full ground-snap system: fast downhill movement and ledges can still leave the ground. For stronger grounding, use a short capsule or sphere cast, reject surfaces steeper than your walkable angle, and snap only while falling and near the ground. Exclude the player's own layers from probes.</p>
-<p>For forgiving jumps, record the last grounded time (coyote time) and the last jump-pressed time (input buffering); allow a jump when both windows overlap, then consume the buffered request. Do not repeatedly jump just because the button remains held.</p>
-<h2 id="moving-platforms-pushing-and-crouching">Going further: Moving platforms, pushing and crouching</h2><p>A controller does not automatically inherit platform motion. Record the contact platform and a local contact point, transform that point next frame, and add its world displacement to your Move. Include rotation around the platform's pivot. Clear the platform reference when jumping or losing contact.</p>
-<p><code>OnControllerColliderHit</code> can identify a Rigidbody to push. Apply a deliberate horizontal force with mass and speed limits; do not drive a dynamic body by writing its Transform. Crouching changes both height and center so the feet remain in place. Before standing, check the expanded capsule for blocking geometry.</p>
-<div class="runtime"><p><strong>What happens at runtime</strong></p><ol><li>Read input once in Update and construct horizontal camera-relative velocity.</li><li>Update the stored vertical speed for gravity and jumping.</li><li>Submit one combined displacement; the controller resolves collisions.</li><li>Use flags to cancel velocity into the ceiling or floor.</li></ol></div>
-<h2 id="common-mistakes">Common Mistakes</h2><ul><li>Multiplying SimpleMove by deltaTime, or forgetting it for Move.</li><li>Writing transform.position for ordinary movement and bypassing collision resolution.</li><li>Reading isGrounded before the first Move and assuming a fresh ground test.</li><li>Normalizing analog stick input and losing slow movement; clamp its magnitude instead.</li><li>Assuming slope limit makes the character slide down steep slopes automatically; author that behavior explicitly.</li></ul>
-<h2 id="try-it">Try it</h2><p>Test diagonal speed, jumping under a low ceiling, walking down a slope, hitting a wall at an angle, stepping over a box, and pausing at timeScale 0. These reveal different failures; a flat floor alone is not enough.</p><h2 id="see-also">See also</h2><ul><li><a href="../tutorials/input-system.html">Using the Input System</a></li><li><a href="../guides/vector-math.html">Dot, Cross &amp; Reflect</a></li><li><a href="../guides/navmesh.html">NavMesh in Depth</a></li></ul><h2 id="official-references">Official references</h2><ul><li><a href="https://docs.unity3d.com/6000.0/Documentation/ScriptReference/CharacterController.html">CharacterController</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/ScriptReference/CharacterController.Move.html">Move</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/ScriptReference/CharacterController.SimpleMove.html">SimpleMove</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/Manual/class-CharacterController.html">Character Controller settings</a></li></ul><p class="official-link">This page is a simplified, AI-assisted interpretation. Check the linked Unity documentation for authoritative details and your installed package version.</p>
+    <p>To support gamepads and rebinding, swap step 1 for an <a href="../api/inputaction.html">InputAction</a>. The rest stays the same.</p>
+
+    <figure class="diagram"><div class="diagram-scroll"><svg viewBox="0 0 758 80" role="img" aria-label="One Move call per frame, with everything combined." style="max-width:758px;min-width:568px"><rect x="5" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="85" y="45" text-anchor="middle" class="dg-t">Read input</text><polyline points="169,40 195,40" class="dg-line"/><path d="M189,35 L197,40 L189,45 z" class="dg-head"/><rect x="201" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="281" y="45" text-anchor="middle" class="dg-t">Camera-relative direction</text><polyline points="365,40 391,40" class="dg-line"/><path d="M385,35 L393,40 L385,45 z" class="dg-head"/><rect x="397" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="477" y="45" text-anchor="middle" class="dg-t">Add gravity / jump</text><polyline points="561,40 587,40" class="dg-line"/><path d="M581,35 L589,40 L581,45 z" class="dg-head"/><rect x="593" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="673" y="45" text-anchor="middle" class="dg-t">controller.Move()</text></svg></div><figcaption>One Move call per frame, with everything combined.</figcaption></figure>
+
+    <h2 id="why-it-works">Why it works</h2>
+    <ul>
+      <li><strong><code>Time.deltaTime</code></strong> turns "metres per second" into "metres this frame", so speed is the same at 30 FPS and 144 FPS.</li>
+      <li><strong><code>verticalSpeed</code></strong> is remembered between frames. Gravity makes it more negative every frame, so you fall faster and faster, like real falling.</li>
+      <li><strong>The jump formula</strong> <code>Sqrt(height * -2 * gravity)</code> is the launch speed needed to reach exactly <code>jumpHeight</code>.</li>
+      <li><strong><code>-2f</code> when grounded</strong> keeps pushing gently down so <code>isGrounded</code> stays true while walking down ramps.</li>
+    </ul>
+
+    <h2 id="move-vs-simplemove">Move vs SimpleMove</h2>
+    <div class="table-wrap"><table>
+      <tr><th></th><th><code>Move(motion)</code></th><th><code>SimpleMove(speed)</code></th></tr>
+      <tr><td>You pass</td><td>Distance for <em>this frame</em> (multiply by deltaTime)</td><td>Speed per second (don't multiply)</td></tr>
+      <tr><td>Gravity</td><td>You add it</td><td>Added for you</td></tr>
+      <tr><td>Jumping</td><td>Yes</td><td>No, it ignores Y</td></tr>
+    </table></div>
+
+    <h2 id="inspector-settings">Inspector settings</h2>
+    <div class="table-wrap"><table>
+      <tr><th>Setting</th><th>What it does</th><th>Try</th></tr>
+      <tr><td>Height / Radius / Center</td><td>Size of the capsule. Fit it to the body, not to hats or swords.</td><td>2 / 0.5 / (0,0,0)</td></tr>
+      <tr><td>Slope Limit</td><td>Steepest ramp you can walk up</td><td>45</td></tr>
+      <tr><td>Step Offset</td><td>Tallest step you can walk onto</td><td>0.3</td></tr>
+      <tr><td>Skin Width</td><td>A small safety gap that stops you getting stuck</td><td>10% of the radius</td></tr>
+    </table></div>
+
+    <h2 id="going-further">Going further</h2>
+    <ul>
+      <li><strong>Coyote time:</strong> remember when you were last on the ground and allow a jump for ~0.1 s after walking off a ledge. It makes jumping feel much fairer.</li>
+      <li><strong>Pushing boxes:</strong> <code>OnControllerColliderHit(ControllerColliderHit hit)</code> runs when you bump into something. If <code>hit.rigidbody</code> isn't null, push it with <code>AddForce</code>.</li>
+      <li><strong>Moving platforms:</strong> the controller doesn't ride along automatically. Add the platform's movement for this frame to your own <code>Move</code>.</li>
+    </ul>
+
+    <h2 id="common-mistakes">Common Mistakes</h2>
+    <ul>
+      <li>Setting <code>transform.position</code> directly. That skips collision and you walk through walls. Use <code>Move</code>.</li>
+      <li>Calling <code>Move</code> twice per frame (once for walking, once for gravity). <code>isGrounded</code> only reflects the last call, so combine them into one.</li>
+      <li>Forgetting <code>Time.deltaTime</code> with <code>Move</code>, or adding it to <code>SimpleMove</code>.</li>
+      <li>Using <code>.normalized</code> on stick input. Slow walking then becomes impossible. Use <code>ClampMagnitude</code>.</li>
+    </ul>
+
+    <h2 id="see-also">See also</h2>
+    <ul>
+      <li><a href="../tutorials/input-system.html">Using the Input System</a></li>
+      <li><a href="update-fixedupdate.html">Update &amp; FixedUpdate</a></li>
+      <li><a href="state-machines.html">Simple State Machines</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/CharacterController.html">official documentation</a>.</p>
   </main>
 </div>
 <footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>

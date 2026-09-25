@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Your First HLSL Shader | Unity Simple Docs</title>
-<meta name="description" content="Write your first shader: put a texture on a shape, give it a color tint, and learn what each part of the code does.">
+<meta name="description" content="Write a small shader that puts a texture on a shape and tints it, and learn what each part does.">
 <link rel="stylesheet" href="../css/style.css">
 </head>
 <body data-root="../" data-page="hlsl/first-shader.html">
@@ -21,23 +21,38 @@
   <aside class="sidebar" id="sidebar"></aside>
   <main class="content">
     <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; HLSL &amp; Shaders &rsaquo; Your First HLSL Shader</div>
-<h1>Your First HLSL Shader</h1>
-<p class="summary">Write your first shader: put a texture on a shape, give it a color tint, and learn what each part of the code does.</p>
-<div class="analogy"><p>Think of decorating a paper model. The vertex function places its corners. The fragment function chooses the colors on its surface. The material is your box of chosen paint and pictures; the shader is the set of instructions for using them.</p></div>
-<div class="tip"><strong>Start here</strong><p>Use a Universal 3D project, copy the complete shader, and get a textured Cube on screen. Then change the tint and try the UV color test. You do not need to memorize every keyword first.</p></div>
-<nav aria-label="On this page"><strong>On this page</strong><ul><li><a href="#a-few-words-first">A few words first</a></li><li><a href="#shader-material-and-renderer">Shader, material and renderer</a></li><li><a href="#1-create-the-assets">1. Create the assets</a></li><li><a href="#2-the-complete-shader">2. The complete shader</a></li><li><a href="#3-read-the-structure">3. Read the structure</a></li><li><a href="#hlsl-essentials">HLSL essentials</a></li><li><a href="#4-experiment-with-the-fragment-function">4. Experiment with the fragment function</a></li><li><a href="#coordinate-spaces-and-lighting">Going further: Coordinate spaces and lighting</a></li><li><a href="#common-mistakes">Common Mistakes</a></li><li><a href="#see-also">See also</a></li><li><a href="#official-references">Official references</a></li></ul></nav>
-<h2 id="a-few-words-first">A few words first</h2><p>A <strong>shader</strong> is a small program used to draw things. <strong>HLSL</strong> is the language used for that program. It runs on the <strong>GPU</strong>, the part of your computer that draws graphics. <strong>ShaderLab</strong> is Unity’s wrapper around the HLSL code: it lists material settings and drawing rules.</p>
+    <h1>Your First HLSL Shader</h1>
+    <p class="summary">Write a small shader that puts a texture on a shape and tints it, and learn what each part does.</p>
+    <nav aria-label="On this page"><strong>On this page</strong><ul><li><a href="#words-to-know">Words to know</a></li><li><a href="#1-create-it">1. Create it</a></li><li><a href="#2-the-shader">2. The shader</a></li><li><a href="#3-what-each-part-does">3. What each part does</a></li><li><a href="#hlsl-in-two-minutes">HLSL in two minutes</a></li><li><a href="#4-experiments">4. Experiments</a></li><li><a href="#common-mistakes">Common Mistakes</a></li><li><a href="#see-also">See also</a></li></ul></nav>
+    <div class="analogy"><p>Imagine painting a paper model. First you decide <strong>where each corner goes</strong> (the <em>vertex</em> function). Then you decide <strong>what colour each spot on the surface is</strong> (the <em>fragment</em> function). The <strong>shader</strong> is your painting instructions; the <strong>material</strong> is the actual paint and pictures you picked.</p></div>
 
+    <div class="note"><strong>Before you start</strong><p>This page is for <strong>URP</strong> (a "Universal 3D" project). Old tutorials using <code>CGPROGRAM</code> or <code>surface</code> shaders are for the Built-in pipeline and won't work here.</p></div>
 
-<div class="note"><strong>Target: Unity 6, URP 17, Universal Renderer</strong><p>These examples are for mesh rendering with URP's Universal Renderer. They are not Built-in Surface Shaders, HDRP shaders or Sprite-Lit shaders for the 2D Renderer. Start with a Universal 3D project; see the URP guide for pipeline setup.</p></div>
-<h2 id="shader-material-and-renderer">Shader, material and renderer</h2><p>A shader defines the GPU program and rendering rules. A material stores chosen values, such as texture and tint. A renderer supplies geometry and transforms. Ten materials can use the same shader with different values. A shader runs on many vertices and fragments in parallel; it is not a C# script with one Update call.</p><figure class="diagram"><div class="diagram-scroll"><svg viewBox="0 0 840 80" role="img" aria-label="Vertices become triangles on screen; interpolated values feed the fragment function for covered samples." style="max-width:840px;min-width:480px"><rect x="5" y="15" width="180" height="50" rx="4" class="dg-box"/><text x="95" y="45" text-anchor="middle" class="dg-t">Mesh vertices</text><text x="197" y="45">→</text><rect x="215" y="15" width="180" height="50" rx="4" class="dg-box"/><text x="305" y="45" text-anchor="middle" class="dg-t">Vertex function</text><text x="407" y="45">→</text><rect x="425" y="15" width="180" height="50" rx="4" class="dg-box"/><text x="515" y="45" text-anchor="middle" class="dg-t">Rasterization</text><text x="617" y="45">→</text><rect x="635" y="15" width="180" height="50" rx="4" class="dg-box"/><text x="725" y="45" text-anchor="middle" class="dg-t">Fragment function</text></svg></div><figcaption>Vertices become triangles on screen; interpolated values feed the fragment function for covered samples.</figcaption></figure>
-<h2 id="1-create-the-assets">1. Create the assets</h2><ol><li>Create a file named <code>SimpleTexture.shader</code> inside Assets. Replace its contents with the complete shader below.</li><li>Wait for compilation, then create a Material and choose <strong>Simple/Texture</strong> from its Shader menu.</li><li>Assign a texture to Base Map and choose a tint. Assign the material to a Quad or Cube.</li><li>Point the camera at the mesh. The texture should remain visible even without a light because this shader is unlit.</li></ol>
-<p>Read this as three small jobs: <code>Properties</code> adds controls to the material, <code>Vert</code> places the corners, and <code>Frag</code> colors the surface. The rest connects those jobs to Unity.</p>
-<h2 id="2-the-complete-shader">2. The complete shader</h2><pre><code class="language-hlsl">Shader "Simple/Texture"
+    <h2 id="words-to-know">Words to know</h2>
+    <div class="table-wrap"><table>
+      <tr><th>Word</th><th>Meaning</th></tr>
+      <tr><td><strong>Shader</strong></td><td>A tiny program that runs on the graphics card (GPU) to draw things.</td></tr>
+      <tr><td><strong>HLSL</strong></td><td>The language shaders are written in. Looks a lot like C#.</td></tr>
+      <tr><td><strong>Vertex</strong></td><td>A corner of a mesh.</td></tr>
+      <tr><td><strong>Fragment</strong></td><td>Roughly, one pixel of the shape on screen.</td></tr>
+      <tr><td><strong>UV</strong></td><td>An address on a texture: (0,0) is bottom-left, (1,1) is top-right.</td></tr>
+    </table></div>
+
+    <figure class="diagram"><div class="diagram-scroll"><svg viewBox="0 0 954 80" role="img" aria-label="The vertex function runs once per corner, the fragment function once per pixel, all at the same time on the GPU." style="max-width:954px;min-width:715px"><rect x="5" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="85" y="45" text-anchor="middle" class="dg-t">Mesh corners</text><polyline points="169,40 195,40" class="dg-line"/><path d="M189,35 L197,40 L189,45 z" class="dg-head"/><rect x="201" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="281" y="45" text-anchor="middle" class="dg-t">Vertex function</text><polyline points="365,40 391,40" class="dg-line"/><path d="M385,35 L393,40 L385,45 z" class="dg-head"/><rect x="397" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="477" y="45" text-anchor="middle" class="dg-t">GPU fills triangles</text><polyline points="561,40 587,40" class="dg-line"/><path d="M581,35 L589,40 L581,45 z" class="dg-head"/><rect x="593" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="673" y="45" text-anchor="middle" class="dg-t">Fragment function</text><polyline points="757,40 783,40" class="dg-line"/><path d="M777,35 L785,40 L777,45 z" class="dg-head"/><rect x="789" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="869" y="45" text-anchor="middle" class="dg-t">Pixels</text></svg></div><figcaption>The vertex function runs once per corner, the fragment function once per pixel, all at the same time on the GPU.</figcaption></figure>
+
+    <h2 id="1-create-it">1. Create it</h2>
+    <ol>
+      <li>In the Project window: <strong>Create &gt; Shader &gt; Unlit Shader</strong>, name it <code>SimpleTexture</code>, and replace everything inside with the code below.</li>
+      <li><strong>Create &gt; Material</strong>, then pick <strong>Simple/Texture</strong> from its Shader dropdown.</li>
+      <li>Give the material a texture and a tint, and drag it onto a Cube.</li>
+    </ol>
+
+    <h2 id="2-the-shader">2. The shader</h2>
+<pre><code class="language-hlsl">Shader "Simple/Texture"
 {
-    Properties
+    Properties   // what shows up in the material Inspector
     {
-        _BaseMap ("Base Map", 2D) = "white" {}
+        _BaseMap ("Texture", 2D) = "white" {}
         _BaseColor ("Tint", Color) = (1, 1, 1, 1)
     }
     SubShader
@@ -45,55 +60,109 @@
         Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalPipeline" }
         Pass
         {
-            Name "Unlit"
-            Tags { "LightMode"="SRPDefaultUnlit" }
             HLSLPROGRAM
             #pragma vertex Vert
             #pragma fragment Frag
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
+            // Data coming IN from the mesh
             struct Attributes
             {
-                float4 positionOS : POSITION;
-                float2 uv : TEXCOORD0;
+                float4 positionOS : POSITION;   // corner position
+                float2 uv         : TEXCOORD0;  // texture address
             };
+
+            // Data passed from Vert to Frag
             struct Varyings
             {
-                float4 positionHCS : SV_POSITION;
-                float2 uv : TEXCOORD0;
+                float4 positionCS : SV_POSITION; // where on screen
+                float2 uv         : TEXCOORD0;
             };
 
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
-            CBUFFER_START(UnityPerMaterial)
-                float4 _BaseMap_ST;
-                half4 _BaseColor;
+
+            CBUFFER_START(UnityPerMaterial)   // the material's numbers
+                float4 _BaseMap_ST;           // tiling and offset
+                half4  _BaseColor;
             CBUFFER_END
 
+            // Runs for every corner: work out where it goes on screen
             Varyings Vert(Attributes input)
             {
                 Varyings output;
-                output.positionHCS = TransformObjectToHClip(input.positionOS.xyz);
+                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 return output;
             }
+
+            // Runs for every pixel: work out its colour
             half4 Frag(Varyings input) : SV_Target
             {
-                return SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv) * _BaseColor;
+                half4 texColor = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv);
+                return texColor * _BaseColor;
             }
             ENDHLSL
         }
     }
 }
 </code></pre>
-<h2 id="3-read-the-structure">3. Read the structure</h2><div class="table-wrap"><table><tr><th>Part</th><th>Responsibility</th></tr><tr><td>Properties</td><td>Inspector-facing material inputs. Names must match the HLSL declarations.</td></tr><tr><td>SubShader / Tags</td><td>Select pipeline and rendering category. These tags do not implement lighting.</td></tr><tr><td>Pass</td><td>One rendering pass with its own GPU program and render state.</td></tr><tr><td>HLSLPROGRAM / pragmas</td><td>Select the named vertex and fragment entry points.</td></tr><tr><td>Attributes</td><td>Data from the mesh. POSITION labels a vertex position; TEXCOORD0 labels its first set of texture coordinates.</td></tr><tr><td>Varyings</td><td>Data passed toward the fragment function. Unity blends values such as UVs between the corners. SV_POSITION tells the GPU where the vertex goes on screen before the final screen conversion.</td></tr><tr><td>UnityPerMaterial</td><td>Groups the material’s numbers in a layout Unity can reuse efficiently. Keep the same layout in every pass. Textures and samplers stay outside.</td></tr><tr><td>_BaseMap_ST</td><td>Texture tiling in xy and offset in zw; TRANSFORM_TEX applies both.</td></tr></table></div>
-<p><strong>UVs</strong> are addresses on a texture: (0,0) is one corner and (1,1) is the opposite corner. <strong>Sampling</strong> a texture means asking for its color at a UV address. A <strong>fragment</strong> is a candidate piece of the image; depth testing can still hide it behind something closer.</p>
-<h2 id="hlsl-essentials">HLSL essentials</h2><p><code>float</code> is a scalar; <code>float2/3/4</code> are small vectors. <code>.xyz</code> or <code>.rgb</code> selects components; <code>.xx</code> duplicates one. Vector arithmetic is component-wise: multiplying two colors multiplies each channel. Use <code>mul(matrix, vector)</code> for matrix transformation, not component-wise multiplication.</p>
-<p>Use float for positions and UVs that need precision, and half where reduced precision is acceptable, commonly colors. Actual precision depends on the target GPU. <code>saturate(x)</code> clamps to 0–1, <code>lerp(a,b,t)</code> blends without automatically clamping t, and <code>smoothstep(a,b,x)</code> creates a smooth transition. HLSL dot, cross and reflect have the same geometric roles as the Vector3 operations.</p>
-<h2 id="4-experiment-with-the-fragment-function">4. Experiment with the fragment function</h2><p>Replace its return line with <code>return half4(input.uv, 0, 1);</code> to see UVs: red increases across U and green across V. Restore texture sampling, then multiply the RGB by <code>0.75 + 0.25 * sin(_Time.y * 2.0)</code> for a pulse. _Time.y is elapsed time in seconds. This shader is opaque: returning alpha below 1 does not enable transparency.</p>
-<h2 id="coordinate-spaces-and-lighting">Going further: Coordinate spaces and lighting</h2><p>OS is object space; WS is world space; HCS is homogeneous clip space. Use URP's transformation helpers so platform conventions stay correct. A real lit shader needs normals, light data and appropriate lighting calculations. Receiving shadows, casting shadows, depth-only rendering and motion vectors require additional support and passes; this deliberately small shader provides none of those passes.</p>
-<div class="runtime"><p><strong>What happens at runtime</strong></p><ol><li>Unity binds the material inputs and mesh attributes.</li><li>Vert transforms each vertex and passes texture coordinates onward.</li><li>The GPU finds which screen pixels the triangles cover and blends the corner UV values across their surfaces.</li><li>Frag samples a texture and returns tinted color; depth testing determines visible fragments.</li></ol></div>
-<h2 id="common-mistakes">Common Mistakes</h2><ul><li>Pink material: check Console shader errors, the active pipeline, and include paths.</li><li>Black texture: confirm assignment and inspect UVs using the gradient test.</li><li>Using Built-in <code>CGPROGRAM</code> examples or Surface Shaders unchanged in URP.</li><li>Expecting shader displacement to update mesh bounds or colliders.</li><li>Adding expensive texture samples or loops without measuring GPU cost on target hardware.</li></ul><h2 id="see-also">See also</h2><ul><li><a href="../hlsl/billboards.html">Camera-facing Billboards</a></li><li><a href="../guides/urp-post-processing.html">URP &amp; Post-processing</a></li><li><a href="../guides/vector-math.html">Dot, Cross &amp; Reflect</a></li></ul><h2 id="official-references">Official references</h2><ul><li><a href="https://docs.unity3d.com/6000.0/Documentation/Manual/urp/writing-shaders-urp-basic-unlit-structure.html">URP unlit shader structure</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/Manual/urp/writing-shaders-urp-unlit-texture.html">URP texture sampling</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/Manual/urp/shaders-in-universalrp-srp-batcher.html">SRP Batcher shader compatibility</a></li></ul><p class="official-link">This page is a simplified, AI-assisted interpretation. Check the linked Unity documentation for authoritative details and your installed package version.</p>
+
+    <h2 id="3-what-each-part-does">3. What each part does</h2>
+    <div class="table-wrap"><table>
+      <tr><th>Part</th><th>In plain words</th></tr>
+      <tr><td><code>Properties</code></td><td>The sliders and slots in the material Inspector. Names must match the variables further down.</td></tr>
+      <tr><td><code>Tags</code></td><td>Tell Unity "this is a solid object for URP".</td></tr>
+      <tr><td><code>Attributes</code></td><td>What each corner of the mesh gives you.</td></tr>
+      <tr><td><code>Varyings</code></td><td>What <code>Vert</code> hands to <code>Frag</code>. The GPU blends these smoothly between corners.</td></tr>
+      <tr><td><code>CBUFFER</code> block</td><td>Groups the material's values so URP can draw faster (SRP Batcher). Put every non-texture property here.</td></tr>
+      <tr><td><code>TransformObjectToHClip</code></td><td>Converts a corner from "on the model" to "on the screen".</td></tr>
+      <tr><td><code>SAMPLE_TEXTURE2D</code></td><td>Reads the texture's colour at a UV address.</td></tr>
+    </table></div>
+
+    <h2 id="hlsl-in-two-minutes">HLSL in two minutes</h2>
+    <ul>
+      <li><code>float</code> = a number. <code>float2</code>, <code>float3</code>, <code>float4</code> = 2, 3 or 4 numbers together (like Vector2/3/4).</li>
+      <li><code>half</code> = a less precise, cheaper number. Fine for colours.</li>
+      <li>Pick parts with <code>.x .y .z .w</code> or <code>.r .g .b .a</code>. <code>color.rgb</code> is the first three.</li>
+      <li>Handy functions: <code>lerp(a, b, t)</code> blend, <code>saturate(x)</code> clamp to 0–1, <code>sin(x)</code> wave, <code>dot</code>, <code>normalize</code>.</li>
+      <li><code>_Time.y</code> = seconds since the game started.</li>
+    </ul>
+
+    <h2 id="4-experiments">4. Experiments</h2>
+    <p>Change the last line of <code>Frag</code> and save; the Scene view updates instantly.</p>
+    <div class="table-wrap"><table>
+      <tr><th>Replace with</th><th>You'll see</th></tr>
+      <tr><td><code>return half4(input.uv, 0, 1);</code></td><td>The UVs as colours: red across, green up.</td></tr>
+      <tr><td><code>return texColor * _BaseColor * (0.75 + 0.25 * sin(_Time.y * 3));</code></td><td>A gentle pulse.</td></tr>
+      <tr><td><code>return half4(1 - texColor.rgb, 1);</code></td><td>Inverted colours.</td></tr>
+    </table></div>
+
+    <div class="runtime"><p><strong>What happens at runtime</strong></p><ol>
+      <li>Unity sends the mesh and the material's values to the GPU.</li>
+      <li><code>Vert</code> runs for every corner and places it on screen.</li>
+      <li>The GPU works out which pixels each triangle covers, blending the UVs between the corners.</li>
+      <li><code>Frag</code> runs for every covered pixel and returns its colour.</li>
+    </ol></div>
+
+    <h2 id="common-mistakes">Common Mistakes</h2>
+    <ul>
+      <li><strong>Pink material:</strong> there's a compile error. Click the shader asset and read the errors in the Inspector.</li>
+      <li>A property named differently in <code>Properties</code> and the <code>CBUFFER</code>, so the Inspector value is ignored.</li>
+      <li>Returning alpha below 1 and expecting see-through. This shader is opaque; transparency needs extra settings.</li>
+      <li>Expecting lighting or shadows. This is an <em>unlit</em> shader. Lighting needs much more code, or use Shader Graph.</li>
+    </ul>
+
+    <div class="tip"><strong>Prefer nodes?</strong><p><strong>Shader Graph</strong> (Create &gt; Shader Graph) builds the same thing by connecting boxes, with lighting included. Many games never write HLSL by hand.</p></div>
+
+    <h2 id="see-also">See also</h2>
+    <ul>
+      <li><a href="billboards.html">Camera-facing Billboards</a></li>
+      <li><a href="../guides/urp-post-processing.html">URP &amp; Post-processing</a></li>
+      <li><a href="../guides/vector-math.html">Dot, Cross &amp; Reflect</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/6000.0/Documentation/Manual/urp/writing-shaders-urp-unlit-texture.html">official documentation</a>.</p>
   </main>
 </div>
 <footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>

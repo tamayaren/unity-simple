@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Working with Particle Systems | Unity Simple Docs</title>
+<meta name="description" content="Make explosions, sparks, smoke, dust and rain, and control them from your scripts.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="guides/particle-systems.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Guides &rsaquo; Working with Particle Systems</div>
+    <h1>Working with Particle Systems</h1>
+    <p class="summary">Make explosions, sparks, smoke, dust and rain, and control them from your scripts.</p>
+    <nav aria-label="On this page"><strong>On this page</strong><ul><li><a href="#make-your-first-effect">Make your first effect</a></li><li><a href="#the-modules-you-ll-use-most">The modules you'll use most</a></li><li><a href="#recipes">Recipes</a></li><li><a href="#local-vs-world-simulation-space">Local vs World simulation space</a></li><li><a href="#controlling-particles-from-code">Controlling particles from code</a></li><li><a href="#example-play-a-hit-effect-where-a-bullet-lands">Example: play a hit effect where a bullet lands</a></li><li><a href="#sub-emitters-effects-inside-effects">Sub Emitters: effects inside effects</a></li><li><a href="#materials-in-urp">Materials in URP</a></li><li><a href="#keep-it-fast">Keep it fast</a></li><li><a href="#common-mistakes">Common Mistakes</a></li><li><a href="#see-also">See also</a></li></ul></nav>
+    <div class="analogy"><p>A Particle System is a <strong>confetti cannon</strong> with a lot of dials. One dial sets how many pieces fly out, another sets which direction, another how long each piece lasts, another what colour it fades to. Each piece of confetti (a <em>particle</em>) is just a tiny picture that always faces the camera.</p></div>
+
+    <h2 id="make-your-first-effect">Make your first effect</h2>
+    <ol>
+      <li><strong>GameObject &gt; Effects &gt; Particle System.</strong> White dots start floating upward.</li>
+      <li>With it selected, a small <strong>Particle Effect</strong> panel appears in the Scene view with Play, Restart and Stop buttons, so you can preview without entering Play mode.</li>
+      <li>In the Inspector, the settings are split into <strong>modules</strong>. Click a module's name to open it and tick its box to turn it on.</li>
+    </ol>
+
+    <h2 id="the-modules-you-ll-use-most">The modules you'll use most</h2>
+    <div class="table-wrap"><table>
+      <tr><th>Module</th><th>Controls</th><th>Key settings</th></tr>
+      <tr><td><strong>Main</strong> (top section)</td><td>Each particle's starting look</td><td>Duration, Looping, Start Lifetime, Start Speed, Start Size, Start Color, Gravity Modifier, Simulation Space</td></tr>
+      <tr><td><strong>Emission</strong></td><td>How many come out</td><td><em>Rate over Time</em> (steady stream) or <em>Bursts</em> (all at once)</td></tr>
+      <tr><td><strong>Shape</strong></td><td>Where they come from and which way they go</td><td>Cone, Sphere, Box, Circle, Edge, Mesh</td></tr>
+      <tr><td><strong>Color over Lifetime</strong></td><td>Colour and fade as they age</td><td>A gradient: set alpha to 0 at the end to fade out</td></tr>
+      <tr><td><strong>Size over Lifetime</strong></td><td>Grow or shrink as they age</td><td>A curve from 1 down to 0 looks like sparks burning out</td></tr>
+      <tr><td><strong>Noise</strong></td><td>Wobbly, natural movement</td><td>Strength, Frequency</td></tr>
+      <tr><td><strong>Collision</strong></td><td>Bounce off the world</td><td>Type: World, Bounce, Lifetime Loss</td></tr>
+      <tr><td><strong>Renderer</strong></td><td>What each particle looks like</td><td>Material, Render Mode (Billboard, Stretched, Mesh)</td></tr>
+    </table></div>
+    <p>Tip: many values have a small ▼ next to them. Choose <strong>Random Between Two Constants</strong> to add variety, e.g. Start Size 0.1 to 0.3. Variety is what makes effects look natural.</p>
+
+    <h2 id="recipes">Recipes</h2>
+    <h3>Explosion burst</h3>
+    <ul>
+      <li>Main: Duration 1, <strong>Looping off</strong>, Start Lifetime 0.4–0.8, Start Speed 5–10, Start Size 0.2–0.5.</li>
+      <li>Emission: Rate over Time <strong>0</strong>. Add a <strong>Burst</strong>: Time 0, Count 40.</li>
+      <li>Shape: Sphere.</li>
+      <li>Color over Lifetime: yellow → orange → transparent. Size over Lifetime: shrink to 0.</li>
+    </ul>
+    <h3>Dust puffs behind a running character</h3>
+    <ul>
+      <li>Main: Looping on, Start Speed 0.5, <strong>Simulation Space: World</strong> (so puffs stay behind instead of following you).</li>
+      <li>Emission: Rate over Time 0, <strong>Rate over Distance 3</strong>. Now it only puffs while moving.</li>
+      <li>Color over Lifetime: fade from light brown to transparent.</li>
+    </ul>
+    <h3>Rain</h3>
+    <ul>
+      <li>Shape: Box, wide and flat, placed above the camera. Rotate it so particles go down.</li>
+      <li>Main: Start Speed 15, Max Particles 2000. Emission: 500 per second.</li>
+      <li>Renderer: <strong>Stretched Billboard</strong> with Speed Scale 0.05 to turn dots into streaks.</li>
+    </ul>
+
+    <h2 id="local-vs-world-simulation-space">Local vs World simulation space</h2>
+    <figure class="diagram"><div class="diagram-scroll"><svg viewBox="0 0 560 150" role="img" aria-label="Local space: particles move with the emitter like a jet flame. World space: particles stay where they were born, leaving a trail." style="max-width:560px;min-width:420px"><text x="130" y="20" text-anchor="middle" class="dg-t dg-b">Local</text><rect x="40" y="60" width="40" height="30" rx="4" class="dg-accent"/><circle cx="100" cy="75" r="5" class="dg-box"/><circle cx="120" cy="75" r="4" class="dg-box"/><circle cx="138" cy="75" r="3" class="dg-box"/><text x="130" y="130" text-anchor="middle" class="dg-s">particles move with the emitter</text><text x="420" y="20" text-anchor="middle" class="dg-t dg-b">World</text><rect x="480" y="60" width="40" height="30" rx="4" class="dg-accent"/><circle cx="455" cy="75" r="5" class="dg-box"/><circle cx="410" cy="80" r="4" class="dg-box"/><circle cx="365" cy="88" r="3" class="dg-box"/><circle cx="320" cy="98" r="2" class="dg-box"/><text x="420" y="130" text-anchor="middle" class="dg-s">particles stay behind: a trail</text></svg></div><figcaption>Main module &gt; Simulation Space. Use <strong>Local</strong> for a torch flame or jet engine, <strong>World</strong> for smoke trails, footstep dust and rain.</figcaption></figure>
+
+    <h2 id="controlling-particles-from-code">Controlling particles from code</h2>
+<pre><code class="language-csharp">using UnityEngine;
+
+public class ParticleExamples : MonoBehaviour
+{
+    [SerializeField] private ParticleSystem sparks;
+
+    void Examples()
+    {
+        sparks.Play();      // start emitting
+        sparks.Stop();      // stop emitting; existing particles finish their life
+        sparks.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear); // vanish now
+        sparks.Emit(20);    // spit out 20 particles immediately, even if stopped
+
+        bool busy = sparks.IsAlive();   // true while any particle is still visible
+    }
+}
+</code></pre>
+
+    <h3>Changing settings: the module gotcha</h3>
+    <p>Modules must be copied into a local variable first. You can't set them in one line:</p>
+<pre><code class="language-csharp">// ❌ Won't compile
+sparks.main.startColor = Color.red;
+
+// ✅ Grab the module, then change it. It still updates the real system.
+var main = sparks.main;
+main.startColor = Color.red;
+main.startSpeed = 8f;
+
+var emission = sparks.emission;
+emission.rateOverTime = 50f;
+</code></pre>
+    <p>The variable is a handle to the particle system, not a copy of the data. Changing it changes the real effect.</p>
+
+    <h2 id="example-play-a-hit-effect-where-a-bullet-lands">Example: play a hit effect where a bullet lands</h2>
+<pre><code class="language-csharp">using UnityEngine;
+
+public class HitEffect : MonoBehaviour
+{
+    [SerializeField] private ParticleSystem hitPrefab;
+
+    void OnCollisionEnter(Collision collision)
+    {
+        ContactPoint contact = collision.GetContact(0);
+        // Face the effect away from the surface that was hit
+        Quaternion rotation = Quaternion.LookRotation(contact.normal);
+
+        Instantiate(hitPrefab, contact.point, rotation); // a cone shape sprays along the blue Z arrow
+        // On the prefab: Looping off, Stop Action = Destroy, so it cleans itself up
+    }
+}
+</code></pre>
+    <p>The <strong>Stop Action</strong> (in the Main module) decides what happens when the effect finishes: <em>Destroy</em> removes the GameObject, <em>Disable</em> switches it off, <em>Callback</em> calls <code>OnParticleSystemStopped()</code> on your script. If effects spawn often, <a href="object-pooling.html">pool them</a> using <em>Disable</em> or <em>Callback</em> instead of Destroy.</p>
+
+    <figure class="diagram"><div class="diagram-scroll"><svg viewBox="0 0 954 80" role="img" aria-label="Every particle goes through this; the system finishes when the last one dies." style="max-width:954px;min-width:715px"><rect x="5" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="85" y="45" text-anchor="middle" class="dg-t">Play() / Burst</text><polyline points="169,40 195,40" class="dg-line"/><path d="M189,35 L197,40 L189,45 z" class="dg-head"/><rect x="201" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="281" y="45" text-anchor="middle" class="dg-t">Particles born</text><polyline points="365,40 391,40" class="dg-line"/><path d="M385,35 L393,40 L385,45 z" class="dg-head"/><rect x="397" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="477" y="45" text-anchor="middle" class="dg-t">Age: colour &amp; size change</text><polyline points="561,40 587,40" class="dg-line"/><path d="M581,35 L589,40 L581,45 z" class="dg-head"/><rect x="593" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="673" y="45" text-anchor="middle" class="dg-t">Lifetime ends</text><polyline points="757,40 783,40" class="dg-line"/><path d="M777,35 L785,40 L777,45 z" class="dg-head"/><rect x="789" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="869" y="45" text-anchor="middle" class="dg-t">Stop Action</text></svg></div><figcaption>Every particle goes through this; the system finishes when the last one dies.</figcaption></figure>
+
+    <h2 id="sub-emitters-effects-inside-effects">Sub Emitters: effects inside effects</h2>
+    <p>The <strong>Sub Emitters</strong> module starts a second particle system when a particle is born, dies or collides. Classic use: a firework rocket particle that triggers a burst explosion when it <em>dies</em>.</p>
+
+    <h2 id="materials-in-urp">Materials in URP</h2>
+    <p>Particles need a particle material. In URP, create a material with <strong>Universal Render Pipeline/Particles/Unlit</strong> (or <em>Lit</em> if it should react to lights), set <em>Surface Type</em> to Transparent, and give it a soft round texture. Then drag it into the Renderer module's <em>Material</em> slot. Pink particles mean the material isn't a URP one.</p>
+
+    <h2 id="keep-it-fast">Keep it fast</h2>
+    <ul>
+      <li><strong>Max Particles</strong> (Main module) is a safety cap. Keep it close to what you need.</li>
+      <li>Big see-through particles covering the screen are the #1 cost (called <em>overdraw</em>). Use fewer, smaller particles.</li>
+      <li>Collision set to <em>World</em> is expensive. Use <em>Planes</em> or low quality if you only need a floor.</li>
+      <li>For millions of GPU particles, look at <strong>VFX Graph</strong> (a separate package, better on PC and console).</li>
+    </ul>
+
+    <h2 id="common-mistakes">Common Mistakes</h2>
+    <ul>
+      <li>Leaving <strong>Looping</strong> on for a one-shot explosion, so it never ends and never gets destroyed.</li>
+      <li>Leaving <strong>Play On Awake</strong> on for an effect you meant to trigger from code.</li>
+      <li>Trying <code>ps.main.startSize = 2</code> in one line. Copy the module to a variable first.</li>
+      <li>Moving character dust in <em>Local</em> space, so the "trail" sticks to the character's feet.</li>
+      <li>Instantiating and destroying a new effect for every bullet hit in a busy game. Pool them.</li>
+    </ul>
+
+    <h2 id="see-also">See also</h2>
+    <ul>
+      <li><a href="object-pooling.html">Object Pooling</a> (has a pooled particle example)</li>
+      <li><a href="urp-post-processing.html">URP &amp; Post-processing</a> (Bloom makes sparks glow)</li>
+      <li><a href="../hlsl/billboards.html">Camera-facing Billboards</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/Manual/ParticleSystems.html">official documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

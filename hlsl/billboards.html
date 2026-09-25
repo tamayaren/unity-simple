@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Camera-facing Billboards | Unity Simple Docs</title>
-<meta name="description" content="Make a flat picture turn toward the camera, like the enemies, trees or labels used in many games.">
+<meta name="description" content="Make a flat picture always turn to face the camera, as used for trees, enemy sprites, name tags and health bars in many 3D games.">
 <link rel="stylesheet" href="../css/style.css">
 </head>
 <body data-root="../" data-page="hlsl/billboards.html">
@@ -21,54 +21,58 @@
   <aside class="sidebar" id="sidebar"></aside>
   <main class="content">
     <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; HLSL &amp; Shaders &rsaquo; Camera-facing Billboards</div>
-<h1>Camera-facing Billboards</h1>
-<p class="summary">Make a flat picture turn toward the camera, like the enemies, trees or labels used in many games.</p>
-<div class="analogy"><p>Imagine someone holding a cardboard sign and turning it as you walk around, so you can always read the front. A billboard does the same thing for a flat picture in your game.</p></div>
-<div class="tip"><strong>Start here</strong><p>Start with the SpriteRenderer script. It is the easiest way to see the effect. The shader version is an optional next step after Your First HLSL Shader.</p></div>
-<nav aria-label="On this page"><strong>On this page</strong><ul><li><a href="#a-few-words-first">A few words first</a></li><li><a href="#choose-what-faces-the-camera-means">Choose what “faces the camera” means</a></li><li><a href="#1-a-spriterenderer-billboard">1. A SpriteRenderer billboard</a></li><li><a href="#2-a-gpu-billboard-for-a-quad">Going further: 2. A GPU billboard for a quad</a></li><li><a href="#bounds-the-cpu-cannot-see-the-turn">Bounds: the CPU cannot see the turn</a></li><li><a href="#cutout-versus-soft-transparency">Hard edges versus soft transparency</a></li><li><a href="#multiple-cameras-and-other-limits">Multiple cameras and other limits</a></li><li><a href="#common-mistakes">Common Mistakes</a></li><li><a href="#try-it">Try it</a></li><li><a href="#see-also">See also</a></li><li><a href="#official-references">Official references</a></li></ul></nav>
-<h2 id="a-few-words-first">A few words first</h2><p>A <strong>sprite</strong> is a 2D image used in a scene. A <strong>billboard</strong> is a flat image that turns toward the camera. A <strong>quad</strong> is a flat rectangle made from two triangles. An <strong>orthographic</strong> camera shows objects without making distant ones look smaller.</p>
+    <h1>Camera-facing Billboards</h1>
+    <p class="summary">Make a flat picture always turn to face the camera, as used for trees, enemy sprites, name tags and health bars in many 3D games.</p>
+    <nav aria-label="On this page"><strong>On this page</strong><ul><li><a href="#three-kinds-of-facing">Three kinds of "facing"</a></li><li><a href="#1-the-easy-way-a-script">1. The easy way: a script</a></li><li><a href="#2-the-fast-way-a-shader">2. The fast way: a shader</a></li><li><a href="#script-or-shader">Script or shader?</a></li><li><a href="#common-mistakes">Common Mistakes</a></li><li><a href="#see-also">See also</a></li></ul></nav>
+    <div class="analogy"><p>Picture someone at a stadium holding up a <strong>cardboard sign</strong>. As you walk around them, they keep turning the sign so you can always read it. A billboard does the same with a flat image in your game.</p></div>
 
+    <h2 id="three-kinds-of-facing">Three kinds of "facing"</h2>
+    <div class="table-wrap"><table>
+      <tr><th>Style</th><th>How it turns</th><th>Good for</th></tr>
+      <tr><td><strong>Copy camera</strong></td><td>Matches the camera's rotation exactly</td><td>Name tags, icons, health bars</td></tr>
+      <tr><td><strong>Upright</strong></td><td>Only spins left/right, never tilts</td><td>Trees, Doom-style enemies, characters</td></tr>
+      <tr><td><strong>Look at camera</strong></td><td>Points straight at the camera, tilting too</td><td>Glowing orbs, simple effects</td></tr>
+    </table></div>
 
-<h2 id="choose-what-faces-the-camera-means">Choose what “faces the camera” means</h2><div class="table-wrap"><table><tr><th>Style</th><th>Behavior</th><th>Useful for</th></tr><tr><td>Screen-aligned</td><td>All billboards share the camera rotation; parallel even at the edge of the screen.</td><td>Icons, floating labels, orthographic games.</td></tr><tr><td>Point-facing</td><td>Each billboard aims at the camera position.</td><td>Perspective objects spread across a wide view.</td></tr><tr><td>Cylindrical / Y-only</td><td>Rotate around world Y while staying upright.</td><td>Trees and upright character cutouts.</td></tr></table></div>
-<h2 id="1-a-spriterenderer-billboard">1. A SpriteRenderer billboard</h2><p>Import an image as Sprite (2D and UI), drag it into the scene, and attach this script. Assign the gameplay camera. Use a sprite material supported by your render pipeline. Use a normal upright sprite: its width follows local X and its height follows local Y. Let this script control its rotation; another script or animation changing it could make it flicker.</p><pre><code class="language-csharp">using UnityEngine;
+    <h2 id="1-the-easy-way-a-script">1. The easy way: a script</h2>
+    <p>Drag a sprite (or a Quad) into the scene and attach this. It works with any pipeline.</p>
+<pre><code class="language-csharp">using UnityEngine;
 
-public class SpriteBillboard : MonoBehaviour
+public class Billboard : MonoBehaviour
 {
-    [SerializeField] private Camera viewCamera;
-    [SerializeField] private bool keepUpright;
+    [SerializeField] private bool stayUpright = true;
+    private Transform cam;
 
-    void Awake()
-    {
-        if (viewCamera == null) viewCamera = Camera.main;
-    }
+    void Start() =&gt; cam = Camera.main.transform;
 
+    // LateUpdate runs after the camera has moved this frame, so there's no lag
     void LateUpdate()
     {
-        if (viewCamera == null) return;
-        if (!keepUpright)
+        if (!stayUpright)
         {
-            // Screen-aligned: copy camera axes, including roll.
-            transform.rotation = viewCamera.transform.rotation;
+            transform.rotation = cam.rotation;   // copy the camera
             return;
         }
-        // Make local -Z face the camera while local Y stays vertical.
-        Vector3 forward = transform.position - viewCamera.transform.position;
-        forward.y = 0;
-        if (forward.sqrMagnitude &gt; 0.0001f)
-            transform.rotation = Quaternion.LookRotation(forward, Vector3.up);
+
+        Vector3 away = transform.position - cam.position; // arrow from camera to me
+        away.y = 0;                                         // ignore height, stay upright
+        if (away.sqrMagnitude &gt; 0.001f)
+            transform.rotation = Quaternion.LookRotation(away);
     }
 }
 </code></pre>
-<p>LateUpdate usually runs after ordinary movement. If a camera rig also updates in LateUpdate, explicitly order this script after the rig if you see a one-frame lag. For point-facing behavior with tilt, remove the Y flattening from the upright branch. A camera directly above the sprite gives no horizontal direction; keeping the last rotation avoids an unstable LookRotation call.</p>
-<p>For an orthographic camera, a Y-only screen-aligned billboard can instead flatten the camera's forward vector. Imported geometry may face local +Z rather than -Z; rotate its visual child 180 degrees if it appears backward. Do not use negative scale as the first fix because that also mirrors art and changes winding.</p>
-<h2 id="2-a-gpu-billboard-for-a-quad">Going further: 2. A GPU billboard for a quad</h2><p>The shader below uses the camera's right and up vectors to rebuild a quad around its world center. It is for a <strong>centred unit Quad with a MeshRenderer</strong>, not a SpriteRenderer: sprite atlases, vertex colors, sprite flips and 2D lighting are not implemented. It targets URP 17's Universal Renderer and a conventional non-XR camera.</p>
-<ol><li>Create <code>Billboard.shader</code> with this code and a material using Simple/Billboard.</li><li>Import a full-image RGBA texture (not an atlas region), assign it to Base Map, and use a Quad at unit scale.</li><li>Assign the material to the Quad and orbit the camera. The image should retain the camera's orientation.</li><li>Disable static batching on billboard objects. The shader needs each object's original center and local coordinates.</li></ol><pre><code class="language-hlsl">Shader "Simple/Billboard"
+    <p><strong>Why "away" and not "toward"?</strong> A sprite's visible front faces its local <em>-Z</em>. Pointing its <em>+Z</em> away from the camera means the front faces the camera. If your image appears mirrored or invisible, rotate the child model 180° on Y.</p>
+
+    <h2 id="2-the-fast-way-a-shader">2. The fast way: a shader</h2>
+    <p>With thousands of billboards (a forest, a particle-like crowd), running a script on each one gets slow. A shader can do the turning on the GPU instead. The object's Transform never changes; only the <em>drawn</em> image turns.</p>
+    <p>Use this with a <strong>Quad</strong> (not a SpriteRenderer) in a URP project. Read <a href="first-shader.html">Your First HLSL Shader</a> first. Only <code>Vert</code> is new.</p>
+<pre><code class="language-hlsl">Shader "Simple/Billboard"
 {
     Properties
     {
-        _BaseMap ("Base Map", 2D) = "white" {}
+        _BaseMap ("Texture", 2D) = "white" {}
         _BaseColor ("Tint", Color) = (1, 1, 1, 1)
-        _Cutoff ("Alpha Cutoff", Range(0,1)) = 0.5
+        _Cutoff ("Alpha Cutoff", Range(0, 1)) = 0.5
     }
     SubShader
     {
@@ -76,65 +80,76 @@ public class SpriteBillboard : MonoBehaviour
                "RenderType"="TransparentCutout" "DisableBatching"="True" }
         Pass
         {
-            Tags { "LightMode"="SRPDefaultUnlit" }
             Cull Off
-            ZWrite On
             HLSLPROGRAM
             #pragma vertex Vert
             #pragma fragment Frag
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
             struct Attributes { float4 positionOS : POSITION; float2 uv : TEXCOORD0; };
-            struct Varyings { float4 positionHCS : SV_POSITION; float2 uv : TEXCOORD0; };
-            TEXTURE2D(_BaseMap);
-            SAMPLER(sampler_BaseMap);
+            struct Varyings   { float4 positionCS : SV_POSITION; float2 uv : TEXCOORD0; };
+
+            TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
             CBUFFER_START(UnityPerMaterial)
-                float4 _BaseMap_ST;
-                half4 _BaseColor;
-                half _Cutoff;
+                float4 _BaseMap_ST; half4 _BaseColor; half _Cutoff;
             CBUFFER_END
 
             Varyings Vert(Attributes input)
             {
                 Varyings output;
-                float3 center = TransformObjectToWorld(float3(0,0,0));
-                float3 right = UNITY_MATRIX_I_V._m00_m10_m20;
-                float3 up = UNITY_MATRIX_I_V._m01_m11_m21;
-                float width = length(TransformObjectToWorldDir(float3(1,0,0), false));
-                float height = length(TransformObjectToWorldDir(float3(0,1,0), false));
-                float3 world = center + right * input.positionOS.x * width
-                                      + up * input.positionOS.y * height;
-                output.positionHCS = TransformWorldToHClip(world);
+                // Where the object's centre is in the world
+                float3 center = TransformObjectToWorld(float3(0, 0, 0));
+                // The camera's right and up directions
+                float3 camRight = UNITY_MATRIX_I_V._m00_m10_m20;
+                float3 camUp    = UNITY_MATRIX_I_V._m01_m11_m21;
+                // Rebuild each corner using the camera's directions
+                float3 world = center + camRight * input.positionOS.x
+                                      + camUp    * input.positionOS.y;
+                output.positionCS = TransformWorldToHClip(world);
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 return output;
             }
+
             half4 Frag(Varyings input) : SV_Target
             {
-                half4 color = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv) * _BaseColor;
-                clip(color.a - _Cutoff);
-                return half4(color.rgb, 1);
+                half4 c = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv) * _BaseColor;
+                clip(c.a - _Cutoff);   // throw away see-through pixels
+                return half4(c.rgb, 1);
             }
             ENDHLSL
         }
     }
 }
 </code></pre>
-<h2 id="bounds-the-cpu-cannot-see-the-turn">Bounds: the CPU cannot see the turn</h2><p>Unity first checks whether an object might be visible, a step called culling. The shader turns its corners afterward. A flat quad's original bounds may be rejected even when its turned image should be visible. For this centred unit quad with uniform scale, attach this helper to give the renderer a conservative local cube. For non-uniform scale, shear, off-centre geometry, or additional displacement, calculate bounds large enough for those cases instead.</p><pre><code class="language-csharp">using UnityEngine;
+    <figure class="diagram"><div class="diagram-scroll"><svg viewBox="0 0 758 80" role="img" aria-label="The quad&#x27;s corners are rebuilt from the camera&#x27;s directions every frame, on the GPU." style="max-width:758px;min-width:568px"><rect x="5" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="85" y="45" text-anchor="middle" class="dg-t">Find object centre</text><polyline points="169,40 195,40" class="dg-line"/><path d="M189,35 L197,40 L189,45 z" class="dg-head"/><rect x="201" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="281" y="45" text-anchor="middle" class="dg-t">Get camera right &amp; up</text><polyline points="365,40 391,40" class="dg-line"/><path d="M385,35 L393,40 L385,45 z" class="dg-head"/><rect x="397" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="477" y="45" text-anchor="middle" class="dg-t">Rebuild corners</text><polyline points="561,40 587,40" class="dg-line"/><path d="M581,35 L589,40 L581,45 z" class="dg-head"/><rect x="593" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="673" y="45" text-anchor="middle" class="dg-t">Draw</text></svg></div><figcaption>The quad's corners are rebuilt from the camera's directions every frame, on the GPU.</figcaption></figure>
+    <p>This version ignores the object's scale and rotation to stay short. Scale the image by multiplying <code>positionOS.x</code> and <code>.y</code> by a size property.</p>
 
-[RequireComponent(typeof(MeshRenderer))]
-public class BillboardBounds : MonoBehaviour
-{
-    void OnEnable()
-    {
-        // Unit quad corner radius is sqrt(0.5^2 + 0.5^2) ~= 0.707.
-        GetComponent&lt;MeshRenderer&gt;().localBounds = new Bounds(Vector3.zero, Vector3.one * 1.5f);
-    }
-    void OnDisable() { GetComponent&lt;MeshRenderer&gt;().ResetLocalBounds(); }
-}
-</code></pre>
-<h2 id="cutout-versus-soft-transparency">Hard edges versus soft transparency</h2><p>This shader discards low-alpha fragments and writes depth, which works well for crisp foliage and pixel-art cutouts. For soft edges, change Queue to Transparent and RenderType to Transparent, use <code>Blend SrcAlpha OneMinusSrcAlpha</code> and <code>ZWrite Off</code>, remove clip, and return the sampled alpha. Transparent objects are generally sorted by object rather than each pixel, so overlapping quads can show sorting artifacts and create heavy overdraw.</p>
-<h2 id="multiple-cameras-and-other-limits">Multiple cameras and other limits</h2><p>The C# version rotates the actual Transform for one camera, including child colliders. Split-screen cameras can disagree about its facing. The shader evaluates camera axes per view, but collision geometry stays in its original orientation. It has no shadow, depth-only or motion-vector passes; adding those requires matching the vertex deformation and deciding how a billboard should face during shadow rendering. This tutorial does not implement GPU instancing or stereo macros.</p>
-<div class="runtime"><p><strong>What happens at runtime</strong></p><ol><li>The C# approach updates a real Transform after movement.</li><li>The shader approach leaves the Transform alone and rebuilds visible vertex positions in the current camera's basis.</li><li>Texture UVs stay attached to their corners; alpha clipping removes the background.</li></ol></div>
-<h2 id="common-mistakes">Common Mistakes</h2><ul><li>Calling LookAt without checking which local side of the image faces forward.</li><li>Expecting a GPU billboard to rotate its collider.</li><li>Using ordinary flat bounds after shader rotation.</li><li>Expecting a mesh shader to automatically handle packed SpriteAtlas UVs.</li><li>Turning on static batching and losing per-object origins.</li></ul><h2 id="try-it">Try it</h2><p>Orbit a perspective camera, switch it to orthographic, and view the billboard from directly above. Test two cameras at once and move the quad to the screen edge. Those checks expose facing and bounds mistakes that a fixed front view hides.</p><h2 id="see-also">See also</h2><ul><li><a href="../hlsl/first-shader.html">Your First HLSL Shader</a></li><li><a href="../api/matrix4x4.html">Matrix4x4</a></li><li><a href="../guides/procedural-meshes.html">Procedural Meshes without GameObjects</a></li></ul><h2 id="official-references">Official references</h2><ul><li><a href="https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Transform.LookAt.html">Transform.LookAt</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Renderer-localBounds.html">Renderer.localBounds</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/Manual/urp/use-built-in-shader-methods-transformations.html">URP transformation helpers</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/Manual/SL-Cull.html">Culling state</a></li></ul><p class="official-link">This page is a simplified, AI-assisted interpretation. Check the linked Unity documentation for authoritative details and your installed package version.</p>
+    <h2 id="script-or-shader">Script or shader?</h2>
+    <div class="table-wrap"><table>
+      <tr><th></th><th>Script</th><th>Shader</th></tr>
+      <tr><td>Easy to set up</td><td>Yes</td><td>Needs shader knowledge</td></tr>
+      <tr><td>Works with SpriteRenderer</td><td>Yes</td><td>No (use a Quad)</td></tr>
+      <tr><td>Colliders turn too</td><td>Yes</td><td>No, only the picture turns</td></tr>
+      <tr><td>Thousands of objects</td><td>Gets slow</td><td>Fast</td></tr>
+    </table></div>
+    <p>Start with the script. Switch to the shader only if the <a href="../guides/optimization-practices.html">Profiler</a> shows the script is a problem.</p>
+
+    <h2 id="common-mistakes">Common Mistakes</h2>
+    <ul>
+      <li>Using <code>transform.LookAt(camera)</code>. It points the <em>back</em> of a sprite at you, so it looks mirrored or invisible.</li>
+      <li>Rotating in <code>Update</code> instead of <code>LateUpdate</code>, which causes a one-frame wobble when the camera moves.</li>
+      <li>Shader version vanishing at screen edges: Unity decides visibility using the <em>original</em> flat shape. Make the Quad's bounds bigger with <code>meshRenderer.localBounds</code> if this happens.</li>
+      <li>Leaving <strong>Static</strong> ticked on shader billboards. Static batching merges them and breaks the effect.</li>
+    </ul>
+
+    <h2 id="see-also">See also</h2>
+    <ul>
+      <li><a href="first-shader.html">Your First HLSL Shader</a></li>
+      <li><a href="../guides/particle-systems.html">Working with Particle Systems</a> (particles are billboards too)</li>
+      <li><a href="../api/quaternion.html">Quaternion</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/Transform.LookAt.html">official documentation</a>.</p>
   </main>
 </div>
 <footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>

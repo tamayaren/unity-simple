@@ -22,10 +22,11 @@ Every API page includes:
 | C# Concepts | Value & Reference Types, Fields/Properties/Modifiers, Inheritance & Interfaces, Types & Type Checking (GetType, typeof, is, as), Exceptions & try/catch, Null & Nullable Types, Generics, Collections, LINQ, Delegates/Lambdas/Events, Iterators & yield, async & await, Enums & switch, Strings & Formatting, Extension Methods, Attributes |
 | Tutorials | UnityEvents in a Game, Using the Input System, ScriptableObjects in a Game, Game Feel with DOTween |
 | HLSL & Shaders | Your First HLSL Shader, Camera-facing Billboards |
-| Guides | Procedural Meshes without GameObjects, Dot/Cross/Reflect, CharacterController, UI & TextMeshPro, URP & Post-processing, NavMesh, Update & FixedUpdate, Interpolation & Easing, Bezier Curves, Better Ways to Do Things |
+| Guides | Procedural Meshes without GameObjects, Dot/Cross/Reflect, CharacterController, UI & TextMeshPro, URP & Post-processing, NavMesh, Particle Systems, Update & FixedUpdate, Interpolation & Easing, Bezier Curves, Better Ways to Do Things |
+| Building Systems | Building Your Own Systems (object pool and cooldown from scratch), Simple State Machines, Saving & Loading Games |
 | Performance | Optimization Best Practices, Optimizing Your Code, Object Pooling, GPU Instancing & Batching |
 | API Reference | Object, GameObject, MonoBehaviour, Transform, ScriptableObject, Vector3, Quaternion, Matrix4x4, Mathf, Rigidbody, Collider, Physics, Time, Input, Camera, Animator, AudioSource, SceneManager, PlayerPrefs, Debug, UnityEvent, InputAction |
-| Packages | DOTween |
+| Packages | Free Libraries Worth Knowing, DOTween |
 
 The site works on phones: below 800px wide the sidebar becomes a Menu button, tables and code scroll or wrap instead of widening the page, and touch targets are larger.
 

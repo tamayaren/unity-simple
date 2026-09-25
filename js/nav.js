@@ -62,10 +62,19 @@ var NAV = [
       { title: "URP & Post-processing", path: "guides/urp-post-processing.html" },
       { title: "UI & TextMeshPro in Depth", path: "guides/ui-tmp.html" },
       { title: "NavMesh in Depth", path: "guides/navmesh.html" },
+      { title: "Working with Particle Systems", path: "guides/particle-systems.html" },
       { title: "Update & FixedUpdate", path: "guides/update-fixedupdate.html" },
       { title: "Interpolation & Easing", path: "guides/interpolation.html" },
       { title: "Bezier Curves", path: "guides/bezier-curves.html" },
       { title: "Better Ways to Do Things", path: "guides/best-practices.html" }
+    ]
+  },
+  {
+    heading: "Building Systems",
+    pages: [
+      { title: "Building Your Own Systems", path: "guides/your-own-systems.html" },
+      { title: "Simple State Machines", path: "guides/state-machines.html" },
+      { title: "Saving & Loading Games", path: "guides/save-load.html" }
     ]
   },
   {
@@ -127,6 +136,7 @@ var NAV = [
   {
     heading: "Packages",
     pages: [
+      { title: "Free Libraries Worth Knowing", path: "guides/libraries.html" },
       { title: "DOTween", path: "api/dotween.html" }
     ]
   }

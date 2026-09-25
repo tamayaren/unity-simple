@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saving &amp; Loading Games | Unity Simple Docs</title>
+<meta name="description" content="Save the player&#x27;s progress to a file and load it back, using a plain C# class and JSON.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="guides/save-load.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Building Systems &rsaquo; Saving &amp; Loading Games</div>
+    <h1>Saving &amp; Loading Games</h1>
+    <p class="summary">Save the player's progress to a file and load it back, using a plain C# class and JSON.</p>
+    <nav aria-label="On this page"><strong>On this page</strong><ul><li><a href="#playerprefs-or-a-save-file">PlayerPrefs or a save file?</a></li><li><a href="#step-1-describe-what-to-save">Step 1: describe what to save</a></li><li><a href="#step-2-the-save-system">Step 2: the save system</a></li><li><a href="#step-3-use-it">Step 3: use it</a></li><li><a href="#what-the-file-looks-like">What the file looks like</a></li><li><a href="#good-habits">Good habits</a></li><li><a href="#common-mistakes">Common Mistakes</a></li><li><a href="#see-also">See also</a></li></ul></nav>
+    <div class="analogy"><p>Saving is like <strong>packing a suitcase</strong>. You don't pack the whole house; you choose the things you need (health, coins, level), fold them neatly into the case (JSON text), and put it in the cupboard (a file). Loading is unpacking the suitcase and putting everything back where it belongs.</p></div>
+
+    <h2 id="playerprefs-or-a-save-file">PlayerPrefs or a save file?</h2>
+    <div class="table-wrap"><table>
+      <tr><th><a href="../api/playerprefs.html">PlayerPrefs</a></th><th>Save file (this page)</th></tr>
+      <tr><td>A few settings: volume, graphics quality</td><td>Real progress: inventory, level, position, quests</td></tr>
+      <tr><td>One value at a time</td><td>Everything together in one file</td></tr>
+      <tr><td>Hard to have several save slots</td><td>Easy: one file per slot</td></tr>
+    </table></div>
+
+    <h2 id="step-1-describe-what-to-save">Step 1: describe what to save</h2>
+    <p>Make a plain class that holds only the data. <code>[System.Serializable]</code> means "this can be turned into text".</p>
+<pre><code class="language-csharp">using System.Collections.Generic;
+using UnityEngine;
+
+[System.Serializable]
+public class SaveData
+{
+    public int coins;
+    public int health = 100;
+    public string levelName = "Level1";
+    public Vector3 playerPosition;
+    public List&lt;string&gt; inventory = new List&lt;string&gt;();
+}
+</code></pre>
+    <p><code>JsonUtility</code> saves <strong>public fields</strong> (or <code>[SerializeField]</code> private ones). It can't save properties, <code>Dictionary</code>, or references to GameObjects. Save an ID or name instead, like <code>"sword_01"</code>.</p>
+
+    <h2 id="step-2-the-save-system">Step 2: the save system</h2>
+<pre><code class="language-csharp">using System.IO;
+using UnityEngine;
+
+public static class SaveSystem
+{
+    private static string PathFor(int slot) =&gt;
+        Path.Combine(Application.persistentDataPath, $"save{slot}.json");
+
+    public static void Save(SaveData data, int slot = 0)
+    {
+        string json = JsonUtility.ToJson(data, prettyPrint: true);
+        File.WriteAllText(PathFor(slot), json);
+    }
+
+    public static SaveData Load(int slot = 0)
+    {
+        string path = PathFor(slot);
+        if (!File.Exists(path)) return new SaveData();   // no save yet: fresh game
+
+        try
+        {
+            return JsonUtility.FromJson&lt;SaveData&gt;(File.ReadAllText(path));
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning($"Save file was broken, starting fresh: {e.Message}");
+            return new SaveData();
+        }
+    }
+
+    public static bool HasSave(int slot = 0) =&gt; File.Exists(PathFor(slot));
+    public static void Delete(int slot = 0) =&gt; File.Delete(PathFor(slot));
+}
+</code></pre>
+    <figure class="diagram"><div class="diagram-scroll"><svg viewBox="0 0 758 80" role="img" aria-label="Saving goes left to right; loading goes right to left." style="max-width:758px;min-width:568px"><rect x="5" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="85" y="45" text-anchor="middle" class="dg-t">Game objects</text><polyline points="169,40 195,40" class="dg-line"/><path d="M189,35 L197,40 L189,45 z" class="dg-head"/><rect x="201" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="281" y="45" text-anchor="middle" class="dg-t">SaveData class</text><polyline points="365,40 391,40" class="dg-line"/><path d="M385,35 L393,40 L385,45 z" class="dg-head"/><rect x="397" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="477" y="45" text-anchor="middle" class="dg-t">JSON text</text><polyline points="561,40 587,40" class="dg-line"/><path d="M581,35 L589,40 L581,45 z" class="dg-head"/><rect x="593" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="673" y="45" text-anchor="middle" class="dg-t">File on disk</text></svg></div><figcaption>Saving goes left to right; loading goes right to left.</figcaption></figure>
+
+    <h2 id="step-3-use-it">Step 3: use it</h2>
+<pre><code class="language-csharp">using UnityEngine;
+
+public class GameSaver : MonoBehaviour
+{
+    [SerializeField] private Transform player;
+    [SerializeField] private Wallet wallet;   // your own coin script
+
+    public void SaveGame()
+    {
+        var data = new SaveData
+        {
+            coins = wallet.Coins,
+            playerPosition = player.position,
+        };
+        SaveSystem.Save(data);
+    }
+
+    public void LoadGame()
+    {
+        SaveData data = SaveSystem.Load();
+        wallet.SetCoins(data.coins);
+        player.position = data.playerPosition;
+    }
+}
+</code></pre>
+    <p>Hook <code>SaveGame</code> and <code>LoadGame</code> up to buttons with a <a href="../api/unityevent.html">UnityEvent</a>, or call <code>SaveGame</code> at checkpoints.</p>
+
+    <h2 id="what-the-file-looks-like">What the file looks like</h2>
+<pre><code class="language-json">{
+    "coins": 42,
+    "health": 100,
+    "levelName": "Level1",
+    "playerPosition": { "x": 3.5, "y": 1.0, "z": -2.0 },
+    "inventory": [ "sword_01", "potion_small" ]
+}
+</code></pre>
+    <p>To find it, log <code>Application.persistentDataPath</code>. On Windows it's inside <code>AppData\LocalLow\&lt;company&gt;\&lt;product&gt;</code>. It's plain text, so you can read it (and so can players).</p>
+
+    <h2 id="good-habits">Good habits</h2>
+    <ul>
+      <li><strong>Add a version number</strong> (<code>public int version = 1;</code>). When you change <code>SaveData</code> later, you can tell old saves apart.</li>
+      <li><strong>New fields are safe:</strong> loading an old file leaves missing fields at their default values.</li>
+      <li><strong>Save IDs, not objects:</strong> store <code>"potion_small"</code> and look it up in a list of <a href="../api/scriptableobject.html">ScriptableObject</a> items when loading.</li>
+      <li><strong>Need dictionaries?</strong> Use the Newtonsoft JSON package (<code>com.unity.nuget.newtonsoft-json</code>); see <a href="libraries.html">Free Libraries</a>.</li>
+      <li><strong>WebGL:</strong> file saving works differently in the browser. Test there early if you're publishing to the web.</li>
+    </ul>
+
+    <h2 id="common-mistakes">Common Mistakes</h2>
+    <ul>
+      <li>Saving to <code>Application.dataPath</code> (inside the game folder). In a finished game it often can't be written to, and on some platforms it's read-only. Use <code>persistentDataPath</code>.</li>
+      <li>Forgetting <code>[System.Serializable]</code>, or using properties, so the file comes out as <code>{}</code>.</li>
+      <li>Trying to save a <code>GameObject</code> or <code>Transform</code> directly.</li>
+      <li>Not handling "no save file yet" on the very first launch.</li>
+    </ul>
+
+    <h2 id="see-also">See also</h2>
+    <ul>
+      <li><a href="../api/playerprefs.html">PlayerPrefs</a></li>
+      <li><a href="../csharp/exceptions.html">Exceptions &amp; try/catch</a></li>
+      <li><a href="your-own-systems.html">Building Your Own Systems</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/JsonUtility.html">official documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

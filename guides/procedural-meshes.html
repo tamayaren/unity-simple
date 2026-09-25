@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Procedural Meshes without GameObjects | Unity Simple Docs</title>
-<meta name="description" content="Make a shape from points and triangles, then draw copies of it without adding a GameObject for every copy.">
+<meta name="description" content="Build a shape in code from points and triangles, then draw many copies of it without making a GameObject for each one.">
 <link rel="stylesheet" href="../css/style.css">
 </head>
 <body data-root="../" data-page="guides/procedural-meshes.html">
@@ -21,85 +21,107 @@
   <aside class="sidebar" id="sidebar"></aside>
   <main class="content">
     <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Guides &rsaquo; Procedural Meshes without GameObjects</div>
-<h1>Procedural Meshes without GameObjects</h1>
-<p class="summary">Make a shape from points and triangles, then draw copies of it without adding a GameObject for every copy.</p>
-<div class="analogy"><p>Imagine cutting a cardboard tile once and using it as a stencil. The mesh is the stencil, the material is the paint, and each matrix says where to stamp a copy. You keep one stencil instead of building a separate model for every tile.</p></div>
-<div class="tip"><strong>Start here</strong><p>Build the floor-tile example first. Once you can see the tiles, try changing their spacing. The bounds helper and large-mesh advice are for later.</p></div>
-<nav aria-label="On this page"><strong>On this page</strong><ul><li><a href="#a-few-words-first">A few words first</a></li><li><a href="#what-a-mesh-contains">What a mesh contains</a></li><li><a href="#build-and-draw-a-floor-tile">Build and draw a floor tile</a></li><li><a href="#correct-bounds-for-rotated-or-scaled-geometry">Going further: Correct bounds for rotated or scaled geometry</a></li><li><a href="#changing-the-mesh">Changing the mesh</a></li><li><a href="#rendering-is-not-simulation">Rendering is not simulation</a></li><li><a href="#scaling-up">Going further: Scaling up</a></li><li><a href="#common-mistakes">Common Mistakes</a></li><li><a href="#see-also">See also</a></li><li><a href="#official-references">Official references</a></li></ul></nav>
-<h2 id="a-few-words-first">A few words first</h2><p>A <strong>mesh</strong> is a shape made from points joined into triangles. <strong>Procedural</strong> means your code creates it. A <strong>material</strong> controls its appearance. <strong>Drawing</strong> makes it visible; it does not automatically make it solid.</p>
+    <h1>Procedural Meshes without GameObjects</h1>
+    <p class="summary">Build a shape in code from points and triangles, then draw many copies of it without making a GameObject for each one.</p>
+    <nav aria-label="On this page"><strong>On this page</strong><ul><li><a href="#what-a-mesh-is-made-of">What a mesh is made of</a></li><li><a href="#example-a-grid-of-tiles">Example: a grid of tiles</a></li><li><a href="#drawing-is-not-the-same-as-existing">Drawing is not the same as existing</a></li><li><a href="#changing-the-mesh-later">Changing the mesh later</a></li><li><a href="#going-further-drawing-thousands">Going further: drawing thousands</a></li><li><a href="#common-mistakes">Common Mistakes</a></li><li><a href="#see-also">See also</a></li></ul></nav>
+    <div class="analogy"><p>Think of a <strong>rubber stamp</strong>. The mesh is the stamp's shape, the material is the ink, and a matrix says where to press it. You make one stamp and press it 25 times, instead of carving 25 separate stamps.</p></div>
 
+    <h2 id="what-a-mesh-is-made-of">What a mesh is made of</h2>
+    <div class="table-wrap"><table>
+      <tr><th>Part</th><th>What it is</th></tr>
+      <tr><td><strong>Vertices</strong></td><td>A list of corner points. Each one has a number (index) starting from 0.</td></tr>
+      <tr><td><strong>Triangles</strong></td><td>A list of indices, three per triangle. <code>0, 1, 2</code> means "join corners 0, 1 and 2".</td></tr>
+      <tr><td><strong>UVs</strong></td><td>Where each corner lands on the texture, from (0,0) to (1,1).</td></tr>
+      <tr><td><strong>Normals</strong></td><td>Which way each corner faces. Used for lighting. Unity can calculate these for you.</td></tr>
+    </table></div>
+    <p>A square is 4 vertices and 2 triangles:</p>
+    <figure class="diagram"><div class="diagram-scroll"><svg viewBox="0 0 300 200" role="img" aria-label="A square with corners numbered 0 bottom-left, 1 top-left, 2 top-right, 3 bottom-right, split into triangles 0-1-2 and 0-2-3." style="max-width:300px;min-width:240px"><rect x="60" y="30" width="180" height="140" class="dg-box"/><line x1="60" y1="170" x2="240" y2="30" class="dg-line dg-dash"/><text x="45" y="188">0</text><text x="45" y="28">1</text><text x="248" y="28">2</text><text x="248" y="188">3</text><text x="105" y="80" class="dg-s">0, 1, 2</text><text x="165" y="140" class="dg-s">0, 2, 3</text></svg></div><figcaption>Corners are listed clockwise (as seen from the front) so the triangles face you.</figcaption></figure>
 
-<div class="note"><strong>Scope: Unity 6</strong><p>The example uses one MonoBehaviour as the owner and frame callback. The rendered copies have no GameObjects, MeshRenderers or Transforms. A completely GameObject-free system still needs a lifetime owner and a frame loop, such as a custom PlayerLoop or ECS system.</p></div>
-<p>You will make a square from four points and two triangles. A <strong>vertex</strong> is one point; <strong>vertices</strong> is the plural. An <strong>index</strong> is a point’s number in the list, starting at 0.</p>
-<h2 id="what-a-mesh-contains">What a mesh contains</h2><div class="table-wrap"><table><tr><th>Data</th><th>Meaning</th></tr><tr><td>Vertices</td><td>Local positions; index 0 means the first position.</td></tr><tr><td>Triangles</td><td>Three vertex indices per triangle. Unity treats clockwise winding, viewed from the front, as front-facing.</td></tr><tr><td>UVs</td><td>Texture coordinates at each vertex; usually 0–1 for a single image.</td></tr><tr><td>Normals</td><td>Surface directions used for lighting.</td></tr><tr><td>Tangents</td><td>Extra surface directions used by normal-map textures, which fake small bumps. You can skip these for the plain tile.</td></tr><tr><td>Bounds</td><td>An invisible box around the shape. Unity uses it to decide whether the camera might see the shape.</td></tr></table></div>
-<p>A vertex index selects a complete set of attributes. Adjacent faces can share indices for smooth normals. At a hard edge or UV seam, duplicate the vertex position so the normals or UVs can differ. A cube often needs 24 vertices, even though it has only 8 corner positions.</p>
-<h2 id="build-and-draw-a-floor-tile">Build and draw a floor tile</h2><ol><li>Create a material using URP/Lit in URP (or Standard in the Built-in pipeline).</li><li>Create an empty object and attach <code>ProceduralTiles.cs</code>. Assign the material.</li><li>Place a camera above the origin looking down at the XZ plane and add a light. Enter Play mode: there should be a 5 by 5 grid of tiles.</li></ol><pre><code class="language-csharp">using UnityEngine;
-using UnityEngine.Rendering;
+    <h2 id="example-a-grid-of-tiles">Example: a grid of tiles</h2>
+    <ol>
+      <li>Create a material (URP: <em>Universal Render Pipeline/Lit</em>).</li>
+      <li>Add this script to an empty object and assign the material.</li>
+      <li>Point a camera down at the origin and press Play: you'll see a 5 × 5 grid of tiles.</li>
+    </ol>
+<pre><code class="language-csharp">using UnityEngine;
 
-public class ProceduralTiles : MonoBehaviour
+public class TileGrid : MonoBehaviour
 {
     [SerializeField] private Material material;
+    [SerializeField] private float spacing = 1.2f;
+
     private Mesh mesh;
+    private RenderParams renderParams;
 
     void OnEnable()
     {
-        mesh = new Mesh { name = "Runtime floor tile" };
+        // Build one flat square, 1 × 1, lying on the ground
+        mesh = new Mesh { name = "Tile" };
         mesh.vertices = new[] {
-            new Vector3(-0.5f, 0, -0.5f), new Vector3(-0.5f, 0, 0.5f),
-            new Vector3(0.5f, 0, 0.5f), new Vector3(0.5f, 0, -0.5f)
+            new Vector3(-0.5f, 0, -0.5f),  // 0
+            new Vector3(-0.5f, 0,  0.5f),  // 1
+            new Vector3( 0.5f, 0,  0.5f),  // 2
+            new Vector3( 0.5f, 0, -0.5f),  // 3
         };
         mesh.uv = new[] { Vector2.zero, Vector2.up, Vector2.one, Vector2.right };
-        mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 }; // front faces upward
+        mesh.triangles = new[] { 0, 1, 2,   0, 2, 3 };
         mesh.RecalculateNormals();
         mesh.RecalculateBounds();
-        // RecalculateTangents() too if the material uses a normal map.
+
+        renderParams = new RenderParams(material);
     }
 
     void Update()
     {
-        if (material == null || mesh == null) return;
-        var rp = new RenderParams(material) {
-            shadowCastingMode = ShadowCastingMode.Off,
-            receiveShadows = true
-        };
+        // Drawing only lasts one frame, so we draw every frame
         for (int z = -2; z &lt;= 2; z++)
         for (int x = -2; x &lt;= 2; x++)
         {
-            Vector3 position = new Vector3(x * 1.2f, 0, z * 1.2f);
-            Matrix4x4 matrix = Matrix4x4.TRS(position, Quaternion.identity, Vector3.one);
-            // Valid for these unrotated, unit-scale tiles; give the flat plane thickness.
-            rp.worldBounds = new Bounds(position, new Vector3(1, 0.1f, 1));
-            Graphics.RenderMesh(rp, mesh, 0, matrix);
+            Vector3 pos = new Vector3(x * spacing, 0, z * spacing);
+            Matrix4x4 placement = Matrix4x4.TRS(pos, Quaternion.identity, Vector3.one);
+            Graphics.RenderMesh(renderParams, mesh, 0, placement);
         }
     }
 
     void OnDisable()
     {
-        if (mesh != null) Destroy(mesh);
-        mesh = null;
+        Destroy(mesh); // meshes made in code aren't cleaned up automatically
     }
 }
 </code></pre>
-<p>The owner's Transform intentionally has no effect: the matrices above use world coordinates. For a movable group, multiply each tile matrix by <code>transform.localToWorldMatrix</code>, then update its world bounds too. The assigned material is an asset; the script destroys only the mesh it created.</p><figure class="diagram"><div class="diagram-scroll"><svg viewBox="0 0 630 80" role="img" aria-label="One geometry buffer is reused at 25 placements; no tile GameObjects are created." style="max-width:630px;min-width:480px"><rect x="5" y="15" width="180" height="50" rx="4" class="dg-box"/><text x="95" y="45" text-anchor="middle" class="dg-t">Mesh + material</text><text x="197" y="45">→</text><rect x="215" y="15" width="180" height="50" rx="4" class="dg-box"/><text x="305" y="45" text-anchor="middle" class="dg-t">Matrix per tile</text><text x="407" y="45">→</text><rect x="425" y="15" width="180" height="50" rx="4" class="dg-box"/><text x="515" y="45" text-anchor="middle" class="dg-t">RenderMesh each frame</text></svg></div><figcaption>One geometry buffer is reused at 25 placements; no tile GameObjects are created.</figcaption></figure>
-<p><strong>First experiment:</strong> change <code>x * 1.2f</code> and <code>z * 1.2f</code> to use 2 instead. The tiles move farther apart. Their shape stays the same because you changed placement, not vertices.</p>
-<h2 id="correct-bounds-for-rotated-or-scaled-geometry">Going further: Correct bounds for rotated or scaled geometry</h2><p>Transforming only the minimum and maximum corners is wrong after rotation. Transform the local center and expand each world axis by the absolute contributions of all three local extents. This helper also works when a transform slants the shape, called shear. You do not need it for the unrotated tiles above.</p><pre><code class="language-csharp">static Bounds TransformBounds(Bounds local, Matrix4x4 m)
-{
-    Vector3 x = m.MultiplyVector(new Vector3(local.extents.x, 0, 0));
-    Vector3 y = m.MultiplyVector(new Vector3(0, local.extents.y, 0));
-    Vector3 z = m.MultiplyVector(new Vector3(0, 0, local.extents.z));
-    Vector3 e = new Vector3(
-        Mathf.Abs(x.x) + Mathf.Abs(y.x) + Mathf.Abs(z.x),
-        Mathf.Abs(x.y) + Mathf.Abs(y.y) + Mathf.Abs(z.y),
-        Mathf.Abs(x.z) + Mathf.Abs(y.z) + Mathf.Abs(z.z));
-    return new Bounds(m.MultiplyPoint3x4(local.center), e * 2f);
-}
-</code></pre>
-<h2 id="changing-the-mesh">Changing the mesh</h2><p>Reuse arrays or lists when updating vertices. Call <code>MarkDynamic</code> once if you will frequently rewrite the mesh. After changing positions, update bounds; update normals and tangents when the surface direction changes. When replacing topology with fewer vertices, clear the mesh before assigning new arrays to avoid stale triangle indices.</p>
-<p>The default index format is 16-bit. If you need more than 65,535 vertices, set <code>mesh.indexFormat = IndexFormat.UInt32</code> before assigning triangles, and check target hardware support. Splitting into chunks gives smaller culling regions and can be better than one huge mesh. <code>UploadMeshData(true)</code> releases CPU-readable mesh data; use it only after all CPU edits and reads are finished.</p>
-<h2 id="rendering-is-not-simulation">Rendering is not simulation</h2><p>These draws do not create collision, navigation, selection, automatic LOD, or per-object events. Store gameplay positions and IDs in your own arrays. Use math queries or a limited set of colliders for interaction. A MeshCollider is a separate component and rebuilding its collision data frequently can be costly.</p>
-<h2 id="scaling-up">Going further: Scaling up</h2><p>This example still submits 25 separate draws. Use <code>RenderMeshInstanced</code> for compatible repeated meshes and materials, or combine unique static geometry into chunks. Respect its instance-count and shader-data limits; removing GameObjects alone does not guarantee fewer draw calls. For large procedural builds, consider MeshData with Jobs/Burst after profiling the simple implementation.</p>
-<div class="runtime"><p><strong>What happens at runtime</strong></p><ol><li>OnEnable creates and uploads one mesh.</li><li>Update submits that mesh at each matrix for this frame.</li><li>Unity culls using the supplied bounds and renders visible submissions later.</li><li>OnDisable releases the runtime mesh; no more draws are submitted.</li></ol></div>
-<h2 id="common-mistakes">Common Mistakes</h2><ul><li>Calling RenderMesh once and expecting persistence: submit every frame.</li><li>Wrong winding: the tile disappears from the intended viewing side.</li><li>Creating a mesh or material per frame: reuse resources and release owned native objects.</li><li>Changing vertices without expanding bounds: parts disappear near the edge of the screen.</li><li>Expecting the draw to cast shadows with a shader that has no ShadowCaster pass.</li></ul><h2 id="see-also">See also</h2><ul><li><a href="../api/matrix4x4.html">Matrix4x4</a></li><li><a href="../guides/gpu-instancing.html">GPU Instancing &amp; Batching</a></li><li><a href="../hlsl/first-shader.html">Your First HLSL Shader</a></li></ul><h2 id="official-references">Official references</h2><ul><li><a href="https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Mesh.html">Mesh</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics.RenderMesh.html">Graphics.RenderMesh</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderParams-worldBounds.html">RenderParams.worldBounds</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Mesh.AllocateWritableMeshData.html">Writable MeshData</a></li></ul><p class="official-link">This page is a simplified, AI-assisted interpretation. Check the linked Unity documentation for authoritative details and your installed package version.</p>
+    <p><strong>Try it:</strong> change <code>spacing</code> to 2 in the Inspector. The tiles spread out but keep their shape, because you changed <em>placement</em>, not vertices.</p>
+
+    <figure class="diagram"><div class="diagram-scroll"><svg viewBox="0 0 562 80" role="img" aria-label="One mesh, 25 placements, zero extra GameObjects." style="max-width:562px;min-width:480px"><rect x="5" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="85" y="45" text-anchor="middle" class="dg-t">Build mesh once</text><polyline points="169,40 195,40" class="dg-line"/><path d="M189,35 L197,40 L189,45 z" class="dg-head"/><rect x="201" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="281" y="45" text-anchor="middle" class="dg-t">Matrix for each tile</text><polyline points="365,40 391,40" class="dg-line"/><path d="M385,35 L393,40 L385,45 z" class="dg-head"/><rect x="397" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="477" y="45" text-anchor="middle" class="dg-t">RenderMesh every frame</text></svg></div><figcaption>One mesh, 25 placements, zero extra GameObjects.</figcaption></figure>
+
+    <h2 id="drawing-is-not-the-same-as-existing">Drawing is not the same as existing</h2>
+    <p>These tiles are just pictures. They have no collider, you can't click them in the Hierarchy, and physics can't hit them. If you need gameplay, keep your own list of positions and use <a href="../api/physics.html">physics queries</a> or a few real colliders.</p>
+
+    <h2 id="changing-the-mesh-later">Changing the mesh later</h2>
+    <ul>
+      <li>After moving vertices, call <code>RecalculateNormals()</code> and <code>RecalculateBounds()</code>. Wrong bounds make the mesh vanish near the screen edge.</li>
+      <li>If you'll edit it often, call <code>mesh.MarkDynamic()</code> once.</li>
+      <li>Over 65,535 vertices? Set <code>mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32</code> before assigning triangles.</li>
+    </ul>
+
+    <h2 id="going-further-drawing-thousands">Going further: drawing thousands</h2>
+    <p>The example still makes 25 separate draw calls. For hundreds or thousands of copies, use <code>Graphics.RenderMeshInstanced</code>, which draws them all in one go. See <a href="gpu-instancing.html">GPU Instancing &amp; Batching</a>.</p>
+
+    <h2 id="common-mistakes">Common Mistakes</h2>
+    <ul>
+      <li>Calling <code>RenderMesh</code> once in <code>Start</code> and expecting it to stay. It must be called every frame.</li>
+      <li>Listing corners anticlockwise: the triangle faces away and looks invisible.</li>
+      <li>Creating a <code>new Mesh()</code> every frame. Build it once and reuse it.</li>
+      <li>Forgetting to <code>Destroy</code> meshes you created, which leaks memory.</li>
+    </ul>
+
+    <h2 id="see-also">See also</h2>
+    <ul>
+      <li><a href="../api/matrix4x4.html">Matrix4x4</a></li>
+      <li><a href="gpu-instancing.html">GPU Instancing &amp; Batching</a></li>
+      <li><a href="../hlsl/first-shader.html">Your First HLSL Shader</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/Mesh.html">official documentation</a>.</p>
   </main>
 </div>
 <footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>

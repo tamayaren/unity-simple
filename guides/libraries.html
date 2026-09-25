@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Free Libraries Worth Knowing | Unity Simple Docs</title>
+<meta name="description" content="Popular free tools and packages that save you from building everything yourself, plus how to install them safely.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="guides/libraries.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Packages &rsaquo; Free Libraries Worth Knowing</div>
+    <h1>Free Libraries Worth Knowing</h1>
+    <p class="summary">Popular free tools and packages that save you from building everything yourself, plus how to install them safely.</p>
+    <nav aria-label="On this page"><strong>On this page</strong><ul><li><a href="#how-to-install-packages">How to install packages</a></li><li><a href="#free-from-unity-start-here">Free from Unity (start here)</a></li><li><a href="#animation-game-feel">Animation &amp; game feel</a></li><li><a href="#nicer-inspector">Nicer Inspector</a></li><li><a href="#code-helpers">Code helpers</a></li><li><a href="#debugging">Debugging</a></li><li><a href="#dialogue-story">Dialogue &amp; story</a></li><li><a href="#multiplayer">Multiplayer</a></li><li><a href="#free-art-and-sound">Free art and sound</a></li><li><a href="#should-i-use-a-library-or-build-it-myself">Should I use a library or build it myself?</a></li><li><a href="#common-mistakes">Common Mistakes</a></li><li><a href="#see-also">See also</a></li></ul></nav>
+    <div class="analogy"><p>Libraries are like <strong>power tools</strong>. You <em>could</em> build a bookshelf with a hand saw, but a drill someone else already built saves hours. The trick is knowing which tools are worth having, and not buying ten drills that all do the same thing.</p></div>
+
+    <div class="note"><strong>Before you install anything</strong><p>Check that it's still updated and works with your Unity version, read its licence (everything below is free to use in commercial games at the time of writing, but licences can change), and use version control so you can undo an install. Add one library at a time.</p></div>
+
+    <h2 id="how-to-install-packages">How to install packages</h2>
+    <div class="table-wrap"><table>
+      <tr><th>Where it's from</th><th>How</th></tr>
+      <tr><td><strong>Unity Registry</strong> (Unity's own)</td><td><em>Window &gt; Package Manager</em> &gt; <em>Unity Registry</em> &gt; find it &gt; <em>Install</em>.</td></tr>
+      <tr><td><strong>Asset Store</strong></td><td>Click <em>Add to My Assets</em> on the website, then in Package Manager open <em>My Assets</em> &gt; <em>Download</em> &gt; <em>Import</em>.</td></tr>
+      <tr><td><strong>GitHub</strong></td><td>Package Manager &gt; <em>+</em> &gt; <em>Install package from git URL</em>, and paste the URL from the project's README. (Needs Git installed.)</td></tr>
+      <tr><td><strong>OpenUPM</strong></td><td>A free catalogue of open-source packages. See <a href="https://openupm.com">openupm.com</a> for the steps.</td></tr>
+    </table></div>
+
+    <h2 id="free-from-unity-start-here">Free from Unity (start here)</h2>
+    <p>These are made by Unity, free, and install from the Unity Registry.</p>
+    <div class="table-wrap"><table>
+      <tr><th>Package</th><th>What it saves you from</th></tr>
+      <tr><td><strong>Cinemachine</strong></td><td>Writing camera code. Follow cams, orbit cams, screen shake, cutscene cameras, all without scripts.</td></tr>
+      <tr><td><strong>Input System</strong></td><td>Hard-coding keys. Keyboard, gamepad and touch in one place, with rebinding. See <a href="../tutorials/input-system.html">the tutorial</a>.</td></tr>
+      <tr><td><strong>ProBuilder</strong></td><td>Waiting on 3D art. Build and test level layouts directly in the editor.</td></tr>
+      <tr><td><strong>Splines</strong></td><td>Writing curve maths. Draw paths for rails, roads and moving platforms. (See <a href="bezier-curves.html">Bezier Curves</a> for how they work.)</td></tr>
+      <tr><td><strong>Timeline</strong></td><td>Scripting cutscenes. Line up animations, sounds and camera moves on a timeline.</td></tr>
+      <tr><td><strong>Newtonsoft Json</strong> (<code>com.unity.nuget.newtonsoft-json</code>)</td><td>JsonUtility's limits. Saves dictionaries, properties and more. See <a href="save-load.html">Saving &amp; Loading</a>.</td></tr>
+      <tr><td><strong>AI Navigation</strong></td><td>Writing pathfinding. See <a href="navmesh.html">NavMesh in Depth</a>.</td></tr>
+      <tr><td><strong>Localization</strong></td><td>Hand-rolling translations of text and assets.</td></tr>
+    </table></div>
+
+    <h2 id="animation-game-feel">Animation &amp; game feel</h2>
+    <div class="table-wrap"><table>
+      <tr><th>Library</th><th>What it does</th><th>Get it</th></tr>
+      <tr><td><strong>DOTween</strong></td><td>Move, scale, fade and shake anything in one line. The most widely used tween library. (A paid Pro version adds extras.)</td><td>Asset Store · <a href="../api/dotween.html">our page</a></td></tr>
+      <tr><td><strong>PrimeTween</strong></td><td>A newer tween library, designed to create no garbage. Similar one-line style.</td><td>Asset Store · <a href="https://github.com/KyryloKuzyk/PrimeTween">GitHub</a></td></tr>
+    </table></div>
+    <p>Pick <strong>one</strong> tween library per project.</p>
+
+    <h2 id="nicer-inspector">Nicer Inspector</h2>
+    <div class="table-wrap"><table>
+      <tr><th>Library</th><th>What it does</th><th>Get it</th></tr>
+      <tr><td><strong>NaughtyAttributes</strong></td><td>Adds attributes like <code>[Button]</code> (a clickable button in the Inspector that runs a method), <code>[ShowIf]</code>, <code>[ReadOnly]</code> and dropdowns.</td><td><a href="https://github.com/dbrizov/NaughtyAttributes">GitHub</a> · Asset Store</td></tr>
+      <tr><td><strong>Tri-Inspector</strong></td><td>Similar idea with groups, tabs and validation. A free alternative to the paid Odin Inspector.</td><td><a href="https://github.com/codewriter-packages/Tri-Inspector">GitHub</a></td></tr>
+    </table></div>
+<pre><code class="language-csharp">using NaughtyAttributes;
+using UnityEngine;
+
+public class Spawner : MonoBehaviour
+{
+    [SerializeField] private bool useTimer;
+    [SerializeField, ShowIf("useTimer")] private float interval = 2f; // only shown when useTimer is ticked
+
+    [Button] // a "Spawn Now" button appears in the Inspector
+    private void SpawnNow() { Debug.Log("Spawned!"); }
+}
+</code></pre>
+
+    <h2 id="code-helpers">Code helpers</h2>
+    <div class="table-wrap"><table>
+      <tr><th>Library</th><th>What it does</th><th>Get it</th></tr>
+      <tr><td><strong>UniTask</strong></td><td>Faster, garbage-free <code>async/await</code> for Unity, with helpers like <code>UniTask.Delay</code>. Learn <a href="../csharp/async-await.html">async &amp; await</a> first; Unity 6's built-in <code>Awaitable</code> covers the basics.</td><td><a href="https://github.com/Cysharp/UniTask">GitHub</a></td></tr>
+      <tr><td><strong>VContainer</strong></td><td>"Dependency injection": hands each script what it needs instead of using singletons. Great for bigger projects; skip it for your first game.</td><td><a href="https://github.com/hadashiA/VContainer">GitHub</a></td></tr>
+    </table></div>
+
+    <h2 id="debugging">Debugging</h2>
+    <div class="table-wrap"><table>
+      <tr><th>Library</th><th>What it does</th><th>Get it</th></tr>
+      <tr><td><strong>Graphy</strong></td><td>An on-screen FPS, memory and audio monitor. Great for testing on phones.</td><td><a href="https://github.com/Tayx94/graphy">GitHub</a> · Asset Store</td></tr>
+      <tr><td><strong>In-game Debug Console</strong></td><td>See the Console (logs and errors) inside a build, on any device.</td><td><a href="https://github.com/yasirkula/UnityIngameDebugConsole">GitHub</a> · Asset Store</td></tr>
+    </table></div>
+
+    <h2 id="dialogue-story">Dialogue &amp; story</h2>
+    <div class="table-wrap"><table>
+      <tr><th>Library</th><th>What it does</th><th>Get it</th></tr>
+      <tr><td><strong>Yarn Spinner</strong></td><td>Write branching conversations in a simple script format. Used in games like <em>Night in the Woods</em>.</td><td><a href="https://github.com/YarnSpinnerTool/YarnSpinner-Unity">GitHub</a></td></tr>
+      <tr><td><strong>Ink</strong></td><td>inkle's narrative scripting language (<em>80 Days</em>), with a Unity plugin.</td><td><a href="https://github.com/inkle/ink-unity-integration">GitHub</a></td></tr>
+    </table></div>
+
+    <h2 id="multiplayer">Multiplayer</h2>
+    <div class="table-wrap"><table>
+      <tr><th>Library</th><th>Notes</th></tr>
+      <tr><td><strong>Netcode for GameObjects</strong></td><td>Unity's own, in the Unity Registry.</td></tr>
+      <tr><td><strong>Mirror</strong></td><td>Open source, large community, lots of tutorials. <a href="https://github.com/MirrorNetworking/Mirror">GitHub</a></td></tr>
+      <tr><td><strong>FishNet</strong></td><td>Open source, many built-in features. <a href="https://github.com/FirstGearGames/FishNet">GitHub</a></td></tr>
+    </table></div>
+    <div class="warning"><strong>Multiplayer is hard</strong><p>No library makes it easy. Finish a small single-player game first.</p></div>
+
+    <h2 id="free-art-and-sound">Free art and sound</h2>
+    <div class="table-wrap"><table>
+      <tr><th>Site</th><th>What you get</th></tr>
+      <tr><td><a href="https://kenney.nl/assets">Kenney</a></td><td>Thousands of 2D, 3D, UI and audio assets in a matching style. Public domain (CC0).</td></tr>
+      <tr><td><a href="https://quaternius.com">Quaternius</a></td><td>Low-poly 3D models and characters. CC0.</td></tr>
+      <tr><td><a href="https://polyhaven.com">Poly Haven</a></td><td>Textures, HDRI skies and models. CC0.</td></tr>
+      <tr><td><a href="https://www.mixamo.com">Mixamo</a></td><td>Free character animations (needs an Adobe account).</td></tr>
+    </table></div>
+    <p>CC0 means you can use it for anything without credit, though crediting is a nice thing to do. Always check the licence of each asset you download.</p>
+
+    <h2 id="should-i-use-a-library-or-build-it-myself">Should I use a library or build it myself?</h2>
+    <div class="table-wrap"><table>
+      <tr><th>Use a library when…</th><th>Build it yourself when…</th></tr>
+      <tr><td>It's a hard, solved problem (cameras, tweening, networking)</td><td>It's small and specific to your game</td></tr>
+      <tr><td>You want to finish the game</td><td>You want to learn how it works (see <a href="your-own-systems.html">Building Your Own Systems</a>)</td></tr>
+      <tr><td>It's popular and actively maintained</td><td>The library is abandoned or much bigger than what you need</td></tr>
+    </table></div>
+
+    <h2 id="common-mistakes">Common Mistakes</h2>
+    <ul>
+      <li>Installing ten libraries on day one and never learning the basics.</li>
+      <li>Two libraries that do the same job (two tween libraries, two inspector libraries).</li>
+      <li>Downloading "free" paid assets from random websites. They can contain malware and are illegal to ship.</li>
+      <li>Not reading the README, then wondering why the git URL install fails.</li>
+    </ul>
+
+    <h2 id="see-also">See also</h2>
+    <ul>
+      <li><a href="../api/dotween.html">DOTween</a> and <a href="../tutorials/dotween.html">Game Feel with DOTween</a></li>
+      <li><a href="your-own-systems.html">Building Your Own Systems</a></li>
+      <li><a href="best-practices.html">Better Ways to Do Things</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/Manual/upm-ui.html">official documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

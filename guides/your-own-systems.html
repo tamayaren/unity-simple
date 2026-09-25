@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Building Your Own Systems | Unity Simple Docs</title>
+<meta name="description" content="How to design small, reusable pieces of game code, shown by building your own object pool and cooldown timer from scratch.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="guides/your-own-systems.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Building Systems &rsaquo; Building Your Own Systems</div>
+    <h1>Building Your Own Systems</h1>
+    <p class="summary">How to design small, reusable pieces of game code, shown by building your own object pool and cooldown timer from scratch.</p>
+    <nav aria-label="On this page"><strong>On this page</strong><ul><li><a href="#what-counts-as-a-system">What counts as a "system"?</a></li><li><a href="#five-rules-for-a-good-system">Five rules for a good system</a></li><li><a href="#build-1-your-own-object-pool">Build 1: your own object pool</a></li><li><a href="#build-2-a-cooldown-timer">Build 2: a cooldown timer</a></li><li><a href="#where-to-put-shared-systems">Where to put shared systems</a></li><li><a href="#more-systems-worth-building-yourself">More systems worth building yourself</a></li><li><a href="#common-mistakes">Common Mistakes</a></li><li><a href="#see-also">See also</a></li></ul></nav>
+    <div class="analogy"><p>A good system is like a <strong>vending machine</strong>. It has a few clear buttons on the front (put money in, pick a snack), and you never need to open it up to use it. Inside it can be as complicated as it likes. Your other scripts should use your systems the same way: press a button, get a result, never reach inside.</p></div>
+
+    <h2 id="what-counts-as-a-system">What counts as a "system"?</h2>
+    <p>Any piece of code that does <strong>one job</strong> for the rest of your game: spawning and reusing objects, cooldowns, saving, playing sounds, tracking score. Unity gives you some of these already (like <a href="object-pooling.html">ObjectPool</a>), but building your own teaches you how they work and lets you shape them to your game.</p>
+
+    <h2 id="five-rules-for-a-good-system">Five rules for a good system</h2>
+    <ol>
+      <li><strong>One job.</strong> A pool reuses objects. It doesn't also play sounds and track score.</li>
+      <li><strong>Few, clear buttons.</strong> Keep the public methods small: <code>Get()</code>, <code>Release()</code>. Make everything else <code>private</code>.</li>
+      <li><strong>Doesn't know about your game.</strong> A pool shouldn't know what a "Zombie" is. That way you can reuse it in your next project.</li>
+      <li><strong>Plain C# if it doesn't need Unity.</strong> A cooldown timer doesn't need to be on a GameObject, so don't make it a MonoBehaviour.</li>
+      <li><strong>Start simple.</strong> Build the smallest version that works, use it, and add features only when you actually need them.</li>
+    </ol>
+
+    <h2 id="build-1-your-own-object-pool">Build 1: your own object pool</h2>
+    <p>Instead of destroying bullets and creating new ones, we'll switch them off and keep them on a shelf for next time. (Why this helps: <a href="object-pooling.html">Object Pooling</a>.)</p>
+    <figure class="diagram"><div class="diagram-scroll"><svg viewBox="0 0 954 80" role="img" aria-label="The shelf is a Queue: first in, first out." style="max-width:954px;min-width:715px"><rect x="5" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="85" y="45" text-anchor="middle" class="dg-t">Get()</text><polyline points="169,40 195,40" class="dg-line"/><path d="M189,35 L197,40 L189,45 z" class="dg-head"/><rect x="201" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="281" y="45" text-anchor="middle" class="dg-t">Shelf empty? Make one</text><polyline points="365,40 391,40" class="dg-line"/><path d="M385,35 L393,40 L385,45 z" class="dg-head"/><rect x="397" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="477" y="45" text-anchor="middle" class="dg-t">Use it</text><polyline points="561,40 587,40" class="dg-line"/><path d="M581,35 L589,40 L581,45 z" class="dg-head"/><rect x="593" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="673" y="45" text-anchor="middle" class="dg-t">Release()</text><polyline points="757,40 783,40" class="dg-line"/><path d="M777,35 L785,40 L777,45 z" class="dg-head"/><rect x="789" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="869" y="45" text-anchor="middle" class="dg-t">Back on the shelf</text></svg></div><figcaption>The shelf is a Queue: first in, first out.</figcaption></figure>
+
+    <h3>Step 1: a way for objects to reset themselves</h3>
+    <p>A reused bullet still has its old speed and position. We'll give poolable objects two "hooks" to reset themselves. An <a href="../csharp/inheritance.html">interface</a> is a promise that a class has certain methods:</p>
+<pre><code class="language-csharp">public interface IPoolable
+{
+    void OnTakenFromPool();   // reset here: health, speed, timers...
+    void OnReturnedToPool();  // clean up here: stop sounds, clear targets...
+}
+</code></pre>
+
+    <h3>Step 2: the pool</h3>
+<pre><code class="language-csharp">using System.Collections.Generic;
+using UnityEngine;
+
+public class SimplePool&lt;T&gt; where T : Component
+{
+    private readonly T prefab;
+    private readonly Transform parent;
+    private readonly Queue&lt;T&gt; shelf = new Queue&lt;T&gt;();
+
+    public SimplePool(T prefab, int startCount, Transform parent = null)
+    {
+        this.prefab = prefab;
+        this.parent = parent;
+        for (int i = 0; i &lt; startCount; i++)
+            shelf.Enqueue(CreateNew()); // make some up front, during loading
+    }
+
+    public T Get(Vector3 position, Quaternion rotation)
+    {
+        T item = shelf.Count &gt; 0 ? shelf.Dequeue() : CreateNew();
+        item.transform.SetPositionAndRotation(position, rotation);
+        item.gameObject.SetActive(true);
+        if (item is IPoolable p) p.OnTakenFromPool();
+        return item;
+    }
+
+    public void Release(T item)
+    {
+        if (!item.gameObject.activeSelf) return;   // already on the shelf
+        if (item is IPoolable p) p.OnReturnedToPool();
+        item.gameObject.SetActive(false);
+        shelf.Enqueue(item);
+    }
+
+    private T CreateNew()
+    {
+        T item = Object.Instantiate(prefab, parent);
+        item.gameObject.SetActive(false);
+        return item;
+    }
+}
+</code></pre>
+    <p>A few things to notice:</p>
+    <ul>
+      <li><code>&lt;T&gt; where T : Component</code> makes it a <a href="../csharp/generics.html">generic</a>: the same code works for a pool of <code>Bullet</code>, <code>Enemy</code> or <code>ParticleSystem</code>.</li>
+      <li>It's <strong>not</strong> a MonoBehaviour. Whoever owns it creates it with <code>new</code>.</li>
+      <li>The <code>activeSelf</code> check stops the same bullet being put on the shelf twice.</li>
+    </ul>
+
+    <h3>Step 3: use it</h3>
+<pre><code class="language-csharp">using UnityEngine;
+
+public class Gun : MonoBehaviour
+{
+    [SerializeField] private Bullet bulletPrefab;
+    private SimplePool&lt;Bullet&gt; pool;
+
+    void Awake() =&gt; pool = new SimplePool&lt;Bullet&gt;(bulletPrefab, 20);
+
+    public void Fire()
+    {
+        Bullet b = pool.Get(transform.position, transform.rotation);
+        b.Launch(pool);   // tell the bullet which pool to go back to
+    }
+}
+</code></pre>
+<pre><code class="language-csharp">using UnityEngine;
+
+public class Bullet : MonoBehaviour, IPoolable
+{
+    [SerializeField] private float speed = 30f;
+    [SerializeField] private float lifetime = 2f;
+
+    private SimplePool&lt;Bullet&gt; pool;
+    private float timeLeft;
+
+    public void Launch(SimplePool&lt;Bullet&gt; owner) =&gt; pool = owner;
+
+    public void OnTakenFromPool()  { timeLeft = lifetime; }  // fresh start
+    public void OnReturnedToPool() { }                       // nothing to clean up yet
+
+    void Update()
+    {
+        transform.position += transform.forward * speed * Time.deltaTime;
+        timeLeft -= Time.deltaTime;
+        if (timeLeft &lt;= 0) pool.Release(this);  // instead of Destroy(gameObject)
+    }
+}
+</code></pre>
+
+    <h2 id="build-2-a-cooldown-timer">Build 2: a cooldown timer</h2>
+    <p>Almost every game needs "you can only do this once every X seconds": dashes, attacks, abilities. Instead of writing timer code in every script, write it once:</p>
+<pre><code class="language-csharp">using UnityEngine;
+
+public class Cooldown
+{
+    private readonly float duration;
+    private float readyAt;
+
+    public Cooldown(float seconds) =&gt; duration = seconds;
+
+    public bool IsReady =&gt; Time.time &gt;= readyAt;
+    public float Remaining =&gt; Mathf.Max(0f, readyAt - Time.time);
+    public float Progress01 =&gt; duration &lt;= 0 ? 1f : 1f - Remaining / duration; // for UI bars
+
+    // Returns true (and starts the cooldown) only if it was ready
+    public bool TryUse()
+    {
+        if (!IsReady) return false;
+        readyAt = Time.time + duration;
+        return true;
+    }
+}
+</code></pre>
+    <p>Now any script gets a cooldown in two lines:</p>
+<pre><code class="language-csharp">// needs: using UnityEngine.InputSystem;
+private readonly Cooldown dash = new Cooldown(1.5f);
+
+void Update()
+{
+    if (Keyboard.current.leftShiftKey.wasPressedThisFrame &amp;&amp; dash.TryUse())
+        Dash();
+}
+</code></pre>
+    <p>Notice how this follows the rules: one job, three simple buttons (<code>IsReady</code>, <code>TryUse</code>, <code>Remaining</code>), plain C#, and it knows nothing about dashing.</p>
+
+    <h2 id="where-to-put-shared-systems">Where to put shared systems</h2>
+    <div class="table-wrap"><table>
+      <tr><th>Approach</th><th>When</th></tr>
+      <tr><td>A field on the script that uses it</td><td>Only one script needs it, like the Gun's pool. Simplest; start here.</td></tr>
+      <tr><td>A <a href="../api/scriptableobject.html">ScriptableObject</a> asset</td><td>Several objects share data or events, set up in the Inspector.</td></tr>
+      <tr><td>A single manager in the scene (a "singleton")</td><td>Truly global things like an audio manager. Use sparingly: it makes everything depend on it.</td></tr>
+    </table></div>
+
+    <h2 id="more-systems-worth-building-yourself">More systems worth building yourself</h2>
+    <ul>
+      <li><a href="state-machines.html">A state machine</a>: idle / patrol / chase for enemies.</li>
+      <li><a href="save-load.html">A save system</a>: turn game data into a file and back.</li>
+      <li>An <strong>audio manager</strong>: a pool of AudioSources so many sounds can play at once.</li>
+      <li>A <strong>floating damage number</strong> spawner, using your pool.</li>
+    </ul>
+
+    <h2 id="common-mistakes">Common Mistakes</h2>
+    <ul>
+      <li>Building a huge "GameManager" that does everything. Split it into small systems.</li>
+      <li>Making every system a singleton "just in case".</li>
+      <li>Resetting pooled objects in <code>Start</code> or <code>Awake</code>. Those only run once; reset in your "taken from pool" hook.</li>
+      <li>Adding features you <em>might</em> need one day. Build what you need today.</li>
+    </ul>
+
+    <h2 id="see-also">See also</h2>
+    <ul>
+      <li><a href="object-pooling.html">Object Pooling</a> (Unity's built-in pool)</li>
+      <li><a href="../csharp/generics.html">Generics</a> and <a href="../csharp/inheritance.html">Inheritance &amp; Interfaces</a></li>
+      <li><a href="best-practices.html">Better Ways to Do Things</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/Manual/scripting.html">official documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

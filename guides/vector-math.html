@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dot, Cross &amp; Reflect | Unity Simple Docs</title>
-<meta name="description" content="Learn three useful tools for directions: check what is in front of you, find a surface direction, and make something bounce.">
+<meta name="description" content="Three small tools for working with directions: Dot (&quot;is it in front of me?&quot;), Cross (&quot;which way is sideways?&quot;) and Reflect (&quot;which way does it bounce?&quot;).">
 <link rel="stylesheet" href="../css/style.css">
 </head>
 <body data-root="../" data-page="guides/vector-math.html">
@@ -21,103 +21,122 @@
   <aside class="sidebar" id="sidebar"></aside>
   <main class="content">
     <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Guides &rsaquo; Dot, Cross &amp; Reflect</div>
-<h1>Dot, Cross &amp; Reflect</h1>
-<p class="summary">Learn three useful tools for directions: check what is in front of you, find a surface direction, and make something bounce.</p>
-<div class="analogy"><p>Picture a ball on a pool table. Dot checks how much its travel direction agrees with another arrow. Cross builds an arrow sticking straight out of the table from two directions along it. Reflect changes the ball’s direction when it bounces off a cushion.</p></div>
-<div class="tip"><strong>Start here</strong><p>Read the meaning of each operation before the formula. Try the guard’s view-cone example first, then the bouncing-ray example.</p></div>
-<nav aria-label="On this page"><strong>On this page</strong><ul><li><a href="#a-few-words-first">A few words first</a></li><li><a href="#before-the-operations-what-does-the-vector-mean">Before the operations: what does the vector mean?</a></li><li><a href="#dot-a-signed-amount-of-alignment">Dot: a signed amount of alignment</a></li><li><a href="#cross-a-perpendicular-vector">Cross: a perpendicular vector</a></li><li><a href="#reflect-reverse-the-normal-component">Reflect: reverse the normal component</a></li><li><a href="#common-mistakes">Common Mistakes</a></li><li><a href="#see-also">See also</a></li><li><a href="#official-references">Official references</a></li></ul></nav>
-<h2 id="a-few-words-first">A few words first</h2><p>A <strong>vector</strong> is a group of numbers that can describe an arrow. Its <strong>magnitude</strong> is its length. <strong>Normalizing</strong> makes the length 1 without changing the direction. That gives a <strong>unit vector</strong>. A zero-length arrow has no direction.</p>
+    <h1>Dot, Cross &amp; Reflect</h1>
+    <p class="summary">Three small tools for working with directions: <strong>Dot</strong> ("is it in front of me?"), <strong>Cross</strong> ("which way is sideways?") and <strong>Reflect</strong> ("which way does it bounce?").</p>
+    <nav aria-label="On this page"><strong>On this page</strong><ul><li><a href="#first-getting-a-direction">First: getting a direction</a></li><li><a href="#dot-how-much-do-two-arrows-agree">Dot: how much do two arrows agree?</a></li><li><a href="#cross-the-arrow-at-right-angles-to-both">Cross: the arrow at right angles to both</a></li><li><a href="#reflect-bouncing">Reflect: bouncing</a></li><li><a href="#bonus-sliding-along-a-wall">Bonus: sliding along a wall</a></li><li><a href="#common-mistakes">Common Mistakes</a></li><li><a href="#see-also">See also</a></li></ul></nav>
+    <div class="analogy"><p>Think of a game of pool. <strong>Dot</strong> is asking "how much is the ball heading toward that pocket?" <strong>Cross</strong> is finding the direction that points straight up out of the table. <strong>Reflect</strong> is the ball bouncing off a cushion.</p></div>
 
+    <h2 id="first-getting-a-direction">First: getting a direction</h2>
+    <p>Most of these tools need a <strong>direction</strong>, an arrow with length 1. To get one from two positions, subtract and normalize:</p>
+<pre><code class="language-csharp">Vector3 toTarget = target.position - transform.position; // arrow from me to target
+float distance   = toTarget.magnitude;                   // how long the arrow is
+Vector3 dir      = toTarget.normalized;                  // same arrow, length 1
+</code></pre>
+    <p>Remember: <strong>target minus me</strong> points from me to the target.</p>
 
+    <h2 id="dot-how-much-do-two-arrows-agree">Dot: how much do two arrows agree?</h2>
+    <p><code>Vector3.Dot(a, b)</code> gives back one number. If both arrows have length 1:</p>
+    <div class="table-wrap"><table>
+      <tr><th>Dot result</th><th>Meaning</th></tr>
+      <tr><td><code>1</code></td><td>Same direction</td></tr>
+      <tr><td><code>0.5</code></td><td>About 60° apart</td></tr>
+      <tr><td><code>0</code></td><td>At a right angle (sideways)</td></tr>
+      <tr><td><code>-1</code></td><td>Opposite directions (behind)</td></tr>
+    </table></div>
+    <p>So "is the player in front of me?" is just <code>Dot(transform.forward, dirToPlayer) &gt; 0</code>.</p>
 
-<h2 id="before-the-operations-what-does-the-vector-mean">Before the operations: what does the vector mean?</h2><p>A position is a location. Subtract two positions to get a displacement: <code>target - origin</code>. Its magnitude is distance; its normalized value is direction. A velocity carries direction and speed. Measure both arrows relative to the same thing: do not compare a world direction with a local direction. Check for nearly zero length before calculations that need a direction.</p>
-<p>Try pointing both hands forward: those directions agree. Point one forward and the other backward: they disagree. Dot puts a number on that idea.</p>
-<h2 id="dot-a-signed-amount-of-alignment">Dot: a signed amount of alignment</h2><p><code>Dot(a,b) = ax*bx + ay*by + az*bz = |a| |b| cos(angle)</code>. The answer is a single number, also called a scalar. The bars in <code>|a|</code> mean the length of a. For unit vectors only, it ranges from -1 to 1: +1 is same direction, 0 perpendicular, -1 opposite. <code>Dot((2,0,0),(3,0,0)) = 6</code>, so an arbitrary dot product is not an angle or a percentage.</p><div class="table-wrap"><table><tr><th>Angle between unit vectors</th><th>Dot</th><th>Interpretation</th></tr><tr><td>0°</td><td>1</td><td>Fully aligned</td></tr><tr><td>60°</td><td>0.5</td><td>Partly aligned</td></tr><tr><td>90°</td><td>0</td><td>Perpendicular</td></tr><tr><td>120°</td><td>-0.5</td><td>Partly opposed</td></tr><tr><td>180°</td><td>-1</td><td>Fully opposed</td></tr></table></div>
-<h3>Field of view without calculating an angle</h3><p>For a 90-degree total cone, compare against the cosine of 45 degrees. Also check distance. A cone test does not detect walls; add a raycast for line of sight. Attach this script to a guard and assign a target; watch the Scene view while playing.</p><pre><code class="language-csharp">using UnityEngine;
+    <h3>Example: a guard's view cone</h3>
+    <p>Attach to a guard, assign a target and watch the line in the Scene view: green = seen, red = not seen.</p>
+<pre><code class="language-csharp">using UnityEngine;
 
 public class ViewCone : MonoBehaviour
 {
     [SerializeField] private Transform target;
-    [SerializeField, Range(0, 180)] private float fieldOfView = 90;
-    [SerializeField] private float range = 10;
+    [SerializeField, Range(0, 180)] private float viewAngle = 90f; // total cone width
+    [SerializeField] private float range = 10f;
 
     void Update()
     {
         if (target == null) return;
-        Vector3 offset = target.position - transform.position;
-        float distanceSquared = offset.sqrMagnitude;
-        if (distanceSquared &lt; 0.000001f) return; // no meaningful direction
-        float threshold = Mathf.Cos(fieldOfView * 0.5f * Mathf.Deg2Rad);
-        bool inCone = distanceSquared &lt;= range * range &amp;&amp;
-            Vector3.Dot(transform.forward, offset.normalized) &gt;= threshold;
-        Debug.DrawLine(transform.position, target.position,
-            inCone ? Color.green : Color.red);
+
+        Vector3 toTarget = target.position - transform.position;
+        if (toTarget.magnitude &gt; range) { Draw(false); return; }
+
+        // cos(half the angle) is the smallest Dot that still counts as "inside"
+        float minDot = Mathf.Cos(viewAngle * 0.5f * Mathf.Deg2Rad);
+        bool seen = Vector3.Dot(transform.forward, toTarget.normalized) &gt;= minDot;
+        Draw(seen);
     }
+
+    void Draw(bool seen) =&gt;
+        Debug.DrawLine(transform.position, target.position, seen ? Color.green : Color.red);
 }
 </code></pre>
-<p>For a top-down cone, flatten both the forward vector and target offset onto the ground plane, check for zero length, then normalize them. That intentionally ignores height. If you really need the angle, use <code>Acos(Clamp(dot, -1, 1)) * Rad2Deg</code>; rounding can otherwise put the input outside Acos's domain.</p>
-<h3>Projection and sliding</h3><p>With unit normal <code>n</code>, <code>Dot(v,n)</code> is the signed amount of v along n. Multiply it by n to get the normal component; subtract it to keep the tangent component. For a non-unit axis a, projection is <code>a * Dot(v,a) / Dot(a,a)</code>, provided a is nonzero.</p><pre><code class="language-csharp">Vector3 n = hit.normal.normalized; // hit is a RaycastHit
-Vector3 normalPart = Vector3.Dot(velocity, n) * n;
-Vector3 slide = velocity - normalPart;
-// Equivalent: Vector3.ProjectOnPlane(velocity, n)
-// To remove only inward movement, preserve outward movement:
-Vector3 constrained = velocity - Mathf.Min(Vector3.Dot(velocity, n), 0f) * n;
-</code></pre>
-<p><strong>Perpendicular</strong> means meeting at a right angle, like a wall and the floor. Cross finds a direction at right angles to both input arrows. Imagine two edges of a book lying on a table: their cross product points up or down through the book.</p>
-<h2 id="cross-a-perpendicular-vector">Cross: a perpendicular vector</h2><p><code>Cross(a,b)</code> has magnitude <code>|a| |b| sin(angle)</code>, the area of the parallelogram spanned by a and b. It is zero if the arrows point along the same line, even in opposite directions. Swap the two inputs and the result points the other way. In Unity, <code>Cross(Vector3.right, Vector3.up)</code> is <code>Vector3.forward</code>. Use that concrete axis check when you are unsure of orientation.</p>
-<p>Given a forward direction on level ground, <code>Cross(Vector3.up, forward)</code> gives right. Given triangle points A, B, C, <code>Cross(B-A, C-A).normalized</code> gives a face normal for that vertex ordering. If the three points lie on one line or on top of each other, there is no real triangle and no valid normal.</p><pre><code class="language-csharp">Vector3 edge1 = b - a;
-Vector3 edge2 = c - a;
-Vector3 areaVector = Vector3.Cross(edge1, edge2);
-float triangleArea = areaVector.magnitude * 0.5f;
-Vector3 normal = areaVector.sqrMagnitude &gt; 0.000001f
-    ? areaVector.normalized : Vector3.up; // explicit fallback for this application
-</code></pre>
-<h3>Build a stable orientation</h3><p>A forward vector alone does not define roll. Add a reference up vector, then use cross products to build perpendicular axes. Choose a different reference when forward nearly aligns with up.</p><pre><code class="language-csharp">static Quaternion FaceDirection(Vector3 direction)
-{
-    if (direction.sqrMagnitude &lt; 0.000001f) return Quaternion.identity;
-    Vector3 forward = direction.normalized;
-    Vector3 referenceUp = Mathf.Abs(Vector3.Dot(forward, Vector3.up)) &gt; 0.99f
-        ? Vector3.right : Vector3.up;
-    Vector3 right = Vector3.Cross(referenceUp, forward).normalized;
-    Vector3 up = Vector3.Cross(forward, right);
-    return Quaternion.LookRotation(forward, up);
-}
-</code></pre>
-<p>Reflect is the bounce tool. Give it the direction toward a wall and the wall’s normal—an arrow sticking straight out of the wall. It gives you the direction away from the wall after a perfect bounce.</p>
-<h2 id="reflect-reverse-the-normal-component">Reflect: reverse the normal component</h2><p>For a unit surface normal n, <code>r = v - 2 * Dot(v,n) * n</code>. The incoming vector points <em>toward</em> the surface. With v = (3,-4,0) and n = (0,1,0), dot = -4 and the reflected vector is (3,4,0). Its magnitude remains 5. Sliding would give (3,0,0): it removes the normal component instead of reversing it.</p>
-<figure class="diagram"><div class="diagram-scroll"><svg viewBox="0 0 600 220" role="img" aria-label="Incoming vector travels down and right to a horizontal surface; reflected vector travels up and right. The normal points up." style="max-width:600px;min-width:480px"><path d="M40 180 H560" class="dg-line"/><path d="M140 40 L300 180 L460 40" class="dg-line-accent"/><path d="M280 151 L300 180 L266 169 M425 51 L460 40 L451 74" class="dg-line-accent"/><path d="M300 180 V25 M290 40 L300 25 L310 40" class="dg-line"/><text x="105" y="95">incoming v</text><text x="427" y="95">reflected r</text><text x="311" y="30">normal n</text><text x="50" y="205">surface</text></svg></div><figcaption>The tangent part keeps its direction. The normal part reverses.</figcaption></figure>
-<h3>Draw a bouncing aim ray</h3><p>Attach to a camera or aiming object. Add colliders to the scene and inspect the Scene view in Play mode. This demonstrates geometry only; it does not move a projectile or replace physics collision handling.</p><pre><code class="language-csharp">using UnityEngine;
+    <p>The cone doesn't know about walls. Add a <a href="../api/physics.html">Physics.Raycast</a> if walls should block sight.</p>
+
+    <h2 id="cross-the-arrow-at-right-angles-to-both">Cross: the arrow at right angles to both</h2>
+    <p><code>Vector3.Cross(a, b)</code> gives an arrow that is perpendicular to both <code>a</code> and <code>b</code>. Lay two pencils flat on a desk; their cross product points straight up out of the desk (or straight down, if you swap the order).</p>
+    <div class="table-wrap"><table>
+      <tr><th>Use</th><th>Code</th></tr>
+      <tr><td>"Right" from a forward direction</td><td><code>Vector3.Cross(Vector3.up, forward)</code></td></tr>
+      <tr><td>The way a triangle faces (its normal)</td><td><code>Vector3.Cross(b - a, c - a).normalized</code></td></tr>
+      <tr><td>Is the target to my left or right?</td><td><code>Vector3.Cross(transform.forward, dir).y</code>: positive = right, negative = left</td></tr>
+    </table></div>
+    <p>If the two arrows point along the same line, the result is zero: there's no single "sideways" answer.</p>
+
+    <h2 id="reflect-bouncing">Reflect: bouncing</h2>
+    <p><code>Vector3.Reflect(direction, normal)</code> returns the direction after a perfect bounce. The <strong>normal</strong> is the arrow sticking straight out of the surface; a raycast hit gives it to you as <code>hit.normal</code>.</p>
+    <figure class="diagram"><div class="diagram-scroll"><svg viewBox="0 0 600 220" role="img" aria-label="An arrow comes down to a flat surface and bounces back up at the same angle. The normal points straight up." style="max-width:600px;min-width:480px"><path d="M40 180 H560" class="dg-line"/><path d="M140 40 L300 180 L460 40" class="dg-line-accent"/><path d="M280 151 L300 180 L266 169 M425 51 L460 40 L451 74" class="dg-line-accent"/><path d="M300 180 V25 M290 40 L300 25 L310 40" class="dg-line"/><text x="105" y="95">incoming</text><text x="427" y="95">reflected</text><text x="311" y="30">normal</text><text x="50" y="205">surface</text></svg></div><figcaption>The sideways part of the motion stays the same; the part going into the wall flips.</figcaption></figure>
+
+    <h3>Example: a bouncing laser preview</h3>
+<pre><code class="language-csharp">using UnityEngine;
 
 public class BouncePreview : MonoBehaviour
 {
-    [SerializeField] private float distance = 30f;
-    [SerializeField] private LayerMask surfaces = ~0;
+    [SerializeField] private int maxBounces = 4;
+    [SerializeField] private float maxDistance = 30f;
 
     void Update()
     {
         Vector3 origin = transform.position;
-        Vector3 direction = transform.forward;
-        float remaining = distance;
-        const float skin = 0.01f;
-        for (int bounce = 0; bounce &lt; 4 &amp;&amp; remaining &gt; 0; bounce++)
+        Vector3 dir = transform.forward;
+
+        for (int i = 0; i &lt;= maxBounces; i++)
         {
-            if (!Physics.Raycast(origin, direction, out RaycastHit hit,
-                remaining, surfaces, QueryTriggerInteraction.Ignore))
+            if (!Physics.Raycast(origin, dir, out RaycastHit hit, maxDistance))
             {
-                Debug.DrawRay(origin, direction * remaining, Color.yellow);
+                Debug.DrawRay(origin, dir * maxDistance, Color.yellow);
                 break;
             }
             Debug.DrawLine(origin, hit.point, Color.yellow);
-            remaining -= hit.distance + skin;
-            direction = Vector3.Reflect(direction, hit.normal).normalized;
-            origin = hit.point + hit.normal * skin;
+            dir = Vector3.Reflect(dir, hit.normal);
+            origin = hit.point + hit.normal * 0.01f; // step off the wall so we don't hit it again
         }
     }
 }
 </code></pre>
-<p>For a moving ball use a sphere sweep rather than a point ray, and account for movement left after a hit. Reflection alone adds no friction or energy loss. Multiplying the whole reflected velocity by a damping factor reduces tangent speed too; a restitution model instead adjusts only the inward normal component.</p>
-<div class="runtime"><p><strong>What happens at runtime</strong></p><ol><li>Subtract positions to establish a direction.</li><li>Dot separates alignment or normal motion; cross constructs perpendicular axes.</li><li>Reflect uses the surface normal to reverse incoming normal motion.</li><li>Your gameplay code decides what to do with these mathematical results.</li></ol></div>
-<h2 id="common-mistakes">Common Mistakes</h2><ul><li>Comparing raw dot products to a cosine without normalizing.</li><li>Taking the cross product in the wrong order and facing backward.</li><li>Normalizing a nearly zero cross product and expecting a stable orientation.</li><li>Reflecting about the contact position instead of the surface normal.</li><li>Starting a second ray exactly on a surface and hitting it again immediately.</li></ul><h2 id="see-also">See also</h2><ul><li><a href="../api/vector3.html">Vector3</a></li><li><a href="../api/physics.html">Physics</a></li><li><a href="../hlsl/billboards.html">Camera-facing Billboards</a></li></ul><h2 id="official-references">Official references</h2><ul><li><a href="https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Vector3.Dot.html">Vector3.Dot</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Vector3.Cross.html">Vector3.Cross</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Vector3.Reflect.html">Vector3.Reflect</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Vector3.ProjectOnPlane.html">ProjectOnPlane</a></li></ul><p class="official-link">This page is a simplified, AI-assisted interpretation. Check the linked Unity documentation for authoritative details and your installed package version.</p>
+
+    <h2 id="bonus-sliding-along-a-wall">Bonus: sliding along a wall</h2>
+    <p>Reflect <em>bounces</em>. To <em>slide</em> along a wall instead (like a character pushing into it), remove the part of the movement that goes into the wall:</p>
+<pre><code class="language-csharp">Vector3 slide = Vector3.ProjectOnPlane(velocity, hit.normal);
+</code></pre>
+
+    <h2 id="common-mistakes">Common Mistakes</h2>
+    <ul>
+      <li>Forgetting to normalize before <code>Dot</code>. With longer arrows the result is bigger than 1 and your angle checks break.</li>
+      <li>Subtracting the wrong way round (<code>me - target</code>) and getting an arrow pointing away.</li>
+      <li>Swapping the inputs to <code>Cross</code> and getting "left" instead of "right".</li>
+      <li>Starting the next ray exactly on the wall, so it hits the same wall again. Nudge it off along the normal.</li>
+    </ul>
+
+    <h2 id="see-also">See also</h2>
+    <ul>
+      <li><a href="../api/vector3.html">Vector3</a></li>
+      <li><a href="../api/physics.html">Physics (raycasts)</a></li>
+      <li><a href="character-controller.html">Working with CharacterController</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/Vector3.html">official documentation</a>.</p>
   </main>
 </div>
 <footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simple State Machines | Unity Simple Docs</title>
+<meta name="description" content="Stop your enemy code from turning into a mess of if statements. Give it clear states like Patrol, Chase and Attack.">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../" data-page="guides/state-machines.html">
+<header class="site-header" id="top">
+  <button class="menu-toggle" id="menu-toggle" type="button">Menu</button>
+  <a class="logo" href="../index.html">Unity Simple Docs</a>
+  <nav class="header-links">
+    <a href="../index.html">Home</a>
+    <a href="https://docs.unity3d.com/Manual/index.html">Official Manual</a>
+    <a href="https://docs.unity3d.com/ScriptReference/index.html">Official Scripting API</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; Building Systems &rsaquo; Simple State Machines</div>
+    <h1>Simple State Machines</h1>
+    <p class="summary">Stop your enemy code from turning into a mess of <code>if</code> statements. Give it clear states like Patrol, Chase and Attack.</p>
+    <nav aria-label="On this page"><strong>On this page</strong><ul><li><a href="#the-problem">The problem</a></li><li><a href="#draw-it-first">Draw it first</a></li><li><a href="#version-1-an-enum-and-a-switch">Version 1: an enum and a switch</a></li><li><a href="#enter-update-exit">Enter, Update, Exit</a></li><li><a href="#version-2-one-class-per-state">Version 2: one class per state</a></li><li><a href="#what-about-the-animator">What about the Animator?</a></li><li><a href="#common-mistakes">Common Mistakes</a></li><li><a href="#see-also">See also</a></li></ul></nav>
+    <div class="analogy"><p>A state machine is like a <strong>traffic light</strong>. It's always in exactly one state: red, amber or green. Each state has its own behaviour, and there are clear rules for switching ("after 30 seconds, go from green to amber"). It can never be red <em>and</em> green at the same time.</p></div>
+
+    <h2 id="the-problem">The problem</h2>
+    <p>Enemy code often starts like this and gets worse with every feature:</p>
+<pre><code class="language-csharp">void Update()
+{
+    if (isDead) return;
+    if (canSeePlayer &amp;&amp; !isAttacking &amp;&amp; distance &lt; 2 &amp;&amp; !isStunned) { ... }
+    else if (canSeePlayer &amp;&amp; !isAttacking &amp;&amp; !isStunned) { ... }
+    else if (!canSeePlayer &amp;&amp; wasChasing) { ... }
+    // ...and 50 more lines of true/false flags
+}
+</code></pre>
+    <p>Lots of true/false flags mean lots of combinations, and some of them make no sense ("attacking while dead"). A state machine replaces the flags with <strong>one</strong> variable: the current state.</p>
+
+    <h2 id="draw-it-first">Draw it first</h2>
+    <figure class="diagram"><div class="diagram-scroll"><svg viewBox="0 0 620 170" role="img" aria-label="Three states: Patrol, Chase and Attack. Patrol goes to Chase when the player is seen. Chase goes to Attack when close. Attack goes back to Chase when the player is farther away. Chase goes back to Patrol when the player is lost." style="max-width:620px;min-width:480px"><defs><marker id="sm-a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="dg-head"/></marker></defs><rect x="20" y="60" width="130" height="50" rx="25" class="dg-box"/><text x="85" y="90" text-anchor="middle" class="dg-t dg-b">Patrol</text><rect x="245" y="60" width="130" height="50" rx="25" class="dg-accent"/><text x="310" y="90" text-anchor="middle" class="dg-t dg-b">Chase</text><rect x="470" y="60" width="130" height="50" rx="25" class="dg-box"/><text x="535" y="90" text-anchor="middle" class="dg-t dg-b">Attack</text><polyline points="150,72 245,72" class="dg-line" marker-end="url(#sm-a)"/><text x="197" y="62" text-anchor="middle" class="dg-s">sees player</text><polyline points="245,98 150,98" class="dg-line" marker-end="url(#sm-a)"/><text x="197" y="118" text-anchor="middle" class="dg-s">loses player</text><polyline points="375,72 470,72" class="dg-line" marker-end="url(#sm-a)"/><text x="422" y="62" text-anchor="middle" class="dg-s">close enough</text><polyline points="470,98 375,98" class="dg-line" marker-end="url(#sm-a)"/><text x="422" y="118" text-anchor="middle" class="dg-s">too far</text></svg></div><figcaption>Boxes are states, arrows are the rules for switching. Sketch this on paper before writing code.</figcaption></figure>
+
+    <h2 id="version-1-an-enum-and-a-switch">Version 1: an enum and a switch</h2>
+    <p>This is enough for most enemies. Uses a <a href="navmesh.html">NavMeshAgent</a> to move.</p>
+<pre><code class="language-csharp">using UnityEngine;
+using UnityEngine.AI;
+
+public class EnemyBrain : MonoBehaviour
+{
+    private enum State { Patrol, Chase, Attack }
+
+    [SerializeField] private Transform player;
+    [SerializeField] private Transform[] patrolPoints;
+    [SerializeField] private float seeRange = 10f;
+    [SerializeField] private float attackRange = 2f;
+
+    private State state = State.Patrol;
+    private NavMeshAgent agent;
+    private int patrolIndex;
+
+    void Awake() =&gt; agent = GetComponent&lt;NavMeshAgent&gt;();
+
+    void Update()
+    {
+        float distance = Vector3.Distance(transform.position, player.position);
+
+        switch (state)
+        {
+            case State.Patrol:
+                if (!agent.pathPending &amp;&amp; agent.remainingDistance &lt; 0.5f)
+                {
+                    patrolIndex = (patrolIndex + 1) % patrolPoints.Length;
+                    agent.SetDestination(patrolPoints[patrolIndex].position);
+                }
+                if (distance &lt; seeRange) ChangeState(State.Chase);
+                break;
+
+            case State.Chase:
+                agent.SetDestination(player.position);
+                if (distance &lt; attackRange) ChangeState(State.Attack);
+                else if (distance &gt; seeRange * 1.5f) ChangeState(State.Patrol);
+                break;
+
+            case State.Attack:
+                transform.LookAt(new Vector3(player.position.x, transform.position.y, player.position.z));
+                // swing the sword, play the animation, etc.
+                if (distance &gt; attackRange * 1.2f) ChangeState(State.Chase);
+                break;
+        }
+    }
+
+    private void ChangeState(State next)
+    {
+        // "Exit" the old state
+        if (state == State.Attack) agent.isStopped = false;
+
+        state = next;
+
+        // "Enter" the new state
+        if (state == State.Attack) agent.isStopped = true;
+        if (state == State.Patrol) agent.SetDestination(patrolPoints[patrolIndex].position);
+        Debug.Log($"{name} is now {state}");
+    }
+}
+</code></pre>
+    <p><strong>Why <code>seeRange * 1.5f</code>?</strong> If "start chasing" and "stop chasing" used the same distance, an enemy standing right on the line would flicker between states every frame. A small gap between the two numbers stops that.</p>
+
+    <h2 id="enter-update-exit">Enter, Update, Exit</h2>
+    <p>Every state usually needs three moments:</p>
+    <div class="table-wrap"><table>
+      <tr><th>Moment</th><th>Runs</th><th>Example</th></tr>
+      <tr><td><strong>Enter</strong></td><td>Once, when switching in</td><td>Play the "alert!" sound, start the attack animation</td></tr>
+      <tr><td><strong>Update</strong></td><td>Every frame while in it</td><td>Move toward the player</td></tr>
+      <tr><td><strong>Exit</strong></td><td>Once, when switching out</td><td>Stop the attack animation</td></tr>
+    </table></div>
+    <p>Putting all switching through one <code>ChangeState</code> method gives you one place for enter/exit code, and one place to add a <code>Debug.Log</code> when something goes wrong.</p>
+
+    <h2 id="version-2-one-class-per-state">Version 2: one class per state</h2>
+    <p>When states get big (a boss with 8 phases), put each one in its own class:</p>
+<pre><code class="language-csharp">public interface IState
+{
+    void Enter();
+    void Tick();   // called every frame
+    void Exit();
+}
+
+public class StateMachine
+{
+    public IState Current { get; private set; }
+
+    public void ChangeState(IState next)
+    {
+        Current?.Exit();
+        Current = next;
+        Current.Enter();
+    }
+
+    public void Tick() =&gt; Current?.Tick();
+}
+</code></pre>
+<pre><code class="language-csharp">public class ChaseState : IState
+{
+    private readonly EnemyController enemy;
+    public ChaseState(EnemyController enemy) =&gt; this.enemy = enemy;
+
+    public void Enter() =&gt; enemy.PlaySound("alert");
+    public void Tick()
+    {
+        enemy.MoveTowardPlayer();
+        if (enemy.PlayerInAttackRange) enemy.Brain.ChangeState(enemy.AttackState);
+    }
+    public void Exit() { }
+}
+</code></pre>
+    <p>The enemy's MonoBehaviour creates the states once in <code>Awake</code>, calls <code>brain.ChangeState(patrolState)</code> to begin, and calls <code>brain.Tick()</code> in <code>Update</code>. Start with Version 1; switch to Version 2 only when the switch statement becomes hard to read.</p>
+
+    <h2 id="what-about-the-animator">What about the Animator?</h2>
+    <p>The <a href="../api/animator.html">Animator</a> window is also a state machine, but for <strong>animations</strong>. Keep game logic (what the enemy decides) in your code, and just tell the Animator what to show: <code>animator.SetBool("Attacking", true)</code>.</p>
+
+    <h2 id="common-mistakes">Common Mistakes</h2>
+    <ul>
+      <li>Changing <code>state = ...</code> in many places, so enter/exit code gets skipped. Always go through <code>ChangeState</code>.</li>
+      <li>Using the same number to enter and leave a state, causing flickering.</li>
+      <li>Keeping the old true/false flags alongside the state. Delete them.</li>
+      <li>Jumping straight to Version 2 for a simple enemy.</li>
+    </ul>
+
+    <h2 id="see-also">See also</h2>
+    <ul>
+      <li><a href="../csharp/enums.html">Enums &amp; switch</a></li>
+      <li><a href="navmesh.html">NavMesh in Depth</a></li>
+      <li><a href="your-own-systems.html">Building Your Own Systems</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/Manual/StateMachineBasics.html">official documentation</a>.</p>
+  </main>
+</div>
+<footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
+<script src="../js/nav.js"></script>
+</body>
+</html>

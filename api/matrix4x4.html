@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Matrix4x4 | Unity Simple Docs</title>
-<meta name="description" content="Use one value to describe where a shape goes, which way it turns, and how big it is.">
+<meta name="description" content="One value that stores where something is, which way it faces and how big it is. You&#x27;ll mostly meet it when drawing meshes from code or writing shaders.">
 <link rel="stylesheet" href="../css/style.css">
 </head>
 <body data-root="../" data-page="api/matrix4x4.html">
@@ -21,51 +21,90 @@
   <aside class="sidebar" id="sidebar"></aside>
   <main class="content">
     <div class="breadcrumbs"><a href="../index.html">Home</a> &rsaquo; API Reference &rsaquo; Matrix4x4</div>
-<h1>Matrix4x4</h1>
-<p class="summary">Use one value to describe where a shape goes, which way it turns, and how big it is.</p>
-<div class="analogy"><p>A matrix is like a set of moving instructions for a toy house: make it twice as big, turn it to face right, then place it on a shelf. Apply the same instructions to every corner and the whole house moves together.</p></div>
-<div class="tip"><strong>Start here</strong><p>Start with TRS and the Console example. You can use a matrix without learning how to calculate all 16 numbers by hand.</p></div>
-<nav aria-label="On this page"><strong>On this page</strong><ul><li><a href="#a-few-words-first">A few words first</a></li><li><a href="#local-space-world-space-and-homogeneous-coordinates">Local space and world space</a></li><li><a href="#the-methods-you-actually-need">The methods you actually need</a></li><li><a href="#try-a-point-and-a-direction">Try a point and a direction</a></li><li><a href="#composition-order-matters">Composition: order matters</a></li><li><a href="#inside-the-matrix">Going further: what is inside the matrix?</a></li><li><a href="#normals-are-different-from-directions">Going further: Normals are different from directions</a></li><li><a href="#projection-matrices">Going further: Projection matrices</a></li><li><a href="#common-mistakes">Common Mistakes</a></li><li><a href="#see-also">See also</a></li><li><a href="#official-references">Official references</a></li></ul></nav>
-<h2 id="a-few-words-first">A few words first</h2><p>A <strong>matrix</strong> is a grid of numbers. <code>Matrix4x4</code> has four rows and four columns. Unity can fill it for you from a position, rotation and scale. <strong>TRS</strong> stands for translation (moving), rotation (turning) and scale (resizing).</p>
+    <h1>Matrix4x4</h1>
+    <p class="summary">One value that stores <strong>where</strong> something is, <strong>which way</strong> it faces and <strong>how big</strong> it is. You'll mostly meet it when drawing meshes from code or writing shaders.</p>
+    <nav aria-label="On this page"><strong>On this page</strong><ul><li><a href="#do-i-need-this">Do I need this?</a></li><li><a href="#local-vs-world-space">Local vs world space</a></li><li><a href="#the-members-you-ll-use">The members you'll use</a></li><li><a href="#example">Example</a></li><li><a href="#combining-matrices-order-matters">Combining matrices: order matters</a></li><li><a href="#going-further">Going further</a></li><li><a href="#common-mistakes">Common Mistakes</a></li><li><a href="#see-also">See also</a></li></ul></nav>
+    <div class="analogy"><p>A matrix is a <strong>recipe card</strong> for placing a toy: "make it twice as big, turn it to face right, then put it on the shelf." Follow the same card for every corner of the toy and the whole toy ends up in the right place.</p></div>
 
+    <div class="infobox"><div class="infobox-title">Matrix4x4</div><table><tr><th>Type</th><td>Struct (value type)</td></tr><tr><th>Namespace</th><td>UnityEngine</td></tr></table></div>
 
-<div class="infobox"><div class="infobox-title">Matrix4x4</div><table><tr><th>Type</th><td>Struct (value type)</td></tr><tr><th>Namespace</th><td>UnityEngine</td></tr><tr><th>Inherits</th><td>System.ValueType</td></tr></table></div>
+    <h2 id="do-i-need-this">Do I need this?</h2>
+    <p>Usually not. A <a href="transform.html">Transform</a> already handles position, rotation and scale for GameObjects. You need <code>Matrix4x4</code> when there is <strong>no</strong> Transform, for example when you draw a mesh with <code>Graphics.RenderMesh</code>, or when you pass placement data to a shader.</p>
+    <p>You never have to fill in the 16 numbers yourself. Give Unity a position, rotation and scale and it builds the matrix.</p>
 
-<h2 id="local-space-world-space-and-homogeneous-coordinates">Local space and world space</h2>
-<p><strong>Local space</strong> means “measured from this object.” <strong>World space</strong> means “measured from the scene’s origin.” Imagine a cup on a table: its local position says where it is on the table; its world position says where it is in the room.</p>
-<p>A matrix can convert between those two descriptions. Start with <code>Matrix4x4.TRS(position, rotation, scale)</code>. Unity builds the numbers for you. Use <code>MultiplyPoint3x4</code> to apply those instructions to a position.</p>
-<h2 id="the-methods-you-actually-need">The methods you actually need</h2><div class="table-wrap"><table><tr><th>Member</th><th>Use</th></tr><tr><td><code>Matrix4x4.identity</code></td><td>A transform that changes nothing. A default/new matrix contains zeros, not identity.</td></tr><tr><td><code>Matrix4x4.TRS(position, rotation, scale)</code></td><td>Build a local-to-world transform. Applies scale, then rotation, then translation.</td></tr><tr><td><code>MultiplyPoint3x4(point)</code></td><td>Apply ordinary move, turn and resize instructions to a position.</td></tr><tr><td><code>MultiplyPoint(point)</code></td><td>Also supports camera perspective calculations; see the later section.</td></tr><tr><td><code>MultiplyVector(vector)</code></td><td>Apply rotation and scale, without translation. Length can change.</td></tr><tr><td><code>inverse</code></td><td>Reverse an invertible transform. Zero scale makes a transform singular.</td></tr><tr><td><code>transpose</code></td><td>Swap rows and columns; useful with inverse for transforming normals.</td></tr><tr><td><code>transform.localToWorldMatrix</code></td><td>Includes the entire parent hierarchy, unlike TRS of local values alone.</td></tr></table></div>
-<h2 id="try-a-point-and-a-direction">Try a point and a direction</h2><p>Attach this script to an empty object and read the Console. Both results are in world space.</p><pre><code class="language-csharp">using UnityEngine;
+    <h2 id="local-vs-world-space">Local vs world space</h2>
+    <p><strong>Local space</strong> = measured from the object itself. <strong>World space</strong> = measured from the centre of the scene. A cup's local position says where it sits on the table; its world position says where it is in the room. A matrix converts local into world.</p>
+
+    <h2 id="the-members-you-ll-use">The members you'll use</h2>
+    <div class="table-wrap"><table>
+      <tr><th>Member</th><th>What it does</th></tr>
+      <tr><td><code>Matrix4x4.TRS(pos, rot, scale)</code></td><td>Builds a matrix from a position (T), rotation (R) and scale (S). Start here.</td></tr>
+      <tr><td><code>Matrix4x4.identity</code></td><td>A matrix that changes nothing. Use this, not <code>new Matrix4x4()</code>, which is all zeros.</td></tr>
+      <tr><td><code>MultiplyPoint3x4(point)</code></td><td>Moves, turns and scales a <strong>position</strong>.</td></tr>
+      <tr><td><code>MultiplyVector(dir)</code></td><td>Turns and scales a <strong>direction</strong> but doesn't move it. A direction has no location, so moving it makes no sense.</td></tr>
+      <tr><td><code>inverse</code></td><td>The reverse recipe: world back to local.</td></tr>
+      <tr><td><code>transform.localToWorldMatrix</code></td><td>The matrix of an existing GameObject, including all its parents.</td></tr>
+    </table></div>
+
+    <h2 id="example">Example</h2>
+    <p>Attach to any object and check the Console.</p>
+<pre><code class="language-csharp">using UnityEngine;
 
 public class MatrixExample : MonoBehaviour
 {
     void Start()
     {
+        // Move 10 right, turn 90° to the right, double the size
         Matrix4x4 m = Matrix4x4.TRS(new Vector3(10, 0, 0),
-            Quaternion.Euler(0, 90, 0), Vector3.one * 2);
-        Vector3 point = m.MultiplyPoint3x4(Vector3.forward);
-        Vector3 direction = m.MultiplyVector(Vector3.forward);
-        Debug.Log($"Point: {point}; direction: {direction}"); // (12,0,0); (2,0,0)
-        Debug.Log(m.inverse.MultiplyPoint3x4(point)); // approximately (0,0,1)
+                                    Quaternion.Euler(0, 90, 0),
+                                    Vector3.one * 2);
+
+        Vector3 point = m.MultiplyPoint3x4(Vector3.forward); // (12, 0, 0)
+        Vector3 dir   = m.MultiplyVector(Vector3.forward);    // (2, 0, 0): not moved by 10
+        Debug.Log($"point {point}, direction {dir}");
+
+        Vector3 back = m.inverse.MultiplyPoint3x4(point);     // about (0, 0, 1) again
+        Debug.Log(back);
     }
 }
 </code></pre>
-<h2 id="composition-order-matters">Composition: order matters</h2><p><code>parent * child</code> first applies the child transform, then the parent. Changing the order changes the result: moving then rotating can orbit an object around the origin; rotating then moving places it at a fixed position. A parent's rotation also turns its child's local translation.</p><pre><code class="language-csharp">Matrix4x4 parent = Matrix4x4.TRS(new Vector3(5, 0, 0),
-    Quaternion.Euler(0, 90, 0), Vector3.one);
-Matrix4x4 child = Matrix4x4.Translate(new Vector3(0, 0, 2));
-Matrix4x4 world = parent * child;
-Vector3 childOrigin = world.MultiplyPoint3x4(Vector3.zero); // (7,0,0)
-</code></pre><figure class="diagram"><div class="diagram-scroll"><svg viewBox="0 0 840 80" role="img" aria-label="Read parent * child * point from right to left: the nearest transform acts first." style="max-width:840px;min-width:480px"><rect x="5" y="15" width="180" height="50" rx="4" class="dg-box"/><text x="95" y="45" text-anchor="middle" class="dg-t">Local point</text><text x="197" y="45">→</text><rect x="215" y="15" width="180" height="50" rx="4" class="dg-box"/><text x="305" y="45" text-anchor="middle" class="dg-t">Child matrix</text><text x="407" y="45">→</text><rect x="425" y="15" width="180" height="50" rx="4" class="dg-box"/><text x="515" y="45" text-anchor="middle" class="dg-t">Parent matrix</text><text x="617" y="45">→</text><rect x="635" y="15" width="180" height="50" rx="4" class="dg-box"/><text x="725" y="45" text-anchor="middle" class="dg-t">World point</text></svg></div><figcaption>Read parent * child * point from right to left: the nearest transform acts first.</figcaption></figure>
-<h2 id="inside-the-matrix">Going further: what is inside the matrix?</h2><p>You can skip this section on your first read. An <strong>affine</strong> transform moves, turns, scales or slants a shape without adding perspective. <strong>Homogeneous coordinates</strong> add one extra number so the same calculation can handle both positions and directions.</p><p>A mesh stores vertices relative to its own origin. An object-to-world matrix converts those local positions into scene positions. Unity uses column vectors: <code>world = matrix * local</code>. The fourth coordinate, <code>w</code>, distinguishes a point (1) from a direction (0), so translation moves points but does not move directions.</p>
-<p>For an affine transform, columns 0–2 are the transformed local X, Y and Z axes; column 3 holds translation. The bottom row is (0, 0, 0, 1). The indexer is <code>m[row, column]</code>; memory storage is column-major. You rarely need to set the 16 entries yourself.</p>
+    <p>The point <code>(0,0,1)</code> was scaled to <code>(0,0,2)</code>, turned to <code>(2,0,0)</code>, then moved to <code>(12,0,0)</code>. The direction got the same scale and turn, but no move.</p>
 
-<p>A <strong>normal</strong> is an arrow pointing straight out of a surface. <strong>Non-uniform scale</strong> means stretching by different amounts on different axes, such as making a shape taller without making it wider.</p>
-<h2 id="normals-are-different-from-directions">Going further: Normals are different from directions</h2><p>With non-uniform scale, applying the ordinary matrix to a normal can make it stop being perpendicular to its surface. Use the inverse transpose and normalize. For a surface tangent, the ordinary vector transform is appropriate. Negative scale can reverse triangle winding; shear can appear when rotated children inherit non-uniform scale.</p><pre><code class="language-csharp">Vector3 worldNormal = objectToWorld.inverse.transpose
-    .MultiplyVector(localNormal).normalized; // objectToWorld must be invertible
+    <h2 id="combining-matrices-order-matters">Combining matrices: order matters</h2>
+    <p>You can combine two matrices with <code>*</code>. Read it <strong>right to left</strong>: in <code>parent * child</code>, the child's recipe happens first, then the parent's. Swapping them gives a different answer, just like "turn then walk" ends somewhere different from "walk then turn".</p>
+<pre><code class="language-csharp">Matrix4x4 parent = Matrix4x4.TRS(new Vector3(5, 0, 0), Quaternion.Euler(0, 90, 0), Vector3.one);
+Matrix4x4 child  = Matrix4x4.Translate(new Vector3(0, 0, 2));  // 2 forward
+Vector3 p = (parent * child).MultiplyPoint3x4(Vector3.zero);    // (7, 0, 0)
 </code></pre>
-<h2 id="projection-matrices">Going further: Projection matrices</h2><p>Camera projection maps view coordinates into clip space, before perspective division. Perspective makes distant objects appear smaller; orthographic projection does not. Do not use <code>MultiplyPoint3x4</code> for a perspective matrix. GPU projection conventions vary by graphics API; use Unity shader helpers or <code>GL.GetGPUProjectionMatrix</code> when supplying custom GPU projection matrices.</p>
-<div class="runtime"><p><strong>What happens at runtime</strong></p><ol><li>C# builds or reads a matrix value.</li><li>The rendering code sends transformation data to the GPU.</li><li>The vertex shader transforms each vertex; the mesh's stored vertex array stays unchanged.</li></ol></div>
-<h2 id="common-mistakes">Common Mistakes</h2><ul><li>Using <code>new Matrix4x4()</code> as a no-op: use <code>identity</code>.</li><li>Using point multiplication on a velocity: translation should not affect it.</li><li>Normalizing a scaled vector when its magnitude is meaningful, such as velocity.</li><li>Assuming every matrix can be cleanly split into position, rotation and scale: shear and projection do not fit that model.</li></ul><h2 id="see-also">See also</h2><ul><li><a href="../guides/procedural-meshes.html">Procedural Meshes without GameObjects</a></li><li><a href="../api/transform.html">Transform</a></li><li><a href="../api/quaternion.html">Quaternion</a></li></ul><h2 id="official-references">Official references</h2><ul><li><a href="https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Matrix4x4.html">Matrix4x4</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Matrix4x4.TRS.html">TRS</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Matrix4x4.MultiplyPoint3x4.html">MultiplyPoint3x4</a></li><li><a href="https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GL.GetGPUProjectionMatrix.html">GPU projection matrices</a></li></ul><p class="official-link">This page is a simplified, AI-assisted interpretation. Check the linked Unity documentation for authoritative details and your installed package version.</p>
+    <figure class="diagram"><div class="diagram-scroll"><svg viewBox="0 0 758 80" role="img" aria-label="The matrix closest to the point is applied first." style="max-width:758px;min-width:568px"><rect x="5" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="85" y="45" text-anchor="middle" class="dg-t">Local point</text><polyline points="169,40 195,40" class="dg-line"/><path d="M189,35 L197,40 L189,45 z" class="dg-head"/><rect x="201" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="281" y="45" text-anchor="middle" class="dg-t">Child matrix</text><polyline points="365,40 391,40" class="dg-line"/><path d="M385,35 L393,40 L385,45 z" class="dg-head"/><rect x="397" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="477" y="45" text-anchor="middle" class="dg-t">Parent matrix</text><polyline points="561,40 587,40" class="dg-line"/><path d="M581,35 L589,40 L581,45 z" class="dg-head"/><rect x="593" y="15" width="160" height="50" rx="4" class="dg-box"/><text x="673" y="45" text-anchor="middle" class="dg-t">World point</text></svg></div><figcaption>The matrix closest to the point is applied first.</figcaption></figure>
+
+    <div class="runtime"><p><strong>What happens at runtime</strong></p><ol>
+      <li>Your code builds a matrix (or reads one from a Transform).</li>
+      <li>When drawing, Unity sends the matrix to the GPU.</li>
+      <li>The shader applies it to every vertex. The mesh data itself is never changed.</li>
+    </ol></div>
+
+    <h2 id="going-further">Going further</h2>
+    <ul>
+      <li><strong>Normals</strong> (arrows pointing out of a surface) need special care if the scale is uneven, like (1, 3, 1). Use <code>m.inverse.transpose.MultiplyVector(normal).normalized</code>.</li>
+      <li><strong>Camera projection matrices</strong> add perspective. For those, use <code>MultiplyPoint</code>, not <code>MultiplyPoint3x4</code>.</li>
+    </ul>
+
+    <h2 id="common-mistakes">Common Mistakes</h2>
+    <ul>
+      <li>Using <code>new Matrix4x4()</code> as "no change". It's all zeros and squashes everything to a point. Use <code>Matrix4x4.identity</code>.</li>
+      <li>Using <code>MultiplyPoint3x4</code> on a velocity or direction. It gets moved as well. Use <code>MultiplyVector</code>.</li>
+      <li>Multiplying in the wrong order and getting an object that orbits instead of sitting still.</li>
+    </ul>
+
+    <h2 id="see-also">See also</h2>
+    <ul>
+      <li><a href="transform.html">Transform</a></li>
+      <li><a href="quaternion.html">Quaternion</a></li>
+      <li><a href="../guides/procedural-meshes.html">Procedural Meshes</a></li>
+    </ul>
+
+    <p class="official-link">This page is a simplified, AI-assisted interpretation. For the complete and authoritative reference, see the <a href="https://docs.unity3d.com/ScriptReference/Matrix4x4.html">official documentation</a>.</p>
   </main>
 </div>
 <footer class="site-footer">Unofficial community documentation. Not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity Technologies.<a class="back-to-top" href="#top">Back to top</a></footer>
