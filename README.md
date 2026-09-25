@@ -8,6 +8,7 @@ Every API page includes:
 - a plain-language summary and, for the trickier concepts, a "Think of it like..." analogy
 - tables of the properties, methods and events you'll actually use
 - complete code samples
+- diagrams (inline SVG, no images or libraries) where a picture explains the mechanism better than text
 - a "What happens at runtime" section
 - common mistakes
 
